@@ -3,8 +3,11 @@ package perf
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -87,4 +90,20 @@ func mergeCodes(merged string, n int, last string) string {
 		merged += fmt.Sprintf("%s", last)
 	}
 	return merged
+}
+
+// ParseFileArg parse an argument which represents a string content,
+// or @file to represents the file's content.
+func ParseFileArg(arg string) []byte {
+	if strings.HasPrefix(arg, "@") {
+		f := (arg)[1:]
+		if v, err := ioutil.ReadFile(f); err != nil {
+			log.Fatalf("failed to read file %s, error: %v", f, err)
+			return nil
+		} else {
+			return v
+		}
+	}
+
+	return []byte(arg)
 }
