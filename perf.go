@@ -1,6 +1,7 @@
 package perf
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"runtime"
@@ -11,120 +12,94 @@ import (
 )
 
 var (
-	pN          = fla9.Int("n", 0, "Total number of requests")
+	pN          = fla9.Int64("n", 0, "Total number of requests")
 	pDuration   = fla9.Duration("d", 0, "Duration of test, examples: -d10s -d3m")
 	pGoMaxProcs = fla9.Int("t", runtime.GOMAXPROCS(0), "Number of GOMAXPROCS")
-	pGoroutines = fla9.Int("g", 300, "Number of goroutines")
+	pGoroutines = fla9.Int64("c", 300, "Number of goroutines")
 	pQps        = fla9.Float64("qps", 0, "QPS per worker")
 	pFeatures   = fla9.String("f", "", "features, e.g. a,b,c")
 	pVerbose    = fla9.Count("v", 0, "verbose level")
-	thinkTime   = fla9.String("think", "", "Think time among requests, eg. 1s, 10ms, 10-20ms and etc. (unit ns, us/µs, ms, s, m, h)")
+	pThinkTime  = fla9.String("think", "", "Think time among requests, eg. 1s, 10ms, 10-20ms and etc. (unit ns, us/µs, ms, s, m, h)")
 	pPort       = fla9.Int("p", 28888, "Listen port for serve Web UI")
 )
 
 // Config defines the bench configuration.
 type Config struct {
-	N          int
+	N          int64
 	Duration   time.Duration
-	Goroutines int
+	Goroutines int64
 	GoMaxProcs int
+	Qps        float64
 	Features   string
 	Verbose    int
+	ThinkTime  string
+	ChartPort  int
 
 	FeatureMap
-	GoroutinesTimes int
+	CountingName string
+	OkStatus     string
 }
 
 type ConfigFn func(*Config)
 
-func WithConfig(v *Config) ConfigFn {
-	return func(c *Config) {
-		*c = *v
-	}
-}
+// WithCounting with customized config.
+func WithCounting(name string) ConfigFn { return func(c *Config) { c.CountingName = name } }
 
-type FnResult struct {
+// WithOkStatus set the status which represents OK.
+func WithOkStatus(okStatus string) ConfigFn { return func(c *Config) { c.OkStatus = okStatus } }
+
+// WithConfig with customized config.
+func WithConfig(v *Config) ConfigFn { return func(c *Config) { *c = *v } }
+
+type Result struct {
 	ReadBytes  int64
 	WriteBytes int64
 	Status     string
 	Counting   string
 }
 
-type Fn func(c *Config) (*FnResult, error)
+type F func(context.Context, *Config) (*Result, error)
 
 // StartBench starts a benchmark.
-func StartBench(fn Fn, fns ...ConfigFn) {
+func StartBench(fn F, fns ...ConfigFn) {
 	c := &Config{
-		N:          *pN,
-		Duration:   *pDuration,
-		Goroutines: *pGoroutines,
-		GoMaxProcs: *pGoMaxProcs,
-		Features:   *pFeatures,
-		Verbose:    *pVerbose,
+		N: *pN, Duration: *pDuration, Goroutines: *pGoroutines, GoMaxProcs: *pGoMaxProcs,
+		Qps: *pQps, Features: *pFeatures, Verbose: *pVerbose, ThinkTime: *pThinkTime, ChartPort: *pPort,
 	}
-
 	for _, f := range fns {
 		f(c)
 	}
 
 	c.Setup()
 
-	requester, err := NewRequester(c.Goroutines, c.Verbose, int64(c.N), c.Duration, fn, c)
+	requester, err := c.NewRequester(fn)
 	ExitIfErr(err)
 
-	var ln net.Listener
-
-	// description
-	desc := "Benchmarking "
-	if c.N > 0 {
-		desc += fmt.Sprintf(" with %d request(s)", c.N)
-	}
-	if c.Duration > 0 {
-		desc += fmt.Sprintf(" for %s", c.Duration)
-	}
-	desc += fmt.Sprintf(" using %d goroutine(s), %d GoMaxProcs", c.Goroutines, c.GoMaxProcs)
-	if c.Features != "" {
-		desc += fmt.Sprintf(" with feature: %s", c.Features)
-	}
-	desc += "."
-
+	desc := c.Description()
 	fmt.Println(desc)
 
-	// charts listener
-	if *pPort > 0 && c.N != 1 {
-		*pPort = GetFreePortStart(*pPort)
-	}
-
-	if *pPort > 0 && c.N != 1 && *pVerbose >= 1 {
-		addr := fmt.Sprintf(":%d", *pPort)
-		if ln, err = net.Listen("tcp", addr); err != nil {
-			ExitIfErr(err)
-		}
-		fmt.Printf("@ Real-time charts is listening on http://127.0.0.1:%d\n", *pPort)
-	}
-	fmt.Printf("\n")
+	report := NewStreamReport()
+	c.serveCharts(report, desc)
 
 	go requester.Run()
-
-	// metrics collection
-	report := NewStreamReport()
-
-	maxResult := c.Goroutines * 100
-	if maxResult > 8192 {
-		maxResult = 8192
-	}
 	go report.Collect(requester.recordChan)
 
-	if ln != nil {
+	p := c.createTerminalPrinter()
+	p.PrintLoop(report.Snapshot, 500*time.Millisecond, false, report.Done(), c.N)
+}
+
+func (c *Config) serveCharts(report *StreamReport, desc string) {
+	if c.ChartPort > 0 && c.N != 1 && c.Verbose >= 1 {
+		addr := fmt.Sprintf(":%d", c.ChartPort)
+		ln, err := net.Listen("tcp", addr)
+		ExitIfErr(err)
+		fmt.Printf("@Real-time charts is on http://127.0.0.1:%d\n", c.ChartPort)
+
 		// serve charts data
 		charts, err := NewCharts(ln, report.Charts, desc)
 		ExitIfErr(err)
-		go charts.Serve(*pPort)
+		go charts.Serve(c.ChartPort)
 	}
-
-	// terminal printer
-	p := &Printer{maxNum: int64(c.N), maxDuration: c.Duration, verbose: c.Verbose}
-	p.PrintLoop(report.Snapshot, 200*time.Millisecond, false, report.Done(), c.N)
 }
 
 // Setup setups the environment by the config.
@@ -146,12 +121,32 @@ func (c *Config) Setup() {
 
 	runtime.GOMAXPROCS(c.GoMaxProcs)
 
-	c.GoroutinesTimes = c.N / c.Goroutines
+	if c.ChartPort > 0 && c.N != 1 {
+		c.ChartPort = GetFreePortStart(c.ChartPort)
+	}
 
 	if c.FeatureMap == nil {
 		c.FeatureMap = make(map[string]bool)
 		c.FeatureMap.Setup(c.Features)
 	}
+}
+
+func (c *Config) Description() string {
+	desc := "Benchmarking"
+	if c.Features != "" {
+		desc += fmt.Sprintf(" %s", c.Features)
+	}
+	if c.N > 0 {
+		desc += fmt.Sprintf(" with %d request(s)", c.N)
+	}
+	if c.Duration > 0 {
+		desc += fmt.Sprintf(" for %s", c.Duration)
+	}
+	return desc + fmt.Sprintf(" using %d goroutine(s), %d GoMaxProcs.", c.Goroutines, c.GoMaxProcs)
+}
+
+func (c *Config) createTerminalPrinter() *Printer {
+	return &Printer{maxNum: c.N, maxDuration: c.Duration, verbose: c.Verbose, config: c}
 }
 
 // FeatureMap defines a feature map.

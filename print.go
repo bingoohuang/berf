@@ -37,6 +37,7 @@ type Printer struct {
 	pbNumStr    string
 	pbDurStr    string
 	verbose     int
+	config      *Config
 }
 
 func (p *Printer) updateProgressValue(rs *SnapshotReport) {
@@ -62,8 +63,8 @@ func (p *Printer) updateProgressValue(rs *SnapshotReport) {
 	}
 }
 
-func (p *Printer) PrintLoop(snapshot func() *SnapshotReport, interval time.Duration, useSeconds bool, doneChan <-chan struct{}, requests int) {
-	stdout := os.Stdout
+func (p *Printer) PrintLoop(snapshot func() *SnapshotReport, interval time.Duration, useSeconds bool, doneChan <-chan struct{}, requests int64) {
+	out := os.Stdout
 
 	var echo func(isFinal bool)
 	buf := &bytes.Buffer{}
@@ -72,14 +73,14 @@ func (p *Printer) PrintLoop(snapshot func() *SnapshotReport, interval time.Durat
 	echo = func(isFinal bool) {
 		r := snapshot()
 		p.updateProgressValue(r)
-		stdout.WriteString(backCursor)
+		out.WriteString(backCursor)
 
 		buf.Reset()
 		p.formatTableReports(buf, r, isFinal, useSeconds)
 
-		n := printLines(buf.Bytes(), stdout)
+		n := printLines(buf.Bytes(), out)
 		backCursor = fmt.Sprintf("\033[%dA", n)
-		stdout.Sync()
+		out.Sync()
 	}
 
 	if interval > 0 && requests != 1 {
@@ -90,17 +91,18 @@ func (p *Printer) PrintLoop(snapshot func() *SnapshotReport, interval time.Durat
 
 	if requests != 1 {
 		echo(true)
-	} else {
-		r := snapshot()
-		if p.printError(buf, r) {
-			stdout.Write(buf.Bytes())
-		}
-
-		buf.Reset()
-		var summary SummaryReport
-		writeBulk(buf, p.buildSummary(r, true, &summary))
-		stdout.Write(buf.Bytes())
+		return
 	}
+
+	r := snapshot()
+	if p.printError(buf, r) {
+		out.Write(buf.Bytes())
+	}
+
+	buf.Reset()
+	var summary SummaryReport
+	writeBulk(buf, p.buildSummary(r, true, &summary))
+	out.Write(buf.Bytes())
 }
 
 func tick(interval time.Duration, echo func(), doneChan <-chan struct{}) {
@@ -209,7 +211,7 @@ type Report struct {
 }
 
 func (p *Printer) formatTableReports(w *bytes.Buffer, r *SnapshotReport, isFinal bool, useSeconds bool) Report {
-	w.WriteString("Summary:\n")
+	w.WriteString("\nSummary:\n")
 	report := Report{}
 	writeBulk(w, p.buildSummary(r, isFinal, &report.SummaryReport))
 
@@ -217,14 +219,12 @@ func (p *Printer) formatTableReports(w *bytes.Buffer, r *SnapshotReport, isFinal
 	p.printError(w, r)
 	writeBulkWith(w, p.buildStats(r, useSeconds, &report.StatsReport), "", "  ", "\n")
 
-	w.WriteString("\n")
-	w.WriteString("Latency Percentile:\n")
+	w.WriteString("\nLatency Percentile:\n")
 	report.PercentileReport = make(map[string]string)
 	writeBulk(w, p.buildPercentile(r, useSeconds, report.PercentileReport))
 
 	if p.verbose >= 1 {
-		w.WriteString("\n")
-		w.WriteString("Latency Histogram:\n")
+		w.WriteString("\nLatency Histogram:\n")
 		writeBulk(w, p.buildHistogram(r, useSeconds, isFinal))
 	}
 	return report
@@ -358,9 +358,10 @@ func (p *Printer) buildSummary(r *SnapshotReport, isFinal bool, sr *SummaryRepor
 	}
 	summaryBulk := [][]string{elapsedLine, countLine}
 	codesBulks := make([][]string, 0, len(r.Codes))
+	okStatus := p.config.OkStatus
 	for k, v := range r.Codes {
 		vs := fmt.Sprintf("%d %.3f", v, float64(v)/r.ElapseInSec)
-		if k != "200" {
+		if okStatus != "" && k != okStatus {
 			vs = colorize(vs, FgMagentaColor)
 		}
 		codesBulks = append(codesBulks, []string{"  " + k, vs})
@@ -376,8 +377,8 @@ func (p *Printer) buildSummary(r *SnapshotReport, isFinal bool, sr *SummaryRepor
 	}
 
 	sr.Counting = r.Counting
-	if p.verbose >= 1 && sr.Counting > 1 {
-		summaryBulk = append(summaryBulk, []string{"Counting", fmt.Sprintf("%d", r.Counting)})
+	if p.verbose >= 1 && p.config.CountingName != "" {
+		summaryBulk = append(summaryBulk, []string{p.config.CountingName, fmt.Sprintf("%d", r.Counting)})
 	}
 
 	alignBulk(summaryBulk, AlignLeft, AlignRight)

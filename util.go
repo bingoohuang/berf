@@ -1,10 +1,20 @@
 package perf
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
+	"time"
 )
+
+func SleepContext(ctx context.Context, duration time.Duration) {
+	select {
+	case <-ctx.Done():
+	case <-time.After(duration):
+	}
+	return
+}
 
 func GetFreePortStart(port int) int {
 	for i := 0; i < 100; i++ {

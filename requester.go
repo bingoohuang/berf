@@ -2,6 +2,7 @@ package perf
 
 import (
 	"context"
+	"github.com/bingoohuang/gg/pkg/ss"
 	"os"
 	"os/signal"
 	"sync"
@@ -26,72 +27,47 @@ func init() {
 }
 
 type Requester struct {
-	concurrency int
-	verbose     int
-	requests    int64
-	duration    time.Duration
+	goroutines int64
+	n          int64
+	verbose    int
+	duration   time.Duration
 
 	recordChan chan *ReportRecord
-
-	closeOnce sync.Once
-	wg        sync.WaitGroup
+	closeOnce  sync.Once
+	wg         sync.WaitGroup
 
 	readBytes  int64
 	writeBytes int64
 
-	cancel func()
-	think  *thinktime.ThinkTime
+	cancelFunc func()
+	think      *thinktime.ThinkTime
 
 	// Qps is the rate limit in queries per second.
 	QPS float64
 
 	ctx    context.Context
-	fn     Fn
+	fn     F
 	config *Config
 }
 
-type ClientOpt struct {
-	url       string
-	method    string
-	headers   []string
-	bodyBytes []byte
-	bodyFile  string
-
-	certPath string
-	keyPath  string
-
-	insecure bool
-
-	maxConns     int
-	doTimeout    time.Duration
-	readTimeout  time.Duration
-	writeTimeout time.Duration
-	dialTimeout  time.Duration
-}
-
-func NewRequester(concurrency, verbose int, requests int64, duration time.Duration, fn Fn, config *Config) (*Requester, error) {
-	maxResult := concurrency * 100
-	if maxResult > 8192 {
-		maxResult = 8192
-	}
-
-	ctx, cancelFunc := context.WithCancel(context.Background())
-
-	think, err := thinktime.ParseThinkTime(*thinkTime)
+func (c *Config) NewRequester(fn F) (*Requester, error) {
+	maxResult := c.Goroutines * 100
+	think, err := thinktime.ParseThinkTime(c.ThinkTime)
 	ExitIfErr(err)
 
+	ctx, cancelFunc := context.WithCancel(context.Background())
 	r := &Requester{
-		concurrency: concurrency,
-		requests:    requests,
-		duration:    duration,
-		recordChan:  make(chan *ReportRecord, maxResult),
-		verbose:     verbose,
-		QPS:         *pQps,
-		ctx:         ctx,
-		cancel:      cancelFunc,
-		fn:          fn,
-		think:       think,
-		config:      config,
+		goroutines: c.Goroutines,
+		n:          c.N,
+		duration:   c.Duration,
+		recordChan: make(chan *ReportRecord, ss.Ifi(maxResult > 8192, 8192, int(maxResult))),
+		verbose:    c.Verbose,
+		QPS:        c.Qps,
+		ctx:        ctx,
+		cancelFunc: cancelFunc,
+		fn:         fn,
+		think:      think,
+		config:     c,
 	}
 
 	return r, nil
@@ -104,9 +80,9 @@ func (r *Requester) closeRecord() {
 }
 
 func (r *Requester) doRequest(rr *ReportRecord) (err error) {
-	var result *FnResult
+	var result *Result
 	t1 := time.Now()
-	result, err = r.fn(r.config)
+	result, err = r.fn(r.ctx, r.config)
 	rr.cost = time.Since(t1)
 	if err != nil {
 		return err
@@ -129,18 +105,18 @@ func (r *Requester) Run() {
 	go func() {
 		<-sigs
 		r.closeRecord()
-		r.cancel()
+		r.cancelFunc()
 	}()
 	startTime = time.Now()
 	if r.duration > 0 {
 		time.AfterFunc(r.duration, func() {
 			r.closeRecord()
-			r.cancel()
+			r.cancelFunc()
 		})
 	}
 
-	semaphore := r.requests
-	for i := 0; i < r.concurrency; i++ {
+	semaphore := r.n
+	for i := int64(0); i < r.goroutines; i++ {
 		r.wg.Add(1)
 		go func() {
 			defer func() {
@@ -158,8 +134,8 @@ func (r *Requester) Run() {
 			}
 
 			for r.ctx.Err() == nil {
-				if r.requests > 0 && atomic.AddInt64(&semaphore, -1) < 0 {
-					r.cancel()
+				if r.n > 0 && atomic.AddInt64(&semaphore, -1) < 0 {
+					r.cancelFunc()
 					return
 				}
 
