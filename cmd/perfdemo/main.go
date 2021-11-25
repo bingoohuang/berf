@@ -14,7 +14,7 @@ func main() {
 	perf.StartBench(demo)
 }
 
-func demo() (*perf.FnResult, error) {
+func demo(*perf.Config) (*perf.FnResult, error) {
 	d := time.Duration(10 + randx.IntN(10))
 	time.Sleep(d * time.Millisecond)
 	return &perf.FnResult{

@@ -50,7 +50,7 @@ type FnResult struct {
 	Counting   string
 }
 
-type Fn func() (*FnResult, error)
+type Fn func(c *Config) (*FnResult, error)
 
 // StartBench starts a benchmark.
 func StartBench(fn Fn, fns ...ConfigFn) {
@@ -69,7 +69,7 @@ func StartBench(fn Fn, fns ...ConfigFn) {
 
 	c.Setup()
 
-	requester, err := NewRequester(c.Goroutines, c.Verbose, int64(c.N), c.Duration, fn)
+	requester, err := NewRequester(c.Goroutines, c.Verbose, int64(c.N), c.Duration, fn, c)
 	ExitIfErr(err)
 
 	var ln net.Listener

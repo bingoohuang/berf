@@ -45,8 +45,9 @@ type Requester struct {
 	// Qps is the rate limit in queries per second.
 	QPS float64
 
-	ctx context.Context
-	fn  Fn
+	ctx    context.Context
+	fn     Fn
+	config *Config
 }
 
 type ClientOpt struct {
@@ -68,7 +69,7 @@ type ClientOpt struct {
 	dialTimeout  time.Duration
 }
 
-func NewRequester(concurrency, verbose int, requests int64, duration time.Duration, fn Fn) (*Requester, error) {
+func NewRequester(concurrency, verbose int, requests int64, duration time.Duration, fn Fn, config *Config) (*Requester, error) {
 	maxResult := concurrency * 100
 	if maxResult > 8192 {
 		maxResult = 8192
@@ -90,6 +91,7 @@ func NewRequester(concurrency, verbose int, requests int64, duration time.Durati
 		cancel:      cancelFunc,
 		fn:          fn,
 		think:       think,
+		config:      config,
 	}
 
 	return r, nil
@@ -104,7 +106,7 @@ func (r *Requester) closeRecord() {
 func (r *Requester) doRequest(rr *ReportRecord) (err error) {
 	var result *FnResult
 	t1 := time.Now()
-	result, err = r.fn()
+	result, err = r.fn(r.config)
 	rr.cost = time.Since(t1)
 	if err != nil {
 		return err
