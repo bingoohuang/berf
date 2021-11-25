@@ -376,7 +376,7 @@ func (p *Printer) buildSummary(r *SnapshotReport, isFinal bool, sr *SummaryRepor
 	}
 
 	sr.Counting = r.Counting
-	if p.verbose >= 1 {
+	if p.verbose >= 1 && sr.Counting > 1 {
 		summaryBulk = append(summaryBulk, []string{"Counting", fmt.Sprintf("%d", r.Counting)})
 	}
 
