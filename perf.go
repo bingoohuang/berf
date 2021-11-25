@@ -82,7 +82,7 @@ func StartBench(fn Fn, fns ...ConfigFn) {
 	if c.Duration > 0 {
 		desc += fmt.Sprintf(" for %s", c.Duration)
 	}
-	desc += fmt.Sprintf(" using %d connection(s), %d GoMaxProcs", c.Goroutines, c.GoMaxProcs)
+	desc += fmt.Sprintf(" using %d goroutine(s), %d GoMaxProcs", c.Goroutines, c.GoMaxProcs)
 	if c.Features != "" {
 		desc += fmt.Sprintf(" with feature: %s", c.Features)
 	}
