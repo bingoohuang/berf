@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os/exec"
 	"strings"
 	"text/template"
 	"time"
@@ -36,27 +35,38 @@ const (
 )
 
 var (
+	views         = []string{latencyView, latencyPercentileView, rpsView, concurrentView}
 	viewSeriesNum = make(map[string]int)
 )
 
 const (
 	ViewTpl = `
-$(function () { setInterval({{ .ViewID }}_sync, {{ .Interval }}); });
-function {{ .ViewID }}_sync() {
+$(function () {
+setInterval(views_sync, {{ .Interval }}); });
+let views = {{.ViewsMap}};
+function views_sync() {
     $.ajax({
         type: "GET",
-        url: "{{ .APIPath }}{{ .Route }}",
+        url: "{{ .APIPath }}",
         dataType: "json",
-        success: function (result) {
-            let opt = goecharts_{{ .ViewID }}.getOption();
-            let x = opt.xAxis[0].data;
-            x.push(result.time);
-            opt.xAxis[0].data = x;
-            for (let i = 0; i < result.values.length; i++) {
-                let y = opt.series[i].data;
-                y.push({ value: result.values[i] });
-                opt.series[i].data = y;
-                goecharts_{{ .ViewID }}.setOption(opt);
+        success: function (dict) {
+            for (let key in dict) {
+                let arr = dict[key];
+                let view = views[key];
+                let opt = view.getOption();
+                let x = opt.xAxis[0].data;
+
+                for (let j = 0; j < arr.length; j++) {
+                    let result = arr[j];
+                    x.push(result.time);
+                    opt.xAxis[0].data = x;
+                    for (let i = 0; i < result.values.length; i++) {
+                        let y = opt.series[i].data;
+                        y.push({ value: result.values[i] });
+                        opt.series[i].data = y;
+                        view.setOption(opt);
+                    }
+                }
             }
         }
     });
@@ -76,22 +86,26 @@ function {{ .ViewID }}_sync() {
 `
 )
 
-func (c *Charts) genViewTemplate(vid, route string) string {
+func (c *Charts) genViewTemplate(routerChartsMap map[string]string) string {
 	tpl, err := template.New("view").Parse(ViewTpl)
 	if err != nil {
 		panic("failed to parse template " + err.Error())
 	}
 
+	viewsMap := "{"
+	for k, v := range routerChartsMap {
+		viewsMap += k + ": goecharts_" + v + ","
+	}
+	viewsMap += "noop: 123}"
+
 	d := struct {
 		Interval int
 		APIPath  string
-		Route    string
-		ViewID   string
+		ViewsMap string
 	}{
 		Interval: int(time.Second.Milliseconds()),
 		APIPath:  dataPath,
-		Route:    route,
-		ViewID:   vid,
+		ViewsMap: viewsMap,
 	}
 
 	buf := bytes.Buffer{}
@@ -102,6 +116,8 @@ func (c *Charts) genViewTemplate(vid, route string) string {
 	return buf.String()
 }
 
+var routerChartsMap = make(map[string]string)
+
 func (c *Charts) newBasicView(route string) *charts.Line {
 	g := charts.NewLine()
 	g.SetGlobalOptions(charts.WithTooltipOpts(opts.Tooltip{Show: true, Trigger: "axis"}),
@@ -110,7 +126,11 @@ func (c *Charts) newBasicView(route string) *charts.Line {
 		charts.WithDataZoomOpts(opts.DataZoom{Type: "slider", XAxisIndex: []int{0}}),
 	)
 	g.SetXAxis([]string{}).SetSeriesOptions(charts.WithLineChartOpts(opts.LineChart{Smooth: true}))
-	g.AddJSFuncs(c.genViewTemplate(g.ChartID, route))
+
+	routerChartsMap[route] = g.ChartID
+	if len(routerChartsMap) == len(views) {
+		g.AddJSFuncs(c.genViewTemplate(routerChartsMap))
+	}
 	return g
 }
 
@@ -164,20 +184,20 @@ func (c *Charts) newRPSView() components.Charter {
 }
 
 type Metrics struct {
-	Values []interface{} `json:"values"`
-	Time   string        `json:"time"`
+	Time   string      `json:"time"`
+	Values interface{} `json:"values"`
 }
 
 type Charts struct {
-	page     *components.Page
-	ln       net.Listener
-	dataFunc func() *ChartsReport
+	page       *components.Page
+	ln         net.Listener
+	chartsData chan *ChartsReport
 }
 
-func NewCharts(ln net.Listener, dataFunc func() *ChartsReport, desc string) (*Charts, error) {
+func NewCharts(ln net.Listener, chartsData chan *ChartsReport, desc string) (*Charts, error) {
 	templates.PageTpl = fmt.Sprintf(PageTpl, desc)
 
-	c := &Charts{ln: ln, dataFunc: dataFunc}
+	c := &Charts{ln: ln, chartsData: chartsData}
 	c.page = components.NewPage()
 	c.page.PageTitle = "perf"
 	c.page.AssetsHost = assetsPath
@@ -187,31 +207,29 @@ func NewCharts(ln net.Listener, dataFunc func() *ChartsReport, desc string) (*Ch
 	return c, nil
 }
 
-func (c *Charts) generateData(view string) []interface{} {
-	rd := c.dataFunc()
+func (c *Charts) generateData() interface{} {
+	t := time.Now().Format("15:04:05")
+	m := map[string][]Metrics{}
+	rd := <-c.chartsData
 	if rd == nil {
-		return make([]interface{}, viewSeriesNum[view])
+		for _, view := range views {
+			m[view] = []Metrics{{Time: t, Values: make([]interface{}, viewSeriesNum[view])}}
+		}
+		return m
 	}
 
-	switch view {
-	case latencyPercentileView:
-		return rd.LatencyPercentiles
-	case latencyView:
-		return rd.Latency
-	case concurrentView:
-		return []interface{}{rd.Concurrent}
-	case rpsView:
-		return []interface{}{rd.RPS}
-	}
+	m[latencyPercentileView] = []Metrics{{Time: t, Values: rd.LatencyPercentiles}}
+	m[latencyView] = []Metrics{{Time: t, Values: rd.Latency}}
+	m[concurrentView] = []Metrics{{Time: t, Values: []interface{}{rd.Concurrent}}}
+	m[rpsView] = []Metrics{{Time: t, Values: []interface{}{rd.RPS}}}
 
-	return nil
+	return m
 }
 
 func (c *Charts) Handler(ctx *fasthttp.RequestCtx) {
 	switch path := string(ctx.Path()); {
-	case strings.HasPrefix(path, dataPath):
-		view := path[len(dataPath):]
-		m := &Metrics{Time: time.Now().Format("15:04:05"), Values: c.generateData(view)}
+	case path == dataPath:
+		m := c.generateData()
 		_ = json.NewEncoder(ctx).Encode(m)
 	case path == "/":
 		ctx.SetContentType("text/html")
@@ -246,21 +264,4 @@ func (c *Charts) Serve(port int) {
 
 	err := server.Serve(c.ln)
 	ExitIfErr(err)
-}
-
-// appearsSuccessful reports whether the command appears to have run successfully.
-// If the command runs longer than the timeout, it's deemed successful.
-// If the command runs within the timeout, it's deemed successful if it exited cleanly.
-func appearsSuccessful(cmd *exec.Cmd, timeout time.Duration) bool {
-	errc := make(chan error, 1)
-	go func() {
-		errc <- cmd.Wait()
-	}()
-
-	select {
-	case <-time.After(timeout):
-		return true
-	case err := <-errc:
-		return err == nil
-	}
 }

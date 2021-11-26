@@ -2,13 +2,16 @@ package perf
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"github.com/bingoohuang/gg/pkg/ss"
+	"log"
 	"net"
 	"os"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/bingoohuang/gg/pkg/ss"
 
 	"github.com/bingoohuang/gg/pkg/fla9"
 )
@@ -24,6 +27,7 @@ var (
 	pGoIncrDur  = fla9.Duration(pf+"cd", time.Minute, "Interval among goroutines number change")
 	pQps        = fla9.Float64(pf+"qps", 0, "QPS rate limit")
 	pFeatures   = fla9.String(pf+"f", "", "Features, e.g. a,b,c")
+	pPlotsFile  = fla9.String(pf+"plots", "", "Plots filename to save")
 	pVerbose    = fla9.Count(pf+"v", 0, "Verbose level, e.g. -v -vv")
 	pThinkTime  = fla9.String(pf+"think", "", "Think time among requests, eg. 1s, 10ms, 10-20ms and etc. (unit ns, us/µs, ms, s, m, h)")
 	pPort       = fla9.Int(pf+"p", 28888, "Listen port for serve Web UI")
@@ -48,6 +52,7 @@ type Config struct {
 	FeatureMap
 	CountingName string
 	OkStatus     string
+	PlotsFile    string
 }
 
 type ConfigFn func(*Config)
@@ -74,7 +79,7 @@ type F func(context.Context, *Config) (*Result, error)
 func StartBench(fn F, fns ...ConfigFn) {
 	c := &Config{
 		N: *pN, Duration: *pDuration, Goroutines: *pGoroutines, GoMaxProcs: *pGoMaxProcs,
-		GoIncr: *pGoIncr, GoIncrDur: *pGoIncrDur,
+		GoIncr: *pGoIncr, GoIncrDur: *pGoIncrDur, PlotsFile: *pPlotsFile,
 		Qps: *pQps, Features: *pFeatures, Verbose: *pVerbose, ThinkTime: *pThinkTime, ChartPort: *pPort,
 	}
 	for _, f := range fns {
@@ -100,16 +105,48 @@ func StartBench(fn F, fns ...ConfigFn) {
 }
 
 func (c *Config) serveCharts(report *StreamReport, desc string) {
+	chartsData := make(chan *ChartsReport, 180)
+
+	go c.collectChartData(report.requester.ctx, chartsData, report.Charts)
+
 	if c.ChartPort > 0 && c.N != 1 && c.Verbose >= 1 {
 		addr := fmt.Sprintf(":%d", c.ChartPort)
 		ln, err := net.Listen("tcp", addr)
 		ExitIfErr(err)
 		fmt.Printf("@Real-time charts is on http://127.0.0.1:%d\n", c.ChartPort)
 
-		// serve charts data
-		charts, err := NewCharts(ln, report.Charts, desc)
+		charts, err := NewCharts(ln, chartsData, desc)
 		ExitIfErr(err)
 		go charts.Serve(c.ChartPort)
+	}
+}
+
+func (c *Config) collectChartData(ctx context.Context, chartsData chan *ChartsReport, chartsFn func() *ChartsReport) {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	var plotsFile *os.File
+	if c.PlotsFile != "" {
+		v, err := os.Create(c.PlotsFile)
+		if err != nil {
+			log.Fatalf("Fail to open plots file: %v", err)
+		}
+		plotsFile = v
+		defer plotsFile.Close()
+	}
+
+	for ctx.Err() == nil {
+		<-ticker.C
+		charts := chartsFn()
+
+		if charts != nil && plotsFile != nil {
+			if chartsJSON, err := json.Marshal(charts); err == nil {
+				plotsFile.Write(chartsJSON)
+				plotsFile.WriteString("\n")
+			}
+		}
+
+		chartsData <- charts
 	}
 }
 
