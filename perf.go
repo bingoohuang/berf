@@ -17,8 +17,8 @@ var (
 	pGoMaxProcs = fla9.Int("t", runtime.GOMAXPROCS(0), "Number of GOMAXPROCS")
 	pGoroutines = fla9.Int64("c", 300, "Number of goroutines")
 	pQps        = fla9.Float64("qps", 0, "QPS per worker")
-	pFeatures   = fla9.String("f", "", "features, e.g. a,b,c")
-	pVerbose    = fla9.Count("v", 0, "verbose level")
+	pFeatures   = fla9.String("f", "", "Features, e.g. a,b,c")
+	pVerbose    = fla9.Count("v", 0, "Verbose level, e.g. -v -vv")
 	pThinkTime  = fla9.String("think", "", "Think time among requests, eg. 1s, 10ms, 10-20ms and etc. (unit ns, us/µs, ms, s, m, h)")
 	pPort       = fla9.Int("p", 28888, "Listen port for serve Web UI")
 )
@@ -85,7 +85,7 @@ func StartBench(fn F, fns ...ConfigFn) {
 	go report.Collect(requester.recordChan)
 
 	p := c.createTerminalPrinter()
-	p.PrintLoop(report.Snapshot, 500*time.Millisecond, false, report.Done(), c.N)
+	p.PrintLoop(report.Snapshot, 500*time.Millisecond, report.Done(), c.N)
 }
 
 func (c *Config) serveCharts(report *StreamReport, desc string) {

@@ -102,35 +102,33 @@ func (c *Charts) genViewTemplate(vid, route string) string {
 }
 
 func (c *Charts) newBasicView(route string) *charts.Line {
-	graph := charts.NewLine()
-	graph.SetGlobalOptions(
+	g := charts.NewLine()
+	g.SetGlobalOptions(
 		charts.WithTooltipOpts(opts.Tooltip{Show: true, Trigger: "axis"}),
 		charts.WithXAxisOpts(opts.XAxis{Name: "Time"}),
-		charts.WithInitializationOpts(opts.Initialization{
-			Width:  "700px",
-			Height: "400px",
-		}),
-		charts.WithDataZoomOpts(opts.DataZoom{
-			Type:       "slider",
-			XAxisIndex: []int{0},
-		}),
+		charts.WithInitializationOpts(opts.Initialization{Width: "800px", Height: "400px"}),
+		charts.WithDataZoomOpts(opts.DataZoom{Type: "slider", XAxisIndex: []int{0}}),
 	)
-	graph.SetXAxis([]string{}).SetSeriesOptions(charts.WithLineChartOpts(opts.LineChart{Smooth: true}))
-	graph.AddJSFuncs(c.genViewTemplate(graph.ChartID, route))
-	return graph
+	g.SetXAxis([]string{}).SetSeriesOptions(charts.WithLineChartOpts(opts.LineChart{Smooth: true}))
+	g.AddJSFuncs(c.genViewTemplate(g.ChartID, route))
+	return g
 }
 
 func (c *Charts) newLatencyView() components.Charter {
-	graph := c.newBasicView(latencyView)
-	graph.SetGlobalOptions(
+	g := c.newBasicView(latencyView)
+	g.SetGlobalOptions(
 		charts.WithTitleOpts(opts.Title{Title: "Latency"}),
 		charts.WithYAxisOpts(opts.YAxis{Scale: true, AxisLabel: &opts.AxisLabel{Formatter: "{value} ms"}}),
-		charts.WithLegendOpts(opts.Legend{Show: true, Selected: map[string]bool{"Min": false, "Max": false}}),
+		charts.WithLegendOpts(opts.Legend{Show: true, Selected: map[string]bool{
+			"Min": false, "Max": false, "StdDev": false,
+		}}),
 	)
-	graph.AddSeries("Min", []opts.LineData{}).
+	g.
+		AddSeries("Min", []opts.LineData{}).
 		AddSeries("Mean", []opts.LineData{}).
+		AddSeries("StdDev", []opts.LineData{}).
 		AddSeries("Max", []opts.LineData{})
-	return graph
+	return g
 }
 
 func (c *Charts) newRPSView() components.Charter {
@@ -168,18 +166,18 @@ func NewCharts(ln net.Listener, dataFunc func() *ChartsReport, desc string) (*Ch
 }
 
 func (c *Charts) Handler(ctx *fasthttp.RequestCtx) {
-	path := string(ctx.Path())
-	switch {
+	switch path := string(ctx.Path()); {
 	case strings.HasPrefix(path, dataPath):
-		view := path[len(dataPath):]
 		var values []interface{}
 		reportData := c.dataFunc()
-		switch view {
+		switch view := path[len(dataPath):]; view {
 		case latencyView:
 			if reportData != nil {
-				values = append(values, reportData.Latency.min/1e6)
-				values = append(values, reportData.Latency.Mean()/1e6)
-				values = append(values, reportData.Latency.max/1e6)
+				values = append(values,
+					reportData.Latency.min/1e6,
+					reportData.Latency.Mean()/1e6,
+					reportData.Latency.Stddev()/1e6,
+					reportData.Latency.max/1e6)
 			} else {
 				values = append(values, nil, nil, nil)
 			}
@@ -200,8 +198,7 @@ func (c *Charts) Handler(ctx *fasthttp.RequestCtx) {
 		_ = c.page.Render(ctx)
 	case strings.HasPrefix(path, assetsPath):
 		ap := path[len(assetsPath):]
-		f, err := assetsFS.Open(ap)
-		if err != nil {
+		if f, err := assetsFS.Open(ap); err != nil {
 			ctx.Error(err.Error(), 404)
 		} else {
 			ctx.SetBodyStream(f, -1)

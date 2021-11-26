@@ -63,7 +63,7 @@ func (p *Printer) updateProgressValue(rs *SnapshotReport) {
 	}
 }
 
-func (p *Printer) PrintLoop(snapshot func() *SnapshotReport, interval time.Duration, useSeconds bool, doneChan <-chan struct{}, requests int64) {
+func (p *Printer) PrintLoop(snapshot func() *SnapshotReport, interval time.Duration, doneChan <-chan struct{}, requests int64) {
 	out := os.Stdout
 
 	var echo func(isFinal bool)
@@ -76,7 +76,7 @@ func (p *Printer) PrintLoop(snapshot func() *SnapshotReport, interval time.Durat
 		out.WriteString(backCursor)
 
 		buf.Reset()
-		p.formatTableReports(buf, r, isFinal, useSeconds)
+		p.formatTableReports(buf, r, isFinal)
 
 		n := printLines(buf.Bytes(), out)
 		backCursor = fmt.Sprintf("\033[%dA", n)
@@ -154,11 +154,11 @@ func colorize(s string, seq int) string {
 	return fmt.Sprintf("\033[%dm%s\033[0m", seq, s)
 }
 
-func durationToString(d time.Duration, useSeconds bool) string {
+func durationToString(d time.Duration) string {
 	d = d.Truncate(time.Microsecond)
-	if useSeconds {
-		return formatFloat64(d.Seconds())
-	}
+	//if useSeconds {
+	//	return formatFloat64(d.Seconds())
+	//}
 	return d.String()
 }
 
@@ -210,22 +210,22 @@ type Report struct {
 	PercentileReport `json:"Percentile"`
 }
 
-func (p *Printer) formatTableReports(w *bytes.Buffer, r *SnapshotReport, isFinal bool, useSeconds bool) Report {
+func (p *Printer) formatTableReports(w *bytes.Buffer, r *SnapshotReport, isFinal bool) Report {
 	w.WriteString("\nSummary:\n")
 	report := Report{}
 	writeBulk(w, p.buildSummary(r, isFinal, &report.SummaryReport))
 
 	w.WriteString("\n")
 	p.printError(w, r)
-	writeBulkWith(w, p.buildStats(r, useSeconds, &report.StatsReport), "", "  ", "\n")
+	writeBulkWith(w, p.buildStats(r, &report.StatsReport), "", "  ", "\n")
 
 	w.WriteString("\nLatency Percentile:\n")
 	report.PercentileReport = make(map[string]string)
-	writeBulk(w, p.buildPercentile(r, useSeconds, report.PercentileReport))
+	writeBulk(w, p.buildPercentile(r, report.PercentileReport))
 
 	if p.verbose >= 1 {
 		w.WriteString("\nLatency Histogram:\n")
-		writeBulk(w, p.buildHistogram(r, useSeconds, isFinal))
+		writeBulk(w, p.buildHistogram(r))
 	}
 	return report
 }
@@ -241,7 +241,7 @@ func (p *Printer) printError(w *bytes.Buffer, r *SnapshotReport) bool {
 	return false
 }
 
-func (p *Printer) buildHistogram(r *SnapshotReport, useSeconds bool, isFinal bool) [][]string {
+func (p *Printer) buildHistogram(r *SnapshotReport) [][]string {
 	hisBulk := make([][]string, 0, 8)
 	maxCount := 0
 	hisSum := 0
@@ -252,35 +252,30 @@ func (p *Printer) buildHistogram(r *SnapshotReport, useSeconds bool, isFinal boo
 		hisSum += bin.Count
 	}
 	for _, bin := range r.Histograms {
-		row := []string{durationToString(bin.Mean, useSeconds), strconv.Itoa(bin.Count)}
-		if isFinal {
-			row = append(row, fmt.Sprintf("%.2f%%", math.Floor(float64(bin.Count)*1e4/float64(hisSum)+0.5)/100.0))
-		} else {
-			barLen := 0
-			if maxCount > 0 {
-				barLen = (bin.Count*maxBarLen + maxCount/2) / maxCount
-			}
-			row = append(row, strings.Repeat(barBody, barLen))
+		row := []string{durationToString(bin.Mean), strconv.Itoa(bin.Count)}
+
+		barLen := 0
+		if maxCount > 0 {
+			barLen = (bin.Count*maxBarLen + maxCount/2) / maxCount
 		}
+		percent := fmt.Sprintf("%.2f%%", math.Floor(float64(bin.Count)*1e4/float64(hisSum)+0.5)/100.0)
+		row = append(row, percent, strings.Repeat(barBody, barLen))
 		hisBulk = append(hisBulk, row)
 	}
-	if isFinal {
-		alignBulk(hisBulk, AlignLeft, AlignRight, AlignRight)
-	} else {
-		alignBulk(hisBulk, AlignLeft, AlignRight, AlignLeft)
-	}
+
+	alignBulk(hisBulk, AlignLeft, AlignRight, AlignRight, AlignLeft)
 	return hisBulk
 }
 
 type PercentileReport map[string]string
 
-func (p *Printer) buildPercentile(r *SnapshotReport, useSeconds bool, report PercentileReport) [][]string {
+func (p *Printer) buildPercentile(r *SnapshotReport, report PercentileReport) [][]string {
 	percBulk := make([][]string, 2)
 	percAligns := make([]int, 0, len(r.Percentiles))
 	for _, percentile := range r.Percentiles {
 		perc := formatFloat64(percentile.Percentile * 100)
 		percBulk[0] = append(percBulk[0], "P"+perc)
-		percValue := durationToString(percentile.Latency, useSeconds)
+		percValue := durationToString(percentile.Latency)
 
 		report["P"+perc] = percValue
 		percBulk[1] = append(percBulk[1], percValue)
@@ -300,9 +295,9 @@ type StatsReport struct {
 	RPS     StatItem
 }
 
-func (p *Printer) buildStats(r *SnapshotReport, useSeconds bool, stats *StatsReport) [][]string {
+func (p *Printer) buildStats(r *SnapshotReport, stats *StatsReport) [][]string {
 	st := r.Stats
-	dts := func(d time.Duration) string { return durationToString(d, useSeconds) }
+	dts := func(d time.Duration) string { return durationToString(d) }
 	stats.Latency.Min = dts(st.Min)
 	stats.Latency.Mean = dts(st.Mean)
 	stats.Latency.StdDev = dts(st.StdDev)

@@ -2,13 +2,14 @@ package perf
 
 import (
 	"context"
-	"github.com/bingoohuang/gg/pkg/ss"
 	"os"
 	"os/signal"
 	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/bingoohuang/gg/pkg/ss"
 
 	"github.com/bingoohuang/gg/pkg/thinktime"
 )
