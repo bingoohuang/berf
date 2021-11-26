@@ -3,6 +3,7 @@ package perf
 import (
 	"math"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/axiomhq/hyperloglog"
@@ -95,10 +96,11 @@ type StreamReport struct {
 	readBytes  int64
 	writeBytes int64
 
-	doneChan chan struct{}
+	doneChan  chan struct{}
+	requester *Requester
 }
 
-func NewStreamReport() *StreamReport {
+func NewStreamReport(requester *Requester) *StreamReport {
 	return &StreamReport{
 		latencyQuantile:  quantile.NewTargeted(quantilesTarget),
 		latencyHistogram: histogram.New(8),
@@ -109,6 +111,7 @@ func NewStreamReport() *StreamReport {
 		latencyStats:     &Stats{},
 		rpsStats:         &Stats{},
 		latencyWithinSec: &Stats{},
+		requester:        requester,
 	}
 }
 
@@ -260,8 +263,10 @@ func (s *StreamReport) Snapshot() *SnapshotReport {
 func (s *StreamReport) Done() <-chan struct{} { return s.doneChan }
 
 type ChartsReport struct {
-	RPS     float64
-	Latency Stats
+	RPS                float64
+	Latency            []interface{}
+	LatencyPercentiles []interface{}
+	Concurrent         int64
 }
 
 func (s *StreamReport) Charts() *ChartsReport {
@@ -272,5 +277,16 @@ func (s *StreamReport) Charts() *ChartsReport {
 		return nil
 	}
 
-	return &ChartsReport{RPS: s.rpsWithinSec, Latency: *s.latencyWithinSec}
+	percentiles := make([]interface{}, len(quantiles))
+	for i, p := range quantiles {
+		percentiles[i] = s.latencyQuantile.Query(p) / 1e6
+	}
+
+	l := s.latencyWithinSec
+	return &ChartsReport{
+		RPS:                s.rpsWithinSec,
+		Latency:            []interface{}{l.min / 1e6, l.Mean() / 1e6, l.Stddev() / 1e6, l.max / 1e6},
+		LatencyPercentiles: percentiles,
+		Concurrent:         atomic.LoadInt64(&s.requester.concurrent),
+	}
 }

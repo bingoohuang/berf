@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 	"text/template"
 	"time"
@@ -29,13 +27,15 @@ import (
 var assetsFS embed.FS
 
 const (
-	assetsPath      = "/echarts/statics/"
-	dataPath        = "/data/"
-	apiPath         = "/api/"
-	latencyView     = "latency"
-	rpsView         = "rps"
-	timeFormat      = "15:04:05"
-	refreshInterval = time.Second
+	assetsPath            = "/echarts/statics/"
+	dataPath              = "/data/"
+	apiPath               = "/api/"
+	latencyView           = "latency"
+	latencyPercentileView = "latencyPercentile"
+	rpsView               = "rps"
+	concurrentView        = "concurrent"
+	timeFormat            = "15:04:05"
+	refreshInterval       = time.Second
 )
 
 const (
@@ -131,6 +131,36 @@ func (c *Charts) newLatencyView() components.Charter {
 	return g
 }
 
+func (c *Charts) newLatencyPercentileView() components.Charter {
+	g := c.newBasicView(latencyPercentileView)
+	g.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{Title: "Latency Percentile"}),
+		charts.WithYAxisOpts(opts.YAxis{Scale: true, AxisLabel: &opts.AxisLabel{Formatter: "{value} ms"}}),
+		charts.WithLegendOpts(opts.Legend{Show: true, Selected: map[string]bool{
+			"P75": false, "P95": false, "P99.9": false, "P99.99": false,
+		}}),
+	)
+	g.
+		AddSeries("P50", []opts.LineData{}).
+		AddSeries("P75", []opts.LineData{}).
+		AddSeries("P90", []opts.LineData{}).
+		AddSeries("P95", []opts.LineData{}).
+		AddSeries("P99", []opts.LineData{}).
+		AddSeries("P99.9", []opts.LineData{}).
+		AddSeries("P99.99", []opts.LineData{})
+	return g
+}
+
+func (c *Charts) newConcurrentView() components.Charter {
+	graph := c.newBasicView(rpsView)
+	graph.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{Title: "Concurrent"}),
+		charts.WithYAxisOpts(opts.YAxis{Scale: true}),
+	)
+	graph.AddSeries("Concurrent", []opts.LineData{})
+	return graph
+}
+
 func (c *Charts) newRPSView() components.Charter {
 	graph := c.newBasicView(rpsView)
 	graph.SetGlobalOptions(
@@ -160,7 +190,7 @@ func NewCharts(ln net.Listener, dataFunc func() *ChartsReport, desc string) (*Ch
 	c.page.PageTitle = "blow"
 	c.page.AssetsHost = assetsPath
 	c.page.Assets.JSAssets.Add("jquery.min.js")
-	c.page.AddCharts(c.newLatencyView(), c.newRPSView())
+	c.page.AddCharts(c.newLatencyView(), c.newRPSView(), c.newLatencyPercentileView(), c.newConcurrentView())
 
 	return c, nil
 }
@@ -168,31 +198,35 @@ func NewCharts(ln net.Listener, dataFunc func() *ChartsReport, desc string) (*Ch
 func (c *Charts) Handler(ctx *fasthttp.RequestCtx) {
 	switch path := string(ctx.Path()); {
 	case strings.HasPrefix(path, dataPath):
-		var values []interface{}
-		reportData := c.dataFunc()
+		m := &Metrics{Time: time.Now().Format(timeFormat)}
+		rd := c.dataFunc()
 		switch view := path[len(dataPath):]; view {
-		case latencyView:
-			if reportData != nil {
-				values = append(values,
-					reportData.Latency.min/1e6,
-					reportData.Latency.Mean()/1e6,
-					reportData.Latency.Stddev()/1e6,
-					reportData.Latency.max/1e6)
+		case latencyPercentileView:
+			if rd != nil {
+				m.Values = append(m.Values, rd.LatencyPercentiles...)
 			} else {
-				values = append(values, nil, nil, nil)
+				m.Values = append(m.Values, nil, nil, nil, nil, nil, nil, nil)
+			}
+		case latencyView:
+			if rd != nil {
+				m.Values = append(m.Values, rd.Latency...)
+			} else {
+				m.Values = append(m.Values, nil, nil, nil, nil)
+			}
+		case concurrentView:
+			if rd != nil {
+				m.Values = append(m.Values, rd.Concurrent)
+			} else {
+				m.Values = append(m.Values, nil)
 			}
 		case rpsView:
-			if reportData != nil {
-				values = append(values, reportData.RPS)
+			if rd != nil {
+				m.Values = append(m.Values, rd.RPS)
 			} else {
-				values = append(values, nil)
+				m.Values = append(m.Values, nil)
 			}
 		}
-		metrics := &Metrics{
-			Time:   time.Now().Format(timeFormat),
-			Values: values,
-		}
-		_ = json.NewEncoder(ctx).Encode(metrics)
+		_ = json.NewEncoder(ctx).Encode(m)
 	case path == "/":
 		ctx.SetContentType("text/html")
 		_ = c.page.Render(ctx)
@@ -222,37 +256,10 @@ func (c *Charts) Serve(port int) {
 
 	time.Sleep(3 * time.Second) // 3s之后再弹出，避免运行时间过短，程序已经退出
 
-	go openBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
+	go OpenBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
 
 	err := server.Serve(c.ln)
 	ExitIfErr(err)
-}
-
-// openBrowser go/src/cmd/internal/browser/browser.go
-func openBrowser(url string) bool {
-	var cmds [][]string
-	if exe := os.Getenv("BROWSER"); exe != "" {
-		cmds = append(cmds, []string{exe})
-	}
-	switch runtime.GOOS {
-	case "darwin":
-		cmds = append(cmds, []string{"/usr/bin/open"})
-	case "windows":
-		cmds = append(cmds, []string{"cmd", "/c", "start"})
-	default:
-		if os.Getenv("DISPLAY") != "" {
-			// xdg-open is only for use in a desktop environment.
-			cmds = append(cmds, []string{"xdg-open"})
-		}
-	}
-	cmds = append(cmds, []string{"chrome"}, []string{"google-chrome"}, []string{"chromium"}, []string{"firefox"})
-	for _, args := range cmds {
-		cmd := exec.Command(args[0], append(args[1:], url)...)
-		if cmd.Start() == nil && appearsSuccessful(cmd, 3*time.Second) {
-			return true
-		}
-	}
-	return false
 }
 
 // appearsSuccessful reports whether the command appears to have run successfully.

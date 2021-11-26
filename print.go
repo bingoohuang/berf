@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/mattn/go-isatty"
@@ -38,6 +39,7 @@ type Printer struct {
 	pbDurStr    string
 	verbose     int
 	config      *Config
+	concurrent  *int64
 }
 
 func (p *Printer) updateProgressValue(rs *SnapshotReport) {
@@ -63,7 +65,7 @@ func (p *Printer) updateProgressValue(rs *SnapshotReport) {
 	}
 }
 
-func (p *Printer) PrintLoop(snapshot func() *SnapshotReport, interval time.Duration, doneChan <-chan struct{}, requests int64) {
+func (p *Printer) PrintLoop(snapshot func() *SnapshotReport, interval time.Duration, doneChan <-chan struct{}, requests int) {
 	out := os.Stdout
 
 	var echo func(isFinal bool)
@@ -346,12 +348,21 @@ func (p *Printer) buildSummary(r *SnapshotReport, isFinal bool, sr *SummaryRepor
 	if p.maxDuration > 0 && !isFinal {
 		elapsedLine = append(elapsedLine, p.pbDurStr)
 	}
+
 	sr.Count = r.Count
 	countLine := []string{"Count/RPS", fmt.Sprintf("%d %.3f", r.Count, r.RPS)}
 	if p.maxNum > 0 && !isFinal {
 		countLine = append(countLine, p.pbNumStr)
 	}
-	summaryBulk := [][]string{elapsedLine, countLine}
+
+	var summaryBulk [][]string
+	if p.config.GoIncr > 0 {
+		concurrentLine := []string{"Concurrent", fmt.Sprintf("%d", atomic.LoadInt64(p.concurrent))}
+		summaryBulk = append(summaryBulk, concurrentLine)
+	}
+
+	summaryBulk = append(summaryBulk, elapsedLine, countLine)
+
 	codesBulks := make([][]string, 0, len(r.Codes))
 	okStatus := p.config.OkStatus
 	for k, v := range r.Codes {

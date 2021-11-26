@@ -3,7 +3,9 @@ package perf
 import (
 	"context"
 	"fmt"
+	"github.com/bingoohuang/gg/pkg/ss"
 	"net"
+	"os"
 	"runtime"
 	"strings"
 	"time"
@@ -12,22 +14,30 @@ import (
 )
 
 var (
-	pN          = fla9.Int64("n", 0, "Total number of requests")
-	pDuration   = fla9.Duration("d", 0, "Duration of test, examples: -d10s -d3m")
-	pGoMaxProcs = fla9.Int("t", runtime.GOMAXPROCS(0), "Number of GOMAXPROCS")
-	pGoroutines = fla9.Int64("c", 300, "Number of goroutines")
-	pQps        = fla9.Float64("qps", 0, "QPS per worker")
-	pFeatures   = fla9.String("f", "", "Features, e.g. a,b,c")
-	pVerbose    = fla9.Count("v", 0, "Verbose level, e.g. -v -vv")
-	pThinkTime  = fla9.String("think", "", "Think time among requests, eg. 1s, 10ms, 10-20ms and etc. (unit ns, us/µs, ms, s, m, h)")
-	pPort       = fla9.Int("p", 28888, "Listen port for serve Web UI")
+	pf = os.Getenv("PERF_PRE")
+
+	pN          = fla9.Int(pf+"n", 0, "Total number of requests")
+	pDuration   = fla9.Duration(pf+"d", 0, "Duration of test, examples: -d10s -d3m")
+	pGoMaxProcs = fla9.Int(pf+"t", runtime.GOMAXPROCS(0), "Number of GOMAXPROCS")
+	pGoroutines = fla9.Int(pf+"c", 100, "Number of goroutines")
+	pGoIncr     = fla9.Int(pf+"ci", 0, "Goroutines incremental mode. 0: none, n: incr by n up to max then down to")
+	pGoIncrDur  = fla9.Duration(pf+"cd", time.Minute, "Interval among goroutines number change")
+	pQps        = fla9.Float64(pf+"qps", 0, "QPS rate limit")
+	pFeatures   = fla9.String(pf+"f", "", "Features, e.g. a,b,c")
+	pVerbose    = fla9.Count(pf+"v", 0, "Verbose level, e.g. -v -vv")
+	pThinkTime  = fla9.String(pf+"think", "", "Think time among requests, eg. 1s, 10ms, 10-20ms and etc. (unit ns, us/µs, ms, s, m, h)")
+	pPort       = fla9.Int(pf+"p", 28888, "Listen port for serve Web UI")
 )
 
 // Config defines the bench configuration.
 type Config struct {
-	N          int64
+	N          int
+	Goroutines int
 	Duration   time.Duration
-	Goroutines int64
+
+	GoIncr    int
+	GoIncrDur time.Duration
+
 	GoMaxProcs int
 	Qps        float64
 	Features   string
@@ -64,6 +74,7 @@ type F func(context.Context, *Config) (*Result, error)
 func StartBench(fn F, fns ...ConfigFn) {
 	c := &Config{
 		N: *pN, Duration: *pDuration, Goroutines: *pGoroutines, GoMaxProcs: *pGoMaxProcs,
+		GoIncr: *pGoIncr, GoIncrDur: *pGoIncrDur,
 		Qps: *pQps, Features: *pFeatures, Verbose: *pVerbose, ThinkTime: *pThinkTime, ChartPort: *pPort,
 	}
 	for _, f := range fns {
@@ -78,13 +89,13 @@ func StartBench(fn F, fns ...ConfigFn) {
 	desc := c.Description()
 	fmt.Println(desc)
 
-	report := NewStreamReport()
+	report := NewStreamReport(requester)
 	c.serveCharts(report, desc)
 
 	go requester.Run()
 	go report.Collect(requester.recordChan)
 
-	p := c.createTerminalPrinter()
+	p := c.createTerminalPrinter(&requester.concurrent)
 	p.PrintLoop(report.Snapshot, 500*time.Millisecond, report.Done(), c.N)
 }
 
@@ -142,11 +153,17 @@ func (c *Config) Description() string {
 	if c.Duration > 0 {
 		desc += fmt.Sprintf(" for %s", c.Duration)
 	}
-	return desc + fmt.Sprintf(" using %d goroutine(s), %d GoMaxProcs.", c.Goroutines, c.GoMaxProcs)
+
+	return desc + fmt.Sprintf(" using %s%d goroutine(s), %d GoMaxProcs.",
+		ss.If(c.GoIncr > 0, "max", ""),
+		c.Goroutines, c.GoMaxProcs)
 }
 
-func (c *Config) createTerminalPrinter() *Printer {
-	return &Printer{maxNum: c.N, maxDuration: c.Duration, verbose: c.Verbose, config: c}
+func (c *Config) createTerminalPrinter(concurrent *int64) *Printer {
+	return &Printer{
+		maxNum: int64(c.N), maxDuration: c.Duration, verbose: c.Verbose, config: c,
+		concurrent: concurrent,
+	}
 }
 
 // FeatureMap defines a feature map.

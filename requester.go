@@ -28,8 +28,8 @@ func init() {
 }
 
 type Requester struct {
-	goroutines int64
-	n          int64
+	goroutines int
+	n          int
 	verbose    int
 	duration   time.Duration
 
@@ -49,6 +49,8 @@ type Requester struct {
 	ctx    context.Context
 	fn     F
 	config *Config
+
+	concurrent int64
 }
 
 func (c *Config) NewRequester(fn F) (*Requester, error) {
@@ -80,10 +82,10 @@ func (r *Requester) closeRecord() {
 	})
 }
 
-func (r *Requester) doRequest(rr *ReportRecord) (err error) {
+func (r *Requester) doRequest(ctx context.Context, rr *ReportRecord) (err error) {
 	var result *Result
 	t1 := time.Now()
-	result, err = r.fn(r.ctx, r.config)
+	result, err = r.fn(ctx, r.config)
 	rr.cost = time.Since(t1)
 	if err != nil {
 		return err
@@ -116,47 +118,95 @@ func (r *Requester) Run() {
 		})
 	}
 
-	semaphore := r.n
-	for i := int64(0); i < r.goroutines; i++ {
-		r.wg.Add(1)
-		go func() {
-			defer func() {
-				r.wg.Done()
-				v := recover()
-				if v != nil && v != sendOnCloseError {
-					panic(v)
-				}
-			}()
+	throttle := func() {}
+	if r.QPS > 0 {
+		t := time.NewTicker(time.Duration(1e6/(r.QPS)) * time.Microsecond)
+		defer t.Stop()
+		throttle = func() { <-t.C }
+	}
 
-			throttle := func() {}
-			if r.QPS > 0 {
-				t := time.Tick(time.Duration(1e6/(r.QPS)) * time.Microsecond)
-				throttle = func() { <-t }
-			}
+	semaphore := int64(r.n)
 
-			for r.ctx.Err() == nil {
-				if r.n > 0 && atomic.AddInt64(&semaphore, -1) < 0 {
-					r.cancelFunc()
-					return
-				}
+	if r.config.GoIncr == 0 {
+		for i := 0; i < r.goroutines; i++ {
+			r.wg.Add(1)
+			go r.loopWork(r.ctx, &semaphore, throttle)
+		}
+	} else {
+		ch := make(chan context.Context)
+		go r.generateTokens(ch)
 
-				throttle()
-
-				rr := recordPool.Get().(*ReportRecord)
-				rr.Reset()
-				r.runOne(rr)
-				r.recordChan <- rr
-				r.thinking()
-			}
-		}()
+		for ctx := range ch {
+			r.wg.Add(1)
+			go r.loopWork(ctx, &semaphore, throttle)
+		}
 	}
 
 	r.wg.Wait()
 	r.closeRecord()
 }
 
-func (r *Requester) runOne(rr *ReportRecord) *ReportRecord {
-	err := r.doRequest(rr)
+func (r *Requester) generateTokens(ch chan context.Context) {
+	defer close(ch)
+
+	dur := r.config.GoIncrDur
+	if dur <= 0 {
+		dur = time.Minute
+	}
+
+	max := r.config.Goroutines
+	cancels := make([]context.CancelFunc, max)
+	var ctx context.Context
+
+	t := time.NewTicker(dur)
+	defer t.Stop()
+
+	incr := r.config.GoIncr
+	for i := 0; i < max; {
+		for j := i; j < i+incr && j < max; j++ {
+			ctx, cancels[j] = context.WithCancel(r.ctx)
+			ch <- ctx
+		}
+		i += incr
+		<-t.C
+	}
+
+	for i := max - 1; i >= 0; i-- {
+		for j := i; j >= i-incr && j >= 0; j-- {
+			cancels[j]()
+		}
+		<-t.C
+	}
+}
+
+func (r *Requester) loopWork(ctx context.Context, semaphore *int64, throttle func()) {
+	atomic.AddInt64(&r.concurrent, 1)
+	defer func() {
+		r.wg.Done()
+		atomic.AddInt64(&r.concurrent, -1)
+		if v := recover(); v != nil && v != sendOnCloseError {
+			panic(v)
+		}
+	}()
+
+	for ctx.Err() == nil {
+		if r.n > 0 && atomic.AddInt64(semaphore, -1) < 0 {
+			r.cancelFunc()
+			return
+		}
+
+		throttle()
+
+		rr := recordPool.Get().(*ReportRecord)
+		rr.Reset()
+		r.runOne(ctx, rr)
+		r.recordChan <- rr
+		r.thinking()
+	}
+}
+
+func (r *Requester) runOne(ctx context.Context, rr *ReportRecord) *ReportRecord {
+	err := r.doRequest(ctx, rr)
 	if err != nil {
 		rr.error = err.Error()
 	}
