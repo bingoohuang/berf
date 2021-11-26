@@ -22,20 +22,21 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-//go:embed echarts.min.js
-//go:embed jquery.min.js
+//go:embed echarts.min.js jquery.min.js
 var assetsFS embed.FS
 
 const (
-	assetsPath            = "/echarts/statics/"
-	dataPath              = "/data/"
-	apiPath               = "/api/"
+	assetsPath = "/echarts/statics/"
+	dataPath   = "/data/"
+
 	latencyView           = "latency"
 	latencyPercentileView = "latencyPercentile"
 	rpsView               = "rps"
 	concurrentView        = "concurrent"
-	timeFormat            = "15:04:05"
-	refreshInterval       = time.Second
+)
+
+var (
+	viewSeriesNum = make(map[string]int)
 )
 
 const (
@@ -66,7 +67,7 @@ function {{ .ViewID }}_sync() {
 <html>
     {{- template "header" . }}
 <body>
-<p align="center">🚀 <a href="https://github.com/bingoohuang/blow"><b>Blow</b></a> %s</p>
+<p align="center">🚀 <a href="https://github.com/bingoohuang/perf"><b>Perf</b></a> %s</p>
 <style> .box { justify-content:center; display:flex; flex-wrap:wrap } </style>
 <div class="box"> {{- range .Charts }} {{ template "base" . }} {{- end }} </div>
 </body>
@@ -87,7 +88,7 @@ func (c *Charts) genViewTemplate(vid, route string) string {
 		Route    string
 		ViewID   string
 	}{
-		Interval: int(refreshInterval.Milliseconds()),
+		Interval: int(time.Second.Milliseconds()),
 		APIPath:  dataPath,
 		Route:    route,
 		ViewID:   vid,
@@ -121,8 +122,11 @@ func (c *Charts) newLatencyView() components.Charter {
 			"Min": false, "Max": false, "StdDev": false,
 		}}),
 	)
-	g.AddSeries("Min", []opts.LineData{}).AddSeries("Mean", []opts.LineData{}).
-		AddSeries("StdDev", []opts.LineData{}).AddSeries("Max", []opts.LineData{})
+
+	for _, p := range []string{"Min", "Mean", "StdDev", "Max"} {
+		g.AddSeries(p, []opts.LineData{})
+	}
+	viewSeriesNum[latencyView] = len(g.MultiSeries)
 	return g
 }
 
@@ -135,10 +139,11 @@ func (c *Charts) newLatencyPercentileView() components.Charter {
 			"P75": false, "P95": false, "P99.9": false, "P99.99": false,
 		}}),
 	)
-	g.AddSeries("P50", []opts.LineData{}).AddSeries("P75", []opts.LineData{}).
-		AddSeries("P90", []opts.LineData{}).AddSeries("P95", []opts.LineData{}).
-		AddSeries("P99", []opts.LineData{}).AddSeries("P99.9", []opts.LineData{}).
-		AddSeries("P99.99", []opts.LineData{})
+
+	for _, p := range []string{"P50", "P75", "P90", "P95", "P99", "P99.9", "P99.99"} {
+		g.AddSeries(p, []opts.LineData{})
+	}
+	viewSeriesNum[latencyPercentileView] = len(g.MultiSeries)
 	return g
 }
 
@@ -146,6 +151,7 @@ func (c *Charts) newConcurrentView() components.Charter {
 	g := c.newBasicView(concurrentView)
 	g.SetGlobalOptions(charts.WithTitleOpts(opts.Title{Title: "Concurrent"}), charts.WithYAxisOpts(opts.YAxis{Scale: true}))
 	g.AddSeries("Concurrent", []opts.LineData{})
+	viewSeriesNum[concurrentView] = len(g.MultiSeries)
 	return g
 }
 
@@ -153,6 +159,7 @@ func (c *Charts) newRPSView() components.Charter {
 	g := c.newBasicView(rpsView)
 	g.SetGlobalOptions(charts.WithTitleOpts(opts.Title{Title: "TPS"}), charts.WithYAxisOpts(opts.YAxis{Scale: true}))
 	g.AddSeries("RPS", []opts.LineData{})
+	viewSeriesNum[rpsView] = len(g.MultiSeries)
 	return g
 }
 
@@ -172,7 +179,7 @@ func NewCharts(ln net.Listener, dataFunc func() *ChartsReport, desc string) (*Ch
 
 	c := &Charts{ln: ln, dataFunc: dataFunc}
 	c.page = components.NewPage()
-	c.page.PageTitle = "blow"
+	c.page.PageTitle = "perf"
 	c.page.AssetsHost = assetsPath
 	c.page.Assets.JSAssets.Add("jquery.min.js")
 	c.page.AddCharts(c.newLatencyView(), c.newRPSView(), c.newLatencyPercentileView(), c.newConcurrentView())
@@ -180,37 +187,31 @@ func NewCharts(ln net.Listener, dataFunc func() *ChartsReport, desc string) (*Ch
 	return c, nil
 }
 
+func (c *Charts) generateData(view string) []interface{} {
+	rd := c.dataFunc()
+	if rd == nil {
+		return make([]interface{}, viewSeriesNum[view])
+	}
+
+	switch view {
+	case latencyPercentileView:
+		return rd.LatencyPercentiles
+	case latencyView:
+		return rd.Latency
+	case concurrentView:
+		return []interface{}{rd.Concurrent}
+	case rpsView:
+		return []interface{}{rd.RPS}
+	}
+
+	return nil
+}
+
 func (c *Charts) Handler(ctx *fasthttp.RequestCtx) {
 	switch path := string(ctx.Path()); {
 	case strings.HasPrefix(path, dataPath):
-		m := &Metrics{Time: time.Now().Format(timeFormat)}
-		rd := c.dataFunc()
-		switch view := path[len(dataPath):]; view {
-		case latencyPercentileView:
-			if rd != nil {
-				m.Values = append(m.Values, rd.LatencyPercentiles...)
-			} else {
-				m.Values = append(m.Values, nil, nil, nil, nil, nil, nil, nil)
-			}
-		case latencyView:
-			if rd != nil {
-				m.Values = append(m.Values, rd.Latency...)
-			} else {
-				m.Values = append(m.Values, nil, nil, nil, nil)
-			}
-		case concurrentView:
-			if rd != nil {
-				m.Values = append(m.Values, rd.Concurrent)
-			} else {
-				m.Values = append(m.Values, nil)
-			}
-		case rpsView:
-			if rd != nil {
-				m.Values = append(m.Values, rd.RPS)
-			} else {
-				m.Values = append(m.Values, nil)
-			}
-		}
+		view := path[len(dataPath):]
+		m := &Metrics{Time: time.Now().Format("15:04:05"), Values: c.generateData(view)}
 		_ = json.NewEncoder(ctx).Encode(m)
 	case path == "/":
 		ctx.SetContentType("text/html")
@@ -222,7 +223,7 @@ func (c *Charts) Handler(ctx *fasthttp.RequestCtx) {
 		} else {
 			ctx.SetBodyStream(f, -1)
 		}
-	case strings.HasPrefix(path, apiPath):
+	case strings.HasPrefix(path, "/api/"):
 		if n, err := ctx.Write(ctx.Request.Body()); err != nil {
 			log.Println(err)
 		} else if n == 0 {
