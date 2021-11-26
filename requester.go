@@ -172,7 +172,7 @@ func (r *Requester) generateTokens(ch chan context.Context) {
 
 	for i := max - 1; i >= 0; i-- {
 		<-t.C
-		for j := i; j >= i-incr && j >= 0; j-- {
+		for j := i; j > i-incr && j >= 0; j-- {
 			cancels[j]()
 		}
 	}
