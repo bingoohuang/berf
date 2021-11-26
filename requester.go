@@ -162,20 +162,19 @@ func (r *Requester) generateTokens(ch chan context.Context) {
 	defer t.Stop()
 
 	incr := r.config.GoIncr
-	for i := 0; i < max; {
+	for i := 0; i < max; i += incr {
 		for j := i; j < i+incr && j < max; j++ {
 			ctx, cancels[j] = context.WithCancel(r.ctx)
 			ch <- ctx
 		}
-		i += incr
 		<-t.C
 	}
 
 	for i := max - 1; i >= 0; i-- {
+		<-t.C
 		for j := i; j >= i-incr && j >= 0; j-- {
 			cancels[j]()
 		}
-		<-t.C
 	}
 }
 

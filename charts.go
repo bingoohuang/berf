@@ -103,8 +103,7 @@ func (c *Charts) genViewTemplate(vid, route string) string {
 
 func (c *Charts) newBasicView(route string) *charts.Line {
 	g := charts.NewLine()
-	g.SetGlobalOptions(
-		charts.WithTooltipOpts(opts.Tooltip{Show: true, Trigger: "axis"}),
+	g.SetGlobalOptions(charts.WithTooltipOpts(opts.Tooltip{Show: true, Trigger: "axis"}),
 		charts.WithXAxisOpts(opts.XAxis{Name: "Time"}),
 		charts.WithInitializationOpts(opts.Initialization{Width: "800px", Height: "400px"}),
 		charts.WithDataZoomOpts(opts.DataZoom{Type: "slider", XAxisIndex: []int{0}}),
@@ -116,18 +115,14 @@ func (c *Charts) newBasicView(route string) *charts.Line {
 
 func (c *Charts) newLatencyView() components.Charter {
 	g := c.newBasicView(latencyView)
-	g.SetGlobalOptions(
-		charts.WithTitleOpts(opts.Title{Title: "Latency"}),
+	g.SetGlobalOptions(charts.WithTitleOpts(opts.Title{Title: "Latency"}),
 		charts.WithYAxisOpts(opts.YAxis{Scale: true, AxisLabel: &opts.AxisLabel{Formatter: "{value} ms"}}),
 		charts.WithLegendOpts(opts.Legend{Show: true, Selected: map[string]bool{
 			"Min": false, "Max": false, "StdDev": false,
 		}}),
 	)
-	g.
-		AddSeries("Min", []opts.LineData{}).
-		AddSeries("Mean", []opts.LineData{}).
-		AddSeries("StdDev", []opts.LineData{}).
-		AddSeries("Max", []opts.LineData{})
+	g.AddSeries("Min", []opts.LineData{}).AddSeries("Mean", []opts.LineData{}).
+		AddSeries("StdDev", []opts.LineData{}).AddSeries("Max", []opts.LineData{})
 	return g
 }
 
@@ -140,35 +135,25 @@ func (c *Charts) newLatencyPercentileView() components.Charter {
 			"P75": false, "P95": false, "P99.9": false, "P99.99": false,
 		}}),
 	)
-	g.
-		AddSeries("P50", []opts.LineData{}).
-		AddSeries("P75", []opts.LineData{}).
-		AddSeries("P90", []opts.LineData{}).
-		AddSeries("P95", []opts.LineData{}).
-		AddSeries("P99", []opts.LineData{}).
-		AddSeries("P99.9", []opts.LineData{}).
+	g.AddSeries("P50", []opts.LineData{}).AddSeries("P75", []opts.LineData{}).
+		AddSeries("P90", []opts.LineData{}).AddSeries("P95", []opts.LineData{}).
+		AddSeries("P99", []opts.LineData{}).AddSeries("P99.9", []opts.LineData{}).
 		AddSeries("P99.99", []opts.LineData{})
 	return g
 }
 
 func (c *Charts) newConcurrentView() components.Charter {
-	graph := c.newBasicView(concurrentView)
-	graph.SetGlobalOptions(
-		charts.WithTitleOpts(opts.Title{Title: "Concurrent"}),
-		charts.WithYAxisOpts(opts.YAxis{Scale: true}),
-	)
-	graph.AddSeries("Concurrent", []opts.LineData{})
-	return graph
+	g := c.newBasicView(concurrentView)
+	g.SetGlobalOptions(charts.WithTitleOpts(opts.Title{Title: "Concurrent"}), charts.WithYAxisOpts(opts.YAxis{Scale: true}))
+	g.AddSeries("Concurrent", []opts.LineData{})
+	return g
 }
 
 func (c *Charts) newRPSView() components.Charter {
-	graph := c.newBasicView(rpsView)
-	graph.SetGlobalOptions(
-		charts.WithTitleOpts(opts.Title{Title: "Reqs/sec"}),
-		charts.WithYAxisOpts(opts.YAxis{Scale: true}),
-	)
-	graph.AddSeries("RPS", []opts.LineData{})
-	return graph
+	g := c.newBasicView(rpsView)
+	g.SetGlobalOptions(charts.WithTitleOpts(opts.Title{Title: "TPS"}), charts.WithYAxisOpts(opts.YAxis{Scale: true}))
+	g.AddSeries("RPS", []opts.LineData{})
+	return g
 }
 
 type Metrics struct {
