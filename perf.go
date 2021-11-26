@@ -155,7 +155,7 @@ func (c *Config) Description() string {
 	}
 
 	return desc + fmt.Sprintf(" using %s%d goroutine(s), %d GoMaxProcs.",
-		ss.If(c.GoIncr > 0, "max", ""),
+		ss.If(c.GoIncr > 0, "max ", ""),
 		c.Goroutines, c.GoMaxProcs)
 }
 

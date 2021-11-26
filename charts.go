@@ -152,7 +152,7 @@ func (c *Charts) newLatencyPercentileView() components.Charter {
 }
 
 func (c *Charts) newConcurrentView() components.Charter {
-	graph := c.newBasicView(rpsView)
+	graph := c.newBasicView(concurrentView)
 	graph.SetGlobalOptions(
 		charts.WithTitleOpts(opts.Title{Title: "Concurrent"}),
 		charts.WithYAxisOpts(opts.YAxis{Scale: true}),
