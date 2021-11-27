@@ -356,7 +356,7 @@ func (p *Printer) buildSummary(r *SnapshotReport, isFinal bool, sr *SummaryRepor
 	}
 
 	var summaryBulk [][]string
-	if p.config.GoIncr > 0 {
+	if !p.config.Incr.IsEmpty() {
 		concurrentLine := []string{"Concurrent", fmt.Sprintf("%d", atomic.LoadInt64(p.concurrent))}
 		summaryBulk = append(summaryBulk, concurrentLine)
 	}

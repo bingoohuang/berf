@@ -127,7 +127,7 @@ func (r *Requester) Run() {
 
 	semaphore := int64(r.n)
 
-	if r.config.GoIncr == 0 {
+	if r.config.Incr.IsEmpty() {
 		for i := 0; i < r.goroutines; i++ {
 			r.wg.Add(1)
 			go r.loopWork(r.ctx, &semaphore, throttle)
@@ -149,7 +149,7 @@ func (r *Requester) Run() {
 func (r *Requester) generateTokens(ch chan context.Context) {
 	defer close(ch)
 
-	dur := r.config.GoIncrDur
+	dur := r.config.Incr.Dur
 	if dur <= 0 {
 		dur = time.Minute
 	}
@@ -161,19 +161,27 @@ func (r *Requester) generateTokens(ch chan context.Context) {
 	t := time.NewTicker(dur)
 	defer t.Stop()
 
-	incr := r.config.GoIncr
-	for i := 0; i < max; i += incr {
-		for j := i; j < i+incr && j < max; j++ {
-			ctx, cancels[j] = context.WithCancel(r.ctx)
+	if up := r.config.Incr.Up; up <= 0 {
+		for i := 0; i < max; i++ {
+			ctx, cancels[i] = context.WithCancel(r.ctx)
 			ch <- ctx
 		}
-		<-t.C
+	} else {
+		for i := 0; i < max; i += up {
+			for j := i; j < i+up && j < max; j++ {
+				ctx, cancels[j] = context.WithCancel(r.ctx)
+				ch <- ctx
+			}
+			<-t.C
+		}
 	}
 
-	for i := max - 1; i >= 0; i-- {
-		<-t.C
-		for j := i; j > i-incr && j >= 0; j-- {
-			cancels[j]()
+	if down := r.config.Incr.Down; down > 0 {
+		for i := max - 1; i >= 0; i-- {
+			<-t.C
+			for j := i; j > i-down && j >= 0; j-- {
+				cancels[j]()
+			}
 		}
 	}
 }

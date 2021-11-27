@@ -4,14 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"runtime"
 	"strings"
 	"time"
-
-	"github.com/bingoohuang/gg/pkg/ss"
 
 	"github.com/bingoohuang/gg/pkg/fla9"
 )
@@ -23,11 +20,10 @@ var (
 	pDuration   = fla9.Duration(pf+"d", 0, "Duration of test, examples: -d10s -d3m")
 	pGoMaxProcs = fla9.Int(pf+"t", runtime.GOMAXPROCS(0), "Number of GOMAXPROCS")
 	pGoroutines = fla9.Int(pf+"c", 100, "Number of goroutines")
-	pGoIncr     = fla9.Int(pf+"ci", 0, "Goroutines incremental mode. 0: none, n: incr by n up to max then down to")
-	pGoIncrDur  = fla9.Duration(pf+"cd", time.Minute, "Interval among goroutines number change")
+	pGoIncr     = fla9.String(pf+"ci", "", "Goroutines incremental mode. empty: none; 1: up by step 1 to max every 1m; 1:10s: up to max by step 1 by n every 10s; 1:10s:1 up to max then down to 0 by step1 every 10s.")
 	pQps        = fla9.Float64(pf+"qps", 0, "QPS rate limit")
 	pFeatures   = fla9.String(pf+"f", "", "Features, e.g. a,b,c")
-	pPlotsFile  = fla9.String(pf+"plots", "", "Plots filename to save")
+	pPlotsFile  = fla9.String(pf+"plots", "", "Plots filename, append :dry to show exists plots in dry mode")
 	pVerbose    = fla9.Count(pf+"v", 0, "Verbose level, e.g. -v -vv")
 	pThinkTime  = fla9.String(pf+"think", "", "Think time among requests, eg. 1s, 10ms, 10-20ms and etc. (unit ns, us/µs, ms, s, m, h)")
 	pPort       = fla9.Int(pf+"p", 28888, "Listen port for serve Web UI")
@@ -38,9 +34,7 @@ type Config struct {
 	N          int
 	Goroutines int
 	Duration   time.Duration
-
-	GoIncr    int
-	GoIncrDur time.Duration
+	Incr       GoroutineIncr
 
 	GoMaxProcs int
 	Qps        float64
@@ -53,6 +47,7 @@ type Config struct {
 	CountingName string
 	OkStatus     string
 	PlotsFile    string
+	PlotsHandle  *LogFile
 }
 
 type ConfigFn func(*Config)
@@ -79,7 +74,7 @@ type F func(context.Context, *Config) (*Result, error)
 func StartBench(fn F, fns ...ConfigFn) {
 	c := &Config{
 		N: *pN, Duration: *pDuration, Goroutines: *pGoroutines, GoMaxProcs: *pGoMaxProcs,
-		GoIncr: *pGoIncr, GoIncrDur: *pGoIncrDur, PlotsFile: *pPlotsFile,
+		Incr: ParseGoIncr(*pGoIncr), PlotsFile: *pPlotsFile,
 		Qps: *pQps, Features: *pFeatures, Verbose: *pVerbose, ThinkTime: *pThinkTime, ChartPort: *pPort,
 	}
 	for _, f := range fns {
@@ -92,7 +87,9 @@ func StartBench(fn F, fns ...ConfigFn) {
 	ExitIfErr(err)
 
 	desc := c.Description()
-	fmt.Println(desc)
+	if !c.IsDryPlots() {
+		fmt.Println(desc)
+	}
 
 	report := NewStreamReport(requester)
 	c.serveCharts(report, desc)
@@ -105,49 +102,65 @@ func StartBench(fn F, fns ...ConfigFn) {
 }
 
 func (c *Config) serveCharts(report *StreamReport, desc string) {
-	chartsData := make(chan *ChartsReport, 180)
+	chartsData := make(chan []byte, 60) // 1m
 
 	go c.collectChartData(report.requester.ctx, chartsData, report.Charts)
 
-	if c.ChartPort > 0 && c.N != 1 && c.Verbose >= 1 {
+	if c.ChartPort > 0 && c.N != 1 && c.Verbose >= 1 || c.IsDryPlots() {
 		addr := fmt.Sprintf(":%d", c.ChartPort)
 		ln, err := net.Listen("tcp", addr)
 		ExitIfErr(err)
 		fmt.Printf("@Real-time charts is on http://127.0.0.1:%d\n", c.ChartPort)
 
-		charts, err := NewCharts(ln, chartsData, desc)
-		ExitIfErr(err)
-		go charts.Serve(c.ChartPort)
+		charts := NewCharts(ln, chartsData, desc, c)
+		charts.Serve(c.ChartPort)
 	}
 }
 
-func (c *Config) collectChartData(ctx context.Context, chartsData chan *ChartsReport, chartsFn func() *ChartsReport) {
+func (c *Config) collectChartData(ctx context.Context, chartsData chan []byte, chartsFn func() *ChartsReport) {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
-	var plotsFile *os.File
-	if c.PlotsFile != "" {
-		v, err := os.Create(c.PlotsFile)
-		if err != nil {
-			log.Fatalf("Fail to open plots file: %v", err)
-		}
-		plotsFile = v
-		defer plotsFile.Close()
+	c.PlotsHandle = NewFile(c.PlotsFile)
+	defer c.PlotsHandle.Close()
+
+	if c.PlotsHandle.IsDry() {
+		return
 	}
 
 	for ctx.Err() == nil {
 		<-ticker.C
-		charts := chartsFn()
 
-		if charts != nil && plotsFile != nil {
-			if chartsJSON, err := json.Marshal(charts); err == nil {
-				plotsFile.Write(chartsJSON)
-				plotsFile.WriteString("\n")
-			}
+		rd := chartsFn()
+		plots := createMetrics(rd)
+		TryWrite(chartsData, plots)
+		if rd != nil {
+			c.PlotsHandle.Write(plots, ",\n")
 		}
-
-		chartsData <- charts
 	}
+}
+
+type Metrics struct {
+	Time   string                 `json:"time"`
+	Values map[string]interface{} `json:"values"`
+}
+
+func createMetrics(rd *ChartsReport) []byte {
+	m := map[string]interface{}{}
+	if rd == nil {
+		for k, v := range viewSeriesNum {
+			m[k] = make([]interface{}, v)
+		}
+	} else {
+		m[latencyPercentileView] = rd.LatencyPercentiles
+		m[latencyView] = rd.Latency
+		m[concurrentView] = []interface{}{rd.Concurrent}
+		m[rpsView] = []interface{}{rd.RPS}
+	}
+
+	md := Metrics{Time: time.Now().Format("15:04:05"), Values: m}
+	data, _ := json.Marshal(md)
+	return data
 }
 
 // Setup setups the environment by the config.
@@ -191,9 +204,7 @@ func (c *Config) Description() string {
 		desc += fmt.Sprintf(" for %s", c.Duration)
 	}
 
-	return desc + fmt.Sprintf(" using %s%d goroutine(s), %d GoMaxProcs.",
-		ss.If(c.GoIncr > 0, "max ", ""),
-		c.Goroutines, c.GoMaxProcs)
+	return desc + fmt.Sprintf(" using %s%d goroutine(s), %d GoMaxProcs.", c.Incr.Modifier(), c.Goroutines, c.GoMaxProcs)
 }
 
 func (c *Config) createTerminalPrinter(concurrent *int64) *Printer {
@@ -202,6 +213,8 @@ func (c *Config) createTerminalPrinter(concurrent *int64) *Printer {
 		concurrent: concurrent,
 	}
 }
+
+func (c *Config) IsDryPlots() bool { return IsFileNameDry(c.PlotsFile) }
 
 // FeatureMap defines a feature map.
 type FeatureMap map[string]bool

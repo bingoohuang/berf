@@ -3,7 +3,7 @@
 perf framework for local methods.
 
 ```sh
-$ perf -f demo -v -ci 1 -cd 3s -c10 -plots demo.json
+$ perf -f demo -v -ci 1 -cd 3s -c10
 Benchmarking demo using max 10 goroutine(s), 12 GoMaxProcs.
 @Real-time charts is on http://127.0.0.1:28888
 

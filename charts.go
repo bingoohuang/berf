@@ -3,7 +3,6 @@ package perf
 import (
 	"bytes"
 	"embed"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -34,48 +33,49 @@ const (
 	concurrentView        = "concurrent"
 )
 
-var (
-	views         = []string{latencyView, latencyPercentileView, rpsView, concurrentView}
-	viewSeriesNum = make(map[string]int)
-)
+var viewSeriesNum = map[string]int{latencyView: 4, latencyPercentileView: 7, rpsView: 1, concurrentView: 1}
 
 const (
 	ViewTpl = `
 $(function () {
-setInterval(views_sync, {{ .Interval }}); });
+{{ .SetInterval }}(views_sync, {{ .Interval }}); });
 let views = {{.ViewsMap}};
 function views_sync() {
-    $.ajax({
-        type: "GET",
-        url: "{{ .APIPath }}",
-        dataType: "json",
-        success: function (dict) {
-            for (let key in dict) {
-                let arr = dict[key];
-                let view = views[key];
-                let opt = view.getOption();
-                let x = opt.xAxis[0].data;
-
-                for (let j = 0; j < arr.length; j++) {
-                    let result = arr[j];
-                    x.push(result.time);
-                    opt.xAxis[0].data = x;
-                    for (let i = 0; i < result.values.length; i++) {
-                        let y = opt.series[i].data;
-                        y.push({ value: result.values[i] });
-                        opt.series[i].data = y;
-                        view.setOption(opt);
-                    }
-                }
-            }
-        }
-    });
+	$.ajax({
+		type: "GET",
+		url: "{{ .APIPath }}",
+		dataType: "json",
+		success: function (dictArr) {
+			for (let j = 0; j < dictArr.length; j++) {
+				let dict = dictArr[j];
+				for (let key in dict.values) {
+					let view = views[key];
+					if (!view) {
+						continue;
+					}
+					let opt = view.getOption();
+	
+					let x = opt.xAxis[0].data;
+					x.push(dict.time);
+					opt.xAxis[0].data = x;
+					
+					let arr = dict.values[key];
+					for (let i = 0; i < arr.length; i++) {
+						let y = opt.series[i].data;
+						y.push({ value: arr[i]});
+						opt.series[i].data = y;
+					}
+					view.setOption(opt);
+				}
+			}
+		}
+	});
 }`
 	PageTpl = `
 {{- define "page" }}
 <!DOCTYPE html>
 <html>
-    {{- template "header" . }}
+	{{- template "header" . }}
 <body>
 <p align="center">🚀 <a href="https://github.com/bingoohuang/perf"><b>Perf</b></a> %s</p>
 <style> .box { justify-content:center; display:flex; flex-wrap:wrap } </style>
@@ -86,7 +86,7 @@ function views_sync() {
 `
 )
 
-func (c *Charts) genViewTemplate(routerChartsMap map[string]string) string {
+func (c *Views) genViewTemplate(routerChartsMap map[string]string) string {
 	tpl, err := template.New("view").Parse(ViewTpl)
 	if err != nil {
 		panic("failed to parse template " + err.Error())
@@ -99,13 +99,20 @@ func (c *Charts) genViewTemplate(routerChartsMap map[string]string) string {
 	viewsMap += "noop: 123}"
 
 	d := struct {
-		Interval int
-		APIPath  string
-		ViewsMap string
+		Interval    int
+		APIPath     string
+		ViewsMap    string
+		SetInterval string
 	}{
-		Interval: int(time.Second.Milliseconds()),
-		APIPath:  dataPath,
-		ViewsMap: viewsMap,
+		Interval:    int(time.Second.Milliseconds()),
+		APIPath:     dataPath,
+		ViewsMap:    viewsMap,
+		SetInterval: "setInterval",
+	}
+
+	if c.dryPlots {
+		d.Interval = 1
+		d.SetInterval = "setTimeout"
 	}
 
 	buf := bytes.Buffer{}
@@ -116,25 +123,39 @@ func (c *Charts) genViewTemplate(routerChartsMap map[string]string) string {
 	return buf.String()
 }
 
-var routerChartsMap = make(map[string]string)
+type Views struct {
+	routerChartsMap map[string]string
+	num             int
+	size            WidthHeight
+	dryPlots        bool
+}
 
-func (c *Charts) newBasicView(route string) *charts.Line {
+func NewViews(num int, size string, dryPlots bool) *Views {
+	return &Views{
+		num:             num,
+		routerChartsMap: make(map[string]string),
+		size:            ParseWidthHeight(size, 800, 400),
+		dryPlots:        dryPlots,
+	}
+}
+
+func (c *Views) newBasicView(route string) *charts.Line {
 	g := charts.NewLine()
 	g.SetGlobalOptions(charts.WithTooltipOpts(opts.Tooltip{Show: true, Trigger: "axis"}),
 		charts.WithXAxisOpts(opts.XAxis{Name: "Time"}),
-		charts.WithInitializationOpts(opts.Initialization{Width: "800px", Height: "400px"}),
+		charts.WithInitializationOpts(opts.Initialization{Width: c.size.WidthPx(), Height: c.size.HeightPx()}),
 		charts.WithDataZoomOpts(opts.DataZoom{Type: "slider", XAxisIndex: []int{0}}),
 	)
 	g.SetXAxis([]string{}).SetSeriesOptions(charts.WithLineChartOpts(opts.LineChart{Smooth: true}))
 
-	routerChartsMap[route] = g.ChartID
-	if len(routerChartsMap) == len(views) {
-		g.AddJSFuncs(c.genViewTemplate(routerChartsMap))
+	c.routerChartsMap[route] = g.ChartID
+	if len(c.routerChartsMap) == c.num {
+		g.AddJSFuncs(c.genViewTemplate(c.routerChartsMap))
 	}
 	return g
 }
 
-func (c *Charts) newLatencyView() components.Charter {
+func (c *Views) newLatencyView() components.Charter {
 	g := c.newBasicView(latencyView)
 	g.SetGlobalOptions(charts.WithTitleOpts(opts.Title{Title: "Latency"}),
 		charts.WithYAxisOpts(opts.YAxis{Scale: true, AxisLabel: &opts.AxisLabel{Formatter: "{value} ms"}}),
@@ -146,11 +167,10 @@ func (c *Charts) newLatencyView() components.Charter {
 	for _, p := range []string{"Min", "Mean", "StdDev", "Max"} {
 		g.AddSeries(p, []opts.LineData{})
 	}
-	viewSeriesNum[latencyView] = len(g.MultiSeries)
 	return g
 }
 
-func (c *Charts) newLatencyPercentileView() components.Charter {
+func (c *Views) newLatencyPercentileView() components.Charter {
 	g := c.newBasicView(latencyPercentileView)
 	g.SetGlobalOptions(
 		charts.WithTitleOpts(opts.Title{Title: "Latency Percentile"}),
@@ -163,90 +183,77 @@ func (c *Charts) newLatencyPercentileView() components.Charter {
 	for _, p := range []string{"P50", "P75", "P90", "P95", "P99", "P99.9", "P99.99"} {
 		g.AddSeries(p, []opts.LineData{})
 	}
-	viewSeriesNum[latencyPercentileView] = len(g.MultiSeries)
 	return g
 }
 
-func (c *Charts) newConcurrentView() components.Charter {
+func (c *Views) newConcurrentView() components.Charter {
 	g := c.newBasicView(concurrentView)
 	g.SetGlobalOptions(charts.WithTitleOpts(opts.Title{Title: "Concurrent"}), charts.WithYAxisOpts(opts.YAxis{Scale: true}))
 	g.AddSeries("Concurrent", []opts.LineData{})
-	viewSeriesNum[concurrentView] = len(g.MultiSeries)
 	return g
 }
 
-func (c *Charts) newRPSView() components.Charter {
+func (c *Views) newRPSView() components.Charter {
 	g := c.newBasicView(rpsView)
 	g.SetGlobalOptions(charts.WithTitleOpts(opts.Title{Title: "TPS"}), charts.WithYAxisOpts(opts.YAxis{Scale: true}))
 	g.AddSeries("RPS", []opts.LineData{})
-	viewSeriesNum[rpsView] = len(g.MultiSeries)
 	return g
 }
 
-type Metrics struct {
-	Time   string      `json:"time"`
-	Values interface{} `json:"values"`
-}
-
 type Charts struct {
-	page       *components.Page
 	ln         net.Listener
-	chartsData chan *ChartsReport
+	chartsData chan []byte
+	config     *Config
 }
 
-func NewCharts(ln net.Listener, chartsData chan *ChartsReport, desc string) (*Charts, error) {
+func NewCharts(ln net.Listener, chartsData chan []byte, desc string, config *Config) *Charts {
 	templates.PageTpl = fmt.Sprintf(PageTpl, desc)
-
-	c := &Charts{ln: ln, chartsData: chartsData}
-	c.page = components.NewPage()
-	c.page.PageTitle = "perf"
-	c.page.AssetsHost = assetsPath
-	c.page.Assets.JSAssets.Add("jquery.min.js")
-	c.page.AddCharts(c.newLatencyView(), c.newRPSView(), c.newLatencyPercentileView(), c.newConcurrentView())
-
-	return c, nil
-}
-
-func (c *Charts) generateData() interface{} {
-	t := time.Now().Format("15:04:05")
-	m := map[string][]Metrics{}
-	rd := <-c.chartsData
-	if rd == nil {
-		for _, view := range views {
-			m[view] = []Metrics{{Time: t, Values: make([]interface{}, viewSeriesNum[view])}}
-		}
-		return m
-	}
-
-	m[latencyPercentileView] = []Metrics{{Time: t, Values: rd.LatencyPercentiles}}
-	m[latencyView] = []Metrics{{Time: t, Values: rd.Latency}}
-	m[concurrentView] = []Metrics{{Time: t, Values: []interface{}{rd.Concurrent}}}
-	m[rpsView] = []Metrics{{Time: t, Values: []interface{}{rd.RPS}}}
-
-	return m
+	return &Charts{ln: ln, chartsData: chartsData, config: config}
 }
 
 func (c *Charts) Handler(ctx *fasthttp.RequestCtx) {
 	switch path := string(ctx.Path()); {
 	case path == dataPath:
-		m := c.generateData()
-		_ = json.NewEncoder(ctx).Encode(m)
+		ctx.SetContentType(`application/json; charset=utf-8`)
+
+		if c.config.IsDryPlots() {
+			data := c.config.PlotsHandle.ReadAll()
+			if len(data) > 2 {
+				ctx.WriteString("[" + string(data[:len(data)-2]) + "]")
+			} else {
+				ctx.WriteString("[]")
+			}
+			return
+		}
+
+		select {
+		case data := <-c.chartsData:
+			ctx.WriteString("[" + string(data) + "]")
+		default:
+			ctx.WriteString("[]")
+		}
 	case path == "/":
 		ctx.SetContentType("text/html")
-		_ = c.page.Render(ctx)
+		viewNum := 3
+		if !c.config.Incr.IsEmpty() {
+			viewNum++
+		}
+		v := NewViews(viewNum, string(ctx.QueryArgs().Peek("size")), c.config.IsDryPlots())
+		page := components.NewPage()
+		page.PageTitle = "perf"
+		page.AssetsHost = assetsPath
+		page.Assets.JSAssets.Add("jquery.min.js")
+		page.AddCharts(v.newLatencyView(), v.newRPSView(), v.newLatencyPercentileView())
+		if !c.config.Incr.IsEmpty() {
+			page.AddCharts(v.newConcurrentView())
+		}
+		_ = page.Render(ctx)
 	case strings.HasPrefix(path, assetsPath):
 		ap := path[len(assetsPath):]
 		if f, err := assetsFS.Open(ap); err != nil {
 			ctx.Error(err.Error(), 404)
 		} else {
 			ctx.SetBodyStream(f, -1)
-		}
-	case strings.HasPrefix(path, "/api/"):
-		if n, err := ctx.Write(ctx.Request.Body()); err != nil {
-			log.Println(err)
-		} else if n == 0 {
-			ctx.SetContentType(`application/json; charset=utf-8`)
-			_, _ = ctx.Write([]byte(`{"status": 200, "message": "OK"}`))
 		}
 	default:
 		ctx.Error("NotFound", fasthttp.StatusNotFound)
@@ -258,10 +265,16 @@ func (c *Charts) Serve(port int) {
 		Handler: cors.DefaultHandler().CorsMiddleware(c.Handler),
 	}
 
-	time.Sleep(3 * time.Second) // 3s之后再弹出，避免运行时间过短，程序已经退出
+	if c.config.IsDryPlots() {
+		log.Printf("Running in dry mode for %s", c.config.PlotsFile)
+		go OpenBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
+		ExitIfErr(server.Serve(c.ln))
+		return
+	}
 
-	go OpenBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
-
-	err := server.Serve(c.ln)
-	ExitIfErr(err)
+	go func() {
+		time.Sleep(3 * time.Second) // 3s之后再弹出，避免运行时间过短，程序已经退出
+		go OpenBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
+		ExitIfErr(server.Serve(c.ln))
+	}()
 }
