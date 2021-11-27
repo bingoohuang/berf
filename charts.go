@@ -218,8 +218,8 @@ func (c *Charts) Handler(ctx *fasthttp.RequestCtx) {
 
 		if c.config.IsDryPlots() {
 			data := c.config.PlotsHandle.ReadAll()
-			if len(data) > 2 {
-				ctx.WriteString("[" + string(data[:len(data)-2]) + "]")
+			if len(data) > 0 {
+				ctx.Write(data)
 			} else {
 				ctx.WriteString("[]")
 			}

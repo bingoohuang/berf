@@ -47,7 +47,7 @@ type Config struct {
 	CountingName string
 	OkStatus     string
 	PlotsFile    string
-	PlotsHandle  *LogFile
+	PlotsHandle  *JSONLogFile
 }
 
 type ConfigFn func(*Config)
@@ -106,7 +106,7 @@ func (c *Config) serveCharts(report *StreamReport, desc string) {
 
 	go c.collectChartData(report.requester.ctx, chartsData, report.Charts)
 
-	if c.ChartPort > 0 && c.N != 1 && c.Verbose >= 1 || c.IsDryPlots() {
+	if c.IsDryPlots() || c.ChartPort > 0 && c.N != 1 && c.Verbose >= 1 {
 		addr := fmt.Sprintf(":%d", c.ChartPort)
 		ln, err := net.Listen("tcp", addr)
 		ExitIfErr(err)
@@ -135,7 +135,7 @@ func (c *Config) collectChartData(ctx context.Context, chartsData chan []byte, c
 		plots := createMetrics(rd)
 		TryWrite(chartsData, plots)
 		if rd != nil {
-			c.PlotsHandle.Write(plots, ",\n")
+			c.PlotsHandle.WriteJSON(plots)
 		}
 	}
 }

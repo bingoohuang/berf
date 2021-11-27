@@ -19,48 +19,43 @@ import (
 	"github.com/bingoohuang/gg/pkg/ss"
 )
 
-type LogFile struct {
+type JSONLogFile struct {
 	F *os.File
 	*sync.Mutex
-	Dry    bool
-	Closed bool
+	Dry     bool
+	Closed  bool
+	HasRows bool
 }
+
+const DrySuffix = ":dry"
 
 func IsFileNameDry(file string) bool {
-	return strings.HasSuffix(file, ":dry")
+	return strings.HasSuffix(file, DrySuffix)
 }
 
-func NewFile(file string) *LogFile {
-	dry := false
+func NewFile(file string) *JSONLogFile {
+	dry := IsFileNameDry(file)
 	if file == "" {
 		file = "perf_" + time.Now().Format(`200601021504`) + ".log"
-	} else if strings.HasSuffix(file, ":dry") {
-		file = strings.TrimSuffix(file, ":dry")
-		dry = true
+	} else if dry {
+		file = strings.TrimSuffix(file, DrySuffix)
 	}
 	f, err := os.OpenFile(file, os.O_RDWR|os.O_CREATE, 0o600)
-	logFile := &LogFile{F: f, Mutex: &sync.Mutex{}, Dry: dry}
+	logFile := &JSONLogFile{F: f, Mutex: &sync.Mutex{}, Dry: dry}
 	if err != nil {
 		log.Printf("E! Fail to open log file %s error: %v", file, err)
 	}
-	if _, err := f.Seek(0, io.SeekEnd); err != nil {
+	if n, err := f.Seek(0, io.SeekEnd); err != nil {
 		log.Printf("E! fail to seek file %s error: %v", file, err)
+	} else if n == 0 {
+		f.WriteString("[]\n")
+	} else {
+		logFile.HasRows = true
 	}
 	return logFile
 }
 
-func (f *LogFile) Close() error {
-	if f.F == nil {
-		return nil
-	}
-
-	f.Lock()
-	defer f.Unlock()
-	f.Closed = true
-	return f.F.Close()
-}
-
-func (f LogFile) ReadAll() []byte {
+func (f JSONLogFile) ReadAll() []byte {
 	if f.F == nil {
 		return nil
 	}
@@ -122,19 +117,40 @@ func ReadFile(f *os.File) ([]byte, error) {
 	}
 }
 
-func (f LogFile) Write(data []byte, extra string) (int, error) {
+func (f *JSONLogFile) WriteJSON(data []byte) error {
 	if f.F == nil {
-		return 0, nil
+		return nil
 	}
 
 	f.Lock()
 	defer f.Unlock()
-	n1, err1 := f.F.Write(data)
-	n2, err2 := f.F.WriteString(extra)
-	return n1 + n2, multierr.Append(err1, err2)
+
+	f.F.Seek(-2, io.SeekEnd) // \n]
+	var err0 error
+
+	if !f.HasRows {
+		f.HasRows = true
+		_, err0 = f.F.WriteString("\n")
+	} else {
+		_, err0 = f.F.WriteString(",\n")
+	}
+	_, err1 := f.F.Write(data)
+	_, err2 := f.F.WriteString("\n]")
+	return multierr.Combine(err0, err1, err2)
 }
 
-func (f LogFile) IsDry() bool { return f.Dry }
+func (f JSONLogFile) IsDry() bool { return f.Dry }
+
+func (f *JSONLogFile) Close() error {
+	if f.F == nil {
+		return nil
+	}
+
+	f.Lock()
+	defer f.Unlock()
+	f.Closed = true
+	return f.F.Close()
+}
 
 type PushResult int
 
