@@ -7,6 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bingoohuang/perf/cmd/util"
+
 	"github.com/axiomhq/hyperloglog"
 	"github.com/beorn7/perks/histogram"
 	"github.com/beorn7/perks/quantile"
@@ -163,7 +165,7 @@ func (s *StreamReport) Collect(records <-chan *ReportRecord) {
 		latencyWithinSecTemp.Update(float64(r.cost))
 		s.insert(float64(r.cost))
 		if len(r.code) > 0 {
-			codes := MergeCodes(r.code)
+			codes := util.MergeCodes(r.code)
 			r.code = nil
 			s.codes[codes]++
 		}
@@ -292,19 +294,17 @@ func (s *StreamReport) Charts() *ChartsReport {
 	}
 }
 
-func createMetrics(rd *ChartsReport) []byte {
-	m := map[string]interface{}{}
+func (rd *ChartsReport) createMetrics() []byte {
 	if rd == nil {
-		for k, v := range viewSeriesNum {
-			m[k] = make([]interface{}, v)
-		}
-	} else {
-		m[latencyPercentileView] = rd.LatencyPercentiles
-		m[latencyView] = rd.Latency
-		m[concurrentView] = []interface{}{rd.Concurrent}
-		m[rpsView] = []interface{}{rd.RPS}
+		return nil
 	}
 
+	m := map[string]interface{}{
+		"latencyPercentile": rd.LatencyPercentiles,
+		"latency":           rd.Latency,
+		"concurrent":        []interface{}{rd.Concurrent},
+		"tps":               []interface{}{rd.RPS},
+	}
 	md := Metrics{Time: time.Now().Format("2006-01-02 15:04:05"), Values: m}
 	data, _ := json.Marshal(md)
 	return data

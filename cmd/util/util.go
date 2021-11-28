@@ -1,12 +1,10 @@
-package perf
+package util
 
 import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
-	"net"
 	"os"
 	"os/exec"
 	"runtime"
@@ -29,12 +27,12 @@ type JSONLogFile struct {
 
 const DrySuffix = ":dry"
 
-func IsFileNameDry(file string) bool {
+func IsDrySuffix(file string) bool {
 	return strings.HasSuffix(file, DrySuffix)
 }
 
-func NewFile(file string) *JSONLogFile {
-	dry := IsFileNameDry(file)
+func NewJsonLogFile(file string) *JSONLogFile {
+	dry := IsDrySuffix(file)
 	if file == "" {
 		file = "perf_" + time.Now().Format(`200601021504`) + ".log"
 	} else if dry {
@@ -342,33 +340,6 @@ func SleepContext(ctx context.Context, duration time.Duration) {
 	return
 }
 
-func GetFreePortStart(port int) int {
-	for i := 0; i < 100; i++ {
-		if IsPortFree(port) {
-			return port
-		}
-		port++
-	}
-
-	return 0
-}
-
-// IsPortFree tells whether the port is free or not
-func IsPortFree(port int) bool {
-	l, err := ListenPort(port)
-	if err != nil {
-		return false
-	}
-
-	_ = l.Close()
-	return true
-}
-
-// ListenPort listens on port
-func ListenPort(port int) (net.Listener, error) {
-	return net.Listen("tcp", fmt.Sprintf(":%d", port))
-}
-
 func ExitIfErr(err error) {
 	if err != nil {
 		Exit(err.Error())
@@ -413,20 +384,4 @@ func mergeCodes(merged string, n int, last string) string {
 		merged += fmt.Sprintf("%s", last)
 	}
 	return merged
-}
-
-// ParseFileArg parse an argument which represents a string content,
-// or @file to represents the file's content.
-func ParseFileArg(arg string) []byte {
-	if strings.HasPrefix(arg, "@") {
-		f := (arg)[1:]
-		if v, err := ioutil.ReadFile(f); err != nil {
-			log.Fatalf("failed to read file %s, error: %v", f, err)
-			return nil
-		} else {
-			return v
-		}
-	}
-
-	return []byte(arg)
 }

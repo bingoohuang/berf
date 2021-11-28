@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bingoohuang/perf/cmd/util"
+
 	"github.com/bingoohuang/gg/pkg/ss"
 
 	"github.com/bingoohuang/gg/pkg/thinktime"
@@ -56,7 +58,7 @@ type Requester struct {
 func (c *Config) NewRequester(fn F) (*Requester, error) {
 	maxResult := c.Goroutines * 100
 	think, err := thinktime.ParseThinkTime(c.ThinkTime)
-	ExitIfErr(err)
+	util.ExitIfErr(err)
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	r := &Requester{

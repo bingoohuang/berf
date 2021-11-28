@@ -4,11 +4,19 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"github.com/bingoohuang/gg/pkg/mapp"
+	"github.com/bingoohuang/jj"
+	"io"
 	"log"
 	"net"
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/bingoohuang/gg/pkg/ss"
+	"github.com/bingoohuang/perf/plugins"
+
+	"github.com/bingoohuang/perf/cmd/util"
 
 	_ "embed"
 
@@ -26,14 +34,7 @@ var assetsFS embed.FS
 const (
 	assetsPath = "/echarts/statics/"
 	dataPath   = "/data/"
-
-	latencyView           = "latency"
-	latencyPercentileView = "latencyPercentile"
-	rpsView               = "rps"
-	concurrentView        = "concurrent"
 )
-
-var viewSeriesNum = map[string]int{latencyView: 4, latencyPercentileView: 7, rpsView: 1, concurrentView: 1}
 
 const (
 	ViewTpl = `
@@ -96,7 +97,7 @@ func (c *Views) genViewTemplate(routerChartsMap map[string]string) string {
 	for k, v := range routerChartsMap {
 		viewsMap += k + ": goecharts_" + v + ","
 	}
-	viewsMap += "noop: 123}"
+	viewsMap += "noop: null}"
 
 	d := struct {
 		Interval    int
@@ -125,16 +126,15 @@ func (c *Views) genViewTemplate(routerChartsMap map[string]string) string {
 
 type Views struct {
 	routerChartsMap map[string]string
-	num             int
-	size            WidthHeight
+	size            util.WidthHeight
 	dryPlots        bool
+	num             int
 }
 
-func NewViews(num int, size string, dryPlots bool) *Views {
+func NewViews(size string, dryPlots bool) *Views {
 	return &Views{
-		num:             num,
 		routerChartsMap: make(map[string]string),
-		size:            ParseWidthHeight(size, 800, 400),
+		size:            util.ParseWidthHeight(size, 800, 400),
 		dryPlots:        dryPlots,
 	}
 }
@@ -155,55 +155,72 @@ func (c *Views) newBasicView(route string) *charts.Line {
 	return g
 }
 
-func (c *Views) newLatencyView() components.Charter {
-	g := c.newBasicView(latencyView)
-	g.SetGlobalOptions(charts.WithTitleOpts(opts.Title{Title: "Latency"}),
-		charts.WithYAxisOpts(opts.YAxis{Scale: true, AxisLabel: &opts.AxisLabel{Formatter: "{value} ms"}}),
-		charts.WithLegendOpts(opts.Legend{Show: true, Selected: map[string]bool{
-			"Min": false, "Max": false, "StdDev": false,
-		}}),
+func (c *Views) newView(name, unit string, series plugins.Series) components.Charter {
+	selected := map[string]bool{}
+	for _, p := range series.Series {
+		selected[p] = len(series.Series) == 1 || ss.AnyOf(p, series.Selected...)
+	}
+
+	g := c.newBasicView(name)
+	var axisLabel *opts.AxisLabel
+	if unit != "" {
+		axisLabel = &opts.AxisLabel{Formatter: "{value} " + unit}
+	}
+	g.SetGlobalOptions(charts.WithTitleOpts(opts.Title{Title: strings.Title(name)}),
+		charts.WithYAxisOpts(opts.YAxis{Scale: true, AxisLabel: axisLabel}),
+		charts.WithLegendOpts(opts.Legend{Show: true, Selected: selected}),
 	)
 
-	for _, p := range []string{"Min", "Mean", "StdDev", "Max"} {
+	for _, p := range series.Series {
 		g.AddSeries(p, []opts.LineData{})
 	}
 	return g
+}
+
+func (c *Views) newHardwareViews(charts *Charts) (charters []components.Charter) {
+	charts.hardwaresNames = mapp.KeysSorted(plugins.Inputs)
+	charts.hardwares = map[string]plugins.Input{}
+	for _, name := range charts.hardwaresNames {
+		inputFn := plugins.Inputs[name]
+		input := inputFn()
+		if init, ok := input.(plugins.Initializer); ok {
+			init.Init()
+		}
+
+		charts.hardwares[name] = input
+		charters = append(charters, c.newView(name, "", input.Series()))
+	}
+
+	return
+}
+
+func (c *Views) newLatencyView() components.Charter {
+	return c.newView("latency", "ms", plugins.Series{
+		Series: []string{"Min", "Mean", "StdDev", "Max"}, Selected: []string{"Mean"},
+	})
 }
 
 func (c *Views) newLatencyPercentileView() components.Charter {
-	g := c.newBasicView(latencyPercentileView)
-	g.SetGlobalOptions(
-		charts.WithTitleOpts(opts.Title{Title: "Latency Percentile"}),
-		charts.WithYAxisOpts(opts.YAxis{Scale: true, AxisLabel: &opts.AxisLabel{Formatter: "{value} ms"}}),
-		charts.WithLegendOpts(opts.Legend{Show: true, Selected: map[string]bool{
-			"P75": false, "P95": false, "P99.9": false, "P99.99": false,
-		}}),
-	)
-
-	for _, p := range []string{"P50", "P75", "P90", "P95", "P99", "P99.9", "P99.99"} {
-		g.AddSeries(p, []opts.LineData{})
-	}
-	return g
+	return c.newView("latencyPercentile", "ms", plugins.Series{
+		Series: []string{"P50", "P75", "P90", "P95", "P99", "P99.9", "P99.99"}, Selected: []string{"P50", "P90", "P99"},
+	})
 }
 
 func (c *Views) newConcurrentView() components.Charter {
-	g := c.newBasicView(concurrentView)
-	g.SetGlobalOptions(charts.WithTitleOpts(opts.Title{Title: "Concurrent"}), charts.WithYAxisOpts(opts.YAxis{Scale: true}))
-	g.AddSeries("Concurrent", []opts.LineData{})
-	return g
+	return c.newView("concurrent", "", plugins.Series{Series: []string{"Concurrent"}})
 }
 
-func (c *Views) newRPSView() components.Charter {
-	g := c.newBasicView(rpsView)
-	g.SetGlobalOptions(charts.WithTitleOpts(opts.Title{Title: "TPS"}), charts.WithYAxisOpts(opts.YAxis{Scale: true}))
-	g.AddSeries("RPS", []opts.LineData{})
-	return g
+func (c *Views) newTPSView() components.Charter {
+	return c.newView("tps", "", plugins.Series{Series: []string{"TPS"}})
 }
 
 type Charts struct {
 	ln         net.Listener
 	chartsData chan []byte
 	config     *Config
+
+	hardwaresNames []string
+	hardwares      map[string]plugins.Input
 }
 
 func NewCharts(ln net.Listener, chartsData chan []byte, desc string, config *Config) *Charts {
@@ -215,39 +232,12 @@ func (c *Charts) Handler(ctx *fasthttp.RequestCtx) {
 	switch path := string(ctx.Path()); {
 	case path == dataPath:
 		ctx.SetContentType(`application/json; charset=utf-8`)
-
-		if c.config.IsDryPlots() {
-			data := c.config.PlotsHandle.ReadAll()
-			if len(data) > 0 {
-				ctx.Write(data)
-			} else {
-				ctx.WriteString("[]")
-			}
-			return
-		}
-
-		select {
-		case data := <-c.chartsData:
-			ctx.WriteString("[" + string(data) + "]")
-		default:
-			ctx.WriteString("[]")
-		}
+		ctx.Write(c.handleData())
 	case path == "/":
 		ctx.SetContentType("text/html")
-		viewNum := 3
-		if !c.config.Incr.IsEmpty() {
-			viewNum++
-		}
-		v := NewViews(viewNum, string(ctx.QueryArgs().Peek("size")), c.config.IsDryPlots())
-		page := components.NewPage()
-		page.PageTitle = "perf"
-		page.AssetsHost = assetsPath
-		page.Assets.JSAssets.Add("jquery.min.js")
-		page.AddCharts(v.newLatencyView(), v.newRPSView(), v.newLatencyPercentileView())
-		if !c.config.Incr.IsEmpty() {
-			page.AddCharts(v.newConcurrentView())
-		}
-		_ = page.Render(ctx)
+		size := ctx.QueryArgs().Peek("size")
+		views := ctx.QueryArgs().Peek("views")
+		c.renderCharts(ctx, string(size), string(views))
 	case strings.HasPrefix(path, assetsPath):
 		ap := path[len(assetsPath):]
 		if f, err := assetsFS.Open(ap); err != nil {
@@ -256,8 +246,72 @@ func (c *Charts) Handler(ctx *fasthttp.RequestCtx) {
 			ctx.SetBodyStream(f, -1)
 		}
 	default:
-		ctx.Error("NotFound", fasthttp.StatusNotFound)
+		ctx.Error("NotFound", 404)
 	}
+}
+
+func (c *Charts) handleData() []byte {
+	if c.config.IsDryPlots() {
+		if d := c.config.PlotsHandle.ReadAll(); len(d) > 0 {
+			return d
+		}
+		return []byte("[]")
+	}
+
+	select {
+	case data := <-c.chartsData:
+		s := string(data)
+		for _, name := range c.hardwaresNames {
+			if d, err := c.hardwares[name].Gather(); err != nil {
+				log.Printf("E! failed to gather %s error: %v", name, err)
+			} else {
+				if s, err = jj.Set(s, "values."+name, d); err != nil {
+					log.Printf("E! failed to set %s error: %v", name, err)
+				}
+			}
+		}
+		return []byte(("[" + s + "]"))
+	default:
+		return []byte("[]")
+	}
+}
+
+func (c *Charts) renderCharts(w io.Writer, size, viewsArg string) {
+	v := NewViews(size, c.config.IsDryPlots())
+	var fns []func() components.Charter
+
+	if views := util.NewFeatureMap(viewsArg); len(views) == 0 {
+		fns = append(fns, v.newLatencyView, v.newTPSView, v.newLatencyPercentileView)
+		if !c.config.Incr.IsEmpty() {
+			fns = append(fns, v.newConcurrentView)
+		}
+	} else {
+		if views.HasAny("latency", "l") {
+			fns = append(fns, v.newLatencyView)
+		}
+		if views.HasAny("tps", "r") {
+			fns = append(fns, v.newTPSView)
+		}
+		if views.HasAny("latencypercentile", "lp") {
+			fns = append(fns, v.newLatencyPercentileView)
+		}
+		if views.HasAny("concurrent", "c") {
+			fns = append(fns, v.newConcurrentView)
+		}
+	}
+
+	v.num = len(fns) + len(plugins.Inputs)
+
+	p := components.NewPage()
+	p.PageTitle = "perf"
+	p.AssetsHost = assetsPath
+	p.Assets.JSAssets.Add("jquery.min.js")
+
+	for _, vf := range fns {
+		p.AddCharts(vf())
+	}
+	p.AddCharts(v.newHardwareViews(c)...)
+	_ = p.Render(w)
 }
 
 func (c *Charts) Serve(port int) {
@@ -267,14 +321,14 @@ func (c *Charts) Serve(port int) {
 
 	if c.config.IsDryPlots() {
 		log.Printf("Running in dry mode for %s", c.config.PlotsFile)
-		go OpenBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
-		ExitIfErr(server.Serve(c.ln))
+		go util.OpenBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
+		util.ExitIfErr(server.Serve(c.ln))
 		return
 	}
 
 	go func() {
 		time.Sleep(3 * time.Second) // 3s之后再弹出，避免运行时间过短，程序已经退出
-		go OpenBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
-		ExitIfErr(server.Serve(c.ln))
+		go util.OpenBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
+		util.ExitIfErr(server.Serve(c.ln))
 	}()
 }

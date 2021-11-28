@@ -8,7 +8,8 @@ gitCommit := $(shell git rev-list --oneline --format=format:'%h@%aI' --max-count
 # https://stackoverflow.com/a/47510909
 pkg := main
 # https://ms2008.github.io/2018/10/08/golang-build-version/
-flags = "-extldflags=-static -s -w -X '$(pkg).buildTime=$(buildTime)' -X $(pkg).gitCommit=$(gitCommit) -X '$(pkg).goVersion=$(goVersion)'"
+# -extldflags=-static
+flags = "-s -w -X '$(pkg).buildTime=$(buildTime)' -X $(pkg).gitCommit=$(gitCommit) -X '$(pkg).goVersion=$(goVersion)'"
 
 tool:
 	go get github.com/securego/gosec/cmd/gosec

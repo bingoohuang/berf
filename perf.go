@@ -8,7 +8,11 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/bingoohuang/gg/pkg/netx/freeport"
+	"github.com/bingoohuang/perf/cmd/util"
+
 	"github.com/bingoohuang/gg/pkg/fla9"
+	_ "github.com/bingoohuang/perf/plugins/all"
 )
 
 var (
@@ -32,7 +36,7 @@ type Config struct {
 	N          int
 	Goroutines int
 	Duration   time.Duration
-	Incr       GoroutineIncr
+	Incr       util.GoroutineIncr
 
 	GoMaxProcs int
 	Qps        float64
@@ -41,11 +45,11 @@ type Config struct {
 	ThinkTime  string
 	ChartPort  int
 
-	FeatureMap
+	util.FeatureMap
 	CountingName string
 	OkStatus     string
 	PlotsFile    string
-	PlotsHandle  *JSONLogFile
+	PlotsHandle  *util.JSONLogFile
 }
 
 type ConfigFn func(*Config)
@@ -72,7 +76,7 @@ type F func(context.Context, *Config) (*Result, error)
 func StartBench(fn F, fns ...ConfigFn) {
 	c := &Config{
 		N: *pN, Duration: *pDuration, Goroutines: *pGoroutines, GoMaxProcs: *pGoMaxProcs,
-		Incr: ParseGoIncr(*pGoIncr), PlotsFile: *pPlotsFile,
+		Incr: util.ParseGoIncr(*pGoIncr), PlotsFile: *pPlotsFile,
 		Qps: *pQps, Features: *pFeatures, Verbose: *pVerbose, ThinkTime: *pThinkTime, ChartPort: *pPort,
 	}
 	for _, f := range fns {
@@ -82,7 +86,7 @@ func StartBench(fn F, fns ...ConfigFn) {
 	c.Setup()
 
 	requester, err := c.NewRequester(fn)
-	ExitIfErr(err)
+	util.ExitIfErr(err)
 
 	desc := c.Description()
 	if !c.IsDryPlots() {
@@ -107,7 +111,7 @@ func (c *Config) serveCharts(report *StreamReport, desc string) {
 	if c.IsDryPlots() || c.ChartPort > 0 && c.N != 1 && c.Verbose >= 1 {
 		addr := fmt.Sprintf(":%d", c.ChartPort)
 		ln, err := net.Listen("tcp", addr)
-		ExitIfErr(err)
+		util.ExitIfErr(err)
 		fmt.Printf("@Real-time charts is on http://127.0.0.1:%d\n", c.ChartPort)
 
 		charts := NewCharts(ln, chartsData, desc, c)
@@ -119,7 +123,7 @@ func (c *Config) collectChartData(ctx context.Context, chartsData chan []byte, c
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
-	c.PlotsHandle = NewFile(c.PlotsFile)
+	c.PlotsHandle = util.NewJsonLogFile(c.PlotsFile)
 	defer c.PlotsHandle.Close()
 
 	if c.PlotsHandle.IsDry() {
@@ -130,8 +134,8 @@ func (c *Config) collectChartData(ctx context.Context, chartsData chan []byte, c
 		<-ticker.C
 
 		rd := chartsFn()
-		plots := createMetrics(rd)
-		TryWrite(chartsData, plots)
+		plots := rd.createMetrics()
+		util.TryWrite(chartsData, plots)
 		if rd != nil {
 			c.PlotsHandle.WriteJSON(plots)
 		}
@@ -158,11 +162,11 @@ func (c *Config) Setup() {
 	runtime.GOMAXPROCS(c.GoMaxProcs)
 
 	if c.ChartPort > 0 && c.N != 1 {
-		c.ChartPort = GetFreePortStart(c.ChartPort)
+		c.ChartPort = freeport.PortStart(c.ChartPort)
 	}
 
 	if c.FeatureMap == nil {
-		c.FeatureMap = NewFeatureMap(c.Features)
+		c.FeatureMap = util.NewFeatureMap(c.Features)
 	}
 }
 
@@ -188,4 +192,4 @@ func (c *Config) createTerminalPrinter(concurrent *int64) *Printer {
 	}
 }
 
-func (c *Config) IsDryPlots() bool { return IsFileNameDry(c.PlotsFile) }
+func (c *Config) IsDryPlots() bool { return util.IsDrySuffix(c.PlotsFile) }
