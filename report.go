@@ -1,6 +1,7 @@
 package perf
 
 import (
+	"encoding/json"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -289,4 +290,27 @@ func (s *StreamReport) Charts() *ChartsReport {
 		LatencyPercentiles: percentiles,
 		Concurrent:         atomic.LoadInt64(&s.requester.concurrent),
 	}
+}
+
+func createMetrics(rd *ChartsReport) []byte {
+	m := map[string]interface{}{}
+	if rd == nil {
+		for k, v := range viewSeriesNum {
+			m[k] = make([]interface{}, v)
+		}
+	} else {
+		m[latencyPercentileView] = rd.LatencyPercentiles
+		m[latencyView] = rd.Latency
+		m[concurrentView] = []interface{}{rd.Concurrent}
+		m[rpsView] = []interface{}{rd.RPS}
+	}
+
+	md := Metrics{Time: time.Now().Format("2006-01-02 15:04:05"), Values: m}
+	data, _ := json.Marshal(md)
+	return data
+}
+
+type Metrics struct {
+	Time   string                 `json:"time"`
+	Values map[string]interface{} `json:"values"`
 }

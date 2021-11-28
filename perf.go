@@ -2,12 +2,10 @@ package perf
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
 	"os"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/bingoohuang/gg/pkg/fla9"
@@ -140,29 +138,6 @@ func (c *Config) collectChartData(ctx context.Context, chartsData chan []byte, c
 	}
 }
 
-type Metrics struct {
-	Time   string                 `json:"time"`
-	Values map[string]interface{} `json:"values"`
-}
-
-func createMetrics(rd *ChartsReport) []byte {
-	m := map[string]interface{}{}
-	if rd == nil {
-		for k, v := range viewSeriesNum {
-			m[k] = make([]interface{}, v)
-		}
-	} else {
-		m[latencyPercentileView] = rd.LatencyPercentiles
-		m[latencyView] = rd.Latency
-		m[concurrentView] = []interface{}{rd.Concurrent}
-		m[rpsView] = []interface{}{rd.RPS}
-	}
-
-	md := Metrics{Time: time.Now().Format("15:04:05"), Values: m}
-	data, _ := json.Marshal(md)
-	return data
-}
-
 // Setup setups the environment by the config.
 func (c *Config) Setup() {
 	if c.Goroutines < 0 {
@@ -187,8 +162,7 @@ func (c *Config) Setup() {
 	}
 
 	if c.FeatureMap == nil {
-		c.FeatureMap = make(map[string]bool)
-		c.FeatureMap.Setup(c.Features)
+		c.FeatureMap = NewFeatureMap(c.Features)
 	}
 }
 
@@ -215,31 +189,3 @@ func (c *Config) createTerminalPrinter(concurrent *int64) *Printer {
 }
 
 func (c *Config) IsDryPlots() bool { return IsFileNameDry(c.PlotsFile) }
-
-// FeatureMap defines a feature map.
-type FeatureMap map[string]bool
-
-// Setup sets up a feature map by features string, which separates feature names by comma.
-func (f *FeatureMap) Setup(features string) {
-	for _, feature := range strings.Split(strings.ToLower(features), ",") {
-		if v := strings.TrimSpace(feature); v != "" {
-			(*f)[v] = true
-		}
-	}
-}
-
-// HasFeature tells the feature map contains a features.
-func (f *FeatureMap) HasFeature(feature string) bool {
-	return (*f)[feature] || (*f)[strings.ToLower(feature)]
-}
-
-// HasAny tells the feature map contains any of the features.
-func (f *FeatureMap) HasAny(features ...string) bool {
-	for _, feature := range features {
-		if f.HasFeature(feature) {
-			return true
-		}
-	}
-
-	return false
-}

@@ -152,6 +152,40 @@ func (f *JSONLogFile) Close() error {
 	return f.F.Close()
 }
 
+func NewFeatureMap(features string) FeatureMap {
+	m := make(FeatureMap)
+	m.Setup(features)
+	return m
+}
+
+// FeatureMap defines a feature map.
+type FeatureMap map[string]bool
+
+// Setup sets up a feature map by features string, which separates feature names by comma.
+func (f *FeatureMap) Setup(features string) {
+	for _, feature := range strings.Split(strings.ToLower(features), ",") {
+		if v := strings.TrimSpace(feature); v != "" {
+			(*f)[v] = true
+		}
+	}
+}
+
+// HasFeature tells the feature map contains a features.
+func (f *FeatureMap) HasFeature(feature string) bool {
+	return (*f)[feature] || (*f)[strings.ToLower(feature)]
+}
+
+// HasAny tells the feature map contains any of the features.
+func (f *FeatureMap) HasAny(features ...string) bool {
+	for _, feature := range features {
+		if f.HasFeature(feature) {
+			return true
+		}
+	}
+
+	return false
+}
+
 type PushResult int
 
 const (

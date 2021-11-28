@@ -176,6 +176,8 @@ func (r *Requester) generateTokens(ch chan context.Context) {
 		}
 	}
 
+	keepTimes(t.C, 3)
+
 	if down := r.config.Incr.Down; down > 0 {
 		for i := max - 1; i >= 0; i-- {
 			<-t.C
@@ -183,6 +185,14 @@ func (r *Requester) generateTokens(ch chan context.Context) {
 				cancels[j]()
 			}
 		}
+
+		keepTimes(t.C, 3)
+	}
+}
+
+func keepTimes(c <-chan time.Time, times int) {
+	for i := 0; i < times; i++ {
+		<-c
 	}
 }
 
