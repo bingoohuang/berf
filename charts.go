@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
-	"github.com/bingoohuang/gg/pkg/mapp"
-	"github.com/bingoohuang/jj"
 	"io"
 	"log"
 	"net"
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/bingoohuang/gg/pkg/mapp"
+	"github.com/bingoohuang/jj"
 
 	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/bingoohuang/perf/plugins"
@@ -178,16 +179,8 @@ func (c *Views) newView(name, unit string, series plugins.Series) components.Cha
 }
 
 func (c *Views) newHardwareViews(charts *Charts) (charters []components.Charter) {
-	charts.hardwaresNames = mapp.KeysSorted(plugins.Inputs)
-	charts.hardwares = map[string]plugins.Input{}
 	for _, name := range charts.hardwaresNames {
-		inputFn := plugins.Inputs[name]
-		input := inputFn()
-		if init, ok := input.(plugins.Initializer); ok {
-			init.Init()
-		}
-
-		charts.hardwares[name] = input
+		input := charts.hardwares[name]
 		charters = append(charters, c.newView(name, "", input.Series()))
 	}
 
@@ -215,17 +208,32 @@ func (c *Views) newTPSView() components.Charter {
 }
 
 type Charts struct {
-	ln         net.Listener
-	chartsData chan []byte
+	chartsData func() *ChartsReport
 	config     *Config
 
 	hardwaresNames []string
 	hardwares      map[string]plugins.Input
 }
 
-func NewCharts(ln net.Listener, chartsData chan []byte, desc string, config *Config) *Charts {
+func NewCharts(chartsData func() *ChartsReport, desc string, config *Config) *Charts {
 	templates.PageTpl = fmt.Sprintf(PageTpl, desc)
-	return &Charts{ln: ln, chartsData: chartsData, config: config}
+	c := &Charts{chartsData: chartsData, config: config}
+	c.initHardwareCollectors()
+	return c
+}
+
+func (c *Charts) initHardwareCollectors() {
+	c.hardwaresNames = mapp.KeysSorted(plugins.Inputs)
+	c.hardwares = map[string]plugins.Input{}
+	for _, name := range c.hardwaresNames {
+		inputFn := plugins.Inputs[name]
+		input := inputFn()
+		if init, ok := input.(plugins.Initializer); ok {
+			init.Init()
+		}
+
+		c.hardwares[name] = input
+	}
 }
 
 func (c *Charts) Handler(ctx *fasthttp.RequestCtx) {
@@ -250,6 +258,20 @@ func (c *Charts) Handler(ctx *fasthttp.RequestCtx) {
 	}
 }
 
+func (c *Charts) mergeHardwareMetrics(s []byte) []byte {
+	for _, name := range c.hardwaresNames {
+		if d, err := c.hardwares[name].Gather(); err != nil {
+			log.Printf("E! failed to gather %s error: %v", name, err)
+		} else {
+			if s, err = jj.SetBytes(s, "values."+name, d); err != nil {
+				log.Printf("E! failed to set %s error: %v", name, err)
+			}
+		}
+	}
+
+	return s
+}
+
 func (c *Charts) handleData() []byte {
 	if c.config.IsDryPlots() {
 		if d := c.config.PlotsHandle.ReadAll(); len(d) > 0 {
@@ -258,50 +280,40 @@ func (c *Charts) handleData() []byte {
 		return []byte("[]")
 	}
 
-	select {
-	case data := <-c.chartsData:
-		s := string(data)
-		for _, name := range c.hardwaresNames {
-			if d, err := c.hardwares[name].Gather(); err != nil {
-				log.Printf("E! failed to gather %s error: %v", name, err)
-			} else {
-				if s, err = jj.Set(s, "values."+name, d); err != nil {
-					log.Printf("E! failed to set %s error: %v", name, err)
-				}
-			}
-		}
-		return []byte(("[" + s + "]"))
-	default:
-		return []byte("[]")
-	}
+	rd := c.chartsData()
+	plots := createMetrics(rd, c.config.IsNoop())
+	plots = c.mergeHardwareMetrics(plots)
+
+	return []byte(("[" + string(plots) + "]"))
 }
 
 func (c *Charts) renderCharts(w io.Writer, size, viewsArg string) {
 	v := NewViews(size, c.config.IsDryPlots())
 	var fns []func() components.Charter
 
-	if views := util.NewFeatureMap(viewsArg); len(views) == 0 {
-		fns = append(fns, v.newLatencyView, v.newTPSView, v.newLatencyPercentileView)
-		if !c.config.Incr.IsEmpty() {
-			fns = append(fns, v.newConcurrentView)
-		}
-	} else {
-		if views.HasAny("latency", "l") {
-			fns = append(fns, v.newLatencyView)
-		}
-		if views.HasAny("tps", "r") {
-			fns = append(fns, v.newTPSView)
-		}
-		if views.HasAny("latencypercentile", "lp") {
-			fns = append(fns, v.newLatencyPercentileView)
-		}
-		if views.HasAny("concurrent", "c") {
-			fns = append(fns, v.newConcurrentView)
+	if !c.config.IsNoop() {
+		if views := util.NewFeatureMap(viewsArg); len(views) == 0 {
+			fns = append(fns, v.newLatencyView, v.newTPSView, v.newLatencyPercentileView)
+			if !c.config.Incr.IsEmpty() || c.config.IsDryPlots() {
+				fns = append(fns, v.newConcurrentView)
+			}
+		} else {
+			if views.HasAny("latency", "l") {
+				fns = append(fns, v.newLatencyView)
+			}
+			if views.HasAny("tps", "r") {
+				fns = append(fns, v.newTPSView)
+			}
+			if views.HasAny("latencypercentile", "lp") {
+				fns = append(fns, v.newLatencyPercentileView)
+			}
+			if views.HasAny("concurrent", "c") {
+				fns = append(fns, v.newConcurrentView)
+			}
 		}
 	}
 
 	v.num = len(fns) + len(plugins.Inputs)
-
 	p := components.NewPage()
 	p.PageTitle = "perf"
 	p.AssetsHost = assetsPath
@@ -314,7 +326,7 @@ func (c *Charts) renderCharts(w io.Writer, size, viewsArg string) {
 	_ = p.Render(w)
 }
 
-func (c *Charts) Serve(port int) {
+func (c *Charts) Serve(ln net.Listener, port int) {
 	server := fasthttp.Server{
 		Handler: cors.DefaultHandler().CorsMiddleware(c.Handler),
 	}
@@ -322,13 +334,13 @@ func (c *Charts) Serve(port int) {
 	if c.config.IsDryPlots() {
 		log.Printf("Running in dry mode for %s", c.config.PlotsFile)
 		go util.OpenBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
-		util.ExitIfErr(server.Serve(c.ln))
+		util.ExitIfErr(server.Serve(ln))
 		return
 	}
 
 	go func() {
 		time.Sleep(3 * time.Second) // 3s之后再弹出，避免运行时间过短，程序已经退出
 		go util.OpenBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
-		util.ExitIfErr(server.Serve(c.ln))
+		util.ExitIfErr(server.Serve(ln))
 	}()
 }

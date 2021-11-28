@@ -3,12 +3,13 @@ package procstat
 import (
 	"bytes"
 	"fmt"
-	"github.com/bingoohuang/perf/plugins/internal"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"github.com/bingoohuang/perf/plugins/internal"
 
 	"github.com/bingoohuang/perf/plugins"
 )

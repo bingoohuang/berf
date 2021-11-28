@@ -2,8 +2,9 @@ package mem
 
 import (
 	"fmt"
-	"github.com/bingoohuang/perf/plugins/internal"
 	"runtime"
+
+	"github.com/bingoohuang/perf/plugins/internal"
 
 	"github.com/bingoohuang/perf/plugins"
 	"github.com/bingoohuang/perf/plugins/system"

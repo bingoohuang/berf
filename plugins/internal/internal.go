@@ -1,14 +1,9 @@
 package internal
 
 import (
-	"errors"
 	"os/exec"
 	"syscall"
 	"time"
-)
-
-var (
-	ErrorNotImplemented = errors.New("not implemented yet")
 )
 
 // ExitStatus status takes the error from exec.Command
@@ -29,7 +24,6 @@ const (
 	KILO SizeUnit = 1000
 	MEGA          = 1000 * KILO
 	GIGA          = 1000 * MEGA
-	TERA          = 1000 * GIGA
 )
 
 func BytesToGiga(bytes uint64) float64 {

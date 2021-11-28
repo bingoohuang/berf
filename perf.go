@@ -96,6 +96,10 @@ func StartBench(fn F, fns ...ConfigFn) {
 	report := NewStreamReport(requester)
 	c.serveCharts(report, desc)
 
+	if c.IsNoop() {
+		<-requester.ctx.Done()
+	}
+
 	go requester.Run()
 	go report.Collect(requester.recordChan)
 
@@ -104,9 +108,9 @@ func StartBench(fn F, fns ...ConfigFn) {
 }
 
 func (c *Config) serveCharts(report *StreamReport, desc string) {
-	chartsData := make(chan []byte, 60) // 1m
+	charts := NewCharts(report.Charts, desc, c)
 
-	go c.collectChartData(report.requester.ctx, chartsData, report.Charts)
+	go c.collectChartData(report.requester.ctx, report.Charts, charts)
 
 	if c.IsDryPlots() || c.ChartPort > 0 && c.N != 1 && c.Verbose >= 1 {
 		addr := fmt.Sprintf(":%d", c.ChartPort)
@@ -114,13 +118,12 @@ func (c *Config) serveCharts(report *StreamReport, desc string) {
 		util.ExitIfErr(err)
 		fmt.Printf("@Real-time charts is on http://127.0.0.1:%d\n", c.ChartPort)
 
-		charts := NewCharts(ln, chartsData, desc, c)
-		charts.Serve(c.ChartPort)
+		charts.Serve(ln, c.ChartPort)
 	}
 }
 
-func (c *Config) collectChartData(ctx context.Context, chartsData chan []byte, chartsFn func() *ChartsReport) {
-	ticker := time.NewTicker(time.Second)
+func (c *Config) collectChartData(ctx context.Context, chartsFn func() *ChartsReport, charts *Charts) {
+	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
 	c.PlotsHandle = util.NewJsonLogFile(c.PlotsFile)
@@ -132,10 +135,9 @@ func (c *Config) collectChartData(ctx context.Context, chartsData chan []byte, c
 
 	for ctx.Err() == nil {
 		<-ticker.C
-
 		rd := chartsFn()
-		plots := rd.createMetrics()
-		util.TryWrite(chartsData, plots)
+		plots := createMetrics(rd, c.IsNoop())
+		plots = charts.mergeHardwareMetrics(plots)
 		if rd != nil {
 			c.PlotsHandle.WriteJSON(plots)
 		}
@@ -171,6 +173,10 @@ func (c *Config) Setup() {
 }
 
 func (c *Config) Description() string {
+	if c.IsNoop() {
+		return "Perf is starting to collect hardware metrics."
+	}
+
 	desc := "Benchmarking"
 	if c.Features != "" {
 		desc += fmt.Sprintf(" %s", c.Features)

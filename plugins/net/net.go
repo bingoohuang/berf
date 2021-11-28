@@ -2,10 +2,11 @@ package net
 
 import (
 	"fmt"
-	"github.com/bingoohuang/perf/plugins/internal"
 	"net"
 	"sort"
 	"time"
+
+	"github.com/bingoohuang/perf/plugins/internal"
 
 	"github.com/bingoohuang/perf/pkg/filter"
 	"github.com/bingoohuang/perf/plugins"
@@ -94,8 +95,10 @@ func (n *NetIOStats) Gather() ([]interface{}, error) {
 
 func init() {
 	plugins.Add("net", func() plugins.Input {
-		return &NetIOStats{ps: system.NewSystemPS(),
-			Interfaces: []string{"eth*", "en0"}}
+		return &NetIOStats{
+			ps:         system.NewSystemPS(),
+			Interfaces: []string{"eth*", "en0"},
+		}
 	})
 }
 
