@@ -32,9 +32,11 @@ import (
 //go:embed echarts.min.js jquery.min.js
 var assetsFS embed.FS
 
+//go:embed views_sync.js
+var viewSyncJs string
+
 const (
 	assetsPath = "/echarts/statics/"
-	dataPath   = "/data/"
 )
 
 const (
@@ -42,37 +44,8 @@ const (
 $(function () {
 {{ .SetInterval }}(views_sync, {{ .Interval }}); });
 let views = {{.ViewsMap}};
-function views_sync() {
-	$.ajax({
-		type: "GET",
-		url: "{{ .APIPath }}",
-		dataType: "json",
-		success: function (dictArr) {
-			for (let j = 0; j < dictArr.length; j++) {
-				let dict = dictArr[j];
-				for (let key in dict.values) {
-					let view = views[key];
-					if (!view) {
-						continue;
-					}
-					let opt = view.getOption();
-	
-					let x = opt.xAxis[0].data;
-					x.push(dict.time);
-					opt.xAxis[0].data = x;
-					
-					let arr = dict.values[key];
-					for (let i = 0; i < arr.length; i++) {
-						let y = opt.series[i].data;
-						y.push({ value: arr[i]});
-						opt.series[i].data = y;
-					}
-					view.setOption(opt);
-				}
-			}
-		}
-	});
-}`
+{{.ViewSyncJS}}
+`
 	PageTpl = `
 {{- define "page" }}
 <!DOCTYPE html>
@@ -102,14 +75,14 @@ func (c *Views) genViewTemplate(routerChartsMap map[string]string) string {
 
 	d := struct {
 		Interval    int
-		APIPath     string
 		ViewsMap    string
 		SetInterval string
+		ViewSyncJS  string
 	}{
 		Interval:    int(time.Second.Milliseconds()),
-		APIPath:     dataPath,
 		ViewsMap:    viewsMap,
 		SetInterval: "setInterval",
+		ViewSyncJS:  viewSyncJs,
 	}
 
 	if c.dryPlots {
@@ -135,7 +108,7 @@ type Views struct {
 func NewViews(size string, dryPlots bool) *Views {
 	return &Views{
 		routerChartsMap: make(map[string]string),
-		size:            util.ParseWidthHeight(size, 800, 400),
+		size:            util.ParseWidthHeight(size, 500, 300),
 		dryPlots:        dryPlots,
 	}
 }
@@ -238,7 +211,7 @@ func (c *Charts) initHardwareCollectors() {
 
 func (c *Charts) Handler(ctx *fasthttp.RequestCtx) {
 	switch path := string(ctx.Path()); {
-	case path == dataPath:
+	case path == "/data/":
 		ctx.SetContentType(`application/json; charset=utf-8`)
 		ctx.Write(c.handleData())
 	case path == "/":
@@ -281,7 +254,7 @@ func (c *Charts) handleData() []byte {
 	}
 
 	rd := c.chartsData()
-	plots := createMetrics(rd, c.config.IsNoop())
+	plots := createMetrics(rd, c.config.IsNop())
 	plots = c.mergeHardwareMetrics(plots)
 
 	return []byte(("[" + string(plots) + "]"))
@@ -291,7 +264,7 @@ func (c *Charts) renderCharts(w io.Writer, size, viewsArg string) {
 	v := NewViews(size, c.config.IsDryPlots())
 	var fns []func() components.Charter
 
-	if !c.config.IsNoop() {
+	if !c.config.IsNop() {
 		if views := util.NewFeatureMap(viewsArg); len(views) == 0 {
 			fns = append(fns, v.newLatencyView, v.newTPSView, v.newLatencyPercentileView)
 			if !c.config.Incr.IsEmpty() || c.config.IsDryPlots() {

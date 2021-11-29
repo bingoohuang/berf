@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/bingoohuang/gg/pkg/ss"
+
 	"github.com/bingoohuang/gg/pkg/netx/freeport"
 	"github.com/bingoohuang/perf/cmd/util"
 
@@ -96,7 +98,7 @@ func StartBench(fn F, fns ...ConfigFn) {
 	report := NewStreamReport(requester)
 	c.serveCharts(report, desc)
 
-	if c.IsNoop() {
+	if c.IsNop() {
 		<-requester.ctx.Done()
 	}
 
@@ -123,7 +125,13 @@ func (c *Config) serveCharts(report *StreamReport, desc string) {
 }
 
 func (c *Config) collectChartData(ctx context.Context, chartsFn func() *ChartsReport, charts *Charts) {
-	ticker := time.NewTicker(5 * time.Second)
+	tickDur := 15 * time.Second
+	tickConf := ss.Or(os.Getenv("PERF_TICK"), "5s")
+	if v, _ := time.ParseDuration(tickConf); v > 0 {
+		tickDur = v
+	}
+
+	ticker := time.NewTicker(tickDur)
 	defer ticker.Stop()
 
 	c.PlotsHandle = util.NewJsonLogFile(c.PlotsFile)
@@ -136,7 +144,7 @@ func (c *Config) collectChartData(ctx context.Context, chartsFn func() *ChartsRe
 	for ctx.Err() == nil {
 		<-ticker.C
 		rd := chartsFn()
-		plots := createMetrics(rd, c.IsNoop())
+		plots := createMetrics(rd, c.IsNop())
 		plots = charts.mergeHardwareMetrics(plots)
 		if rd != nil {
 			c.PlotsHandle.WriteJSON(plots)
@@ -173,7 +181,7 @@ func (c *Config) Setup() {
 }
 
 func (c *Config) Description() string {
-	if c.IsNoop() {
+	if c.IsNop() {
 		return "Perf is starting to collect hardware metrics."
 	}
 

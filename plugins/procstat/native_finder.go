@@ -11,8 +11,7 @@ import (
 )
 
 // NativeFinder uses gopsutil to find processes
-type NativeFinder struct {
-}
+type NativeFinder struct{}
 
 // NewNativeFinder ...
 func NewNativeFinder() (PIDFinder, error) {

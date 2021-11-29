@@ -168,19 +168,17 @@ func (f *FeatureMap) Setup(features string) {
 	}
 }
 
-func (f *FeatureMap) IsNoop() bool {
-	return f.HasFeature("noop")
-}
+func (f *FeatureMap) IsNop() bool { return f.Has("nop") }
 
-// HasFeature tells the feature map contains a features.
-func (f *FeatureMap) HasFeature(feature string) bool {
+// Has tells the feature map contains a features.
+func (f *FeatureMap) Has(feature string) bool {
 	return (*f)[feature] || (*f)[strings.ToLower(feature)]
 }
 
 // HasAny tells the feature map contains any of the features.
 func (f *FeatureMap) HasAny(features ...string) bool {
 	for _, feature := range features {
-		if f.HasFeature(feature) {
+		if f.Has(feature) {
 			return true
 		}
 	}

@@ -9,8 +9,7 @@ import (
 	"github.com/shirou/gopsutil/v3/load"
 )
 
-type SystemStats struct {
-}
+type SystemStats struct{}
 
 func (s *SystemStats) Series() plugins.Series {
 	return plugins.Series{

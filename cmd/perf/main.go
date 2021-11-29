@@ -20,7 +20,7 @@ func main() {
 }
 
 func demo(ctx context.Context, conf *perf.Config) (*perf.Result, error) {
-	if conf.HasFeature("demo") {
+	if conf.Has("demo") {
 		if randx.IntN(100) >= 90 {
 			return &perf.Result{Status: "500"}, nil
 		}
