@@ -3,7 +3,6 @@ package internal
 import (
 	"os/exec"
 	"syscall"
-	"time"
 )
 
 // ExitStatus status takes the error from exec.Command
@@ -16,28 +15,4 @@ func ExitStatus(err error) (int, bool) {
 		}
 	}
 	return 0, false
-}
-
-type SizeUnit int
-
-const (
-	KILO SizeUnit = 1000
-	MEGA          = 1000 * KILO
-	GIGA          = 1000 * MEGA
-)
-
-func BytesToGiga(bytes uint64) float64 {
-	return float64(bytes) / float64(GIGA)
-}
-
-func BytesToMEGA(bytes uint64) float64 {
-	return float64(bytes) / float64(MEGA)
-}
-
-func BytesToBPS(bytes uint64, d time.Duration) float64 {
-	return float64(bytes*8) / float64(MEGA) / d.Seconds()
-}
-
-func NumberToRate(num uint64, d time.Duration) float64 {
-	return float64(num) / d.Seconds()
 }

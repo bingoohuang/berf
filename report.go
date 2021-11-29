@@ -266,9 +266,9 @@ func (s *StreamReport) Snapshot() *SnapshotReport {
 func (s *StreamReport) Done() <-chan struct{} { return s.doneChan }
 
 type ChartsReport struct {
-	RPS                float64
-	Latency            []float64
-	LatencyPercentiles []float64
+	RPS                util.Float64
+	Latency            []util.Float64
+	LatencyPercentiles []util.Float64
 	Concurrent         int64
 }
 
@@ -280,15 +280,15 @@ func (s *StreamReport) Charts() *ChartsReport {
 		return nil
 	}
 
-	percentiles := make([]float64, len(quantiles))
+	percentiles := make([]util.Float64, len(quantiles))
 	for i, p := range quantiles {
-		percentiles[i] = s.latencyQuantile.Query(p) / 1e6
+		percentiles[i] = util.Float64(s.latencyQuantile.Query(p) / 1e6)
 	}
 
 	l := s.latencyWithinSec
 	return &ChartsReport{
-		RPS:                s.rpsWithinSec,
-		Latency:            []float64{l.min / 1e6, l.Mean() / 1e6, l.Stddev() / 1e6, l.max / 1e6},
+		RPS:                util.Float64(s.rpsWithinSec),
+		Latency:            []util.Float64{util.Float64(l.min / 1e6), util.Float64(l.Mean() / 1e6), util.Float64(l.Stddev() / 1e6), util.Float64(l.max / 1e6)},
 		LatencyPercentiles: percentiles,
 		Concurrent:         atomic.LoadInt64(&s.requester.concurrent),
 	}

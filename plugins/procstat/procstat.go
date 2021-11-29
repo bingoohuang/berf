@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/bingoohuang/perf/plugins/internal"
+	"github.com/bingoohuang/perf/pkg/util"
 
 	"github.com/bingoohuang/perf/plugins"
 )
@@ -138,25 +138,25 @@ func (p *Procstat) Gather() ([]interface{}, error) {
 var fields = []string{"threads", "fds", "%cpu", "rss", "vms", "swap"}
 
 // Add metrics a single Process
-func (p *Procstat) addMetric(proc Process) map[string]float64 {
-	f := map[string]float64{}
+func (p *Procstat) addMetric(proc Process) map[string]util.Float64 {
+	f := map[string]util.Float64{}
 
 	if v, err := proc.NumThreads(); err == nil {
-		f["threads"] = float64(v)
+		f["threads"] = util.Float64(v)
 	}
 
 	if v, err := proc.NumFDs(); err == nil {
-		f["fds"] = float64(v)
+		f["fds"] = util.Float64(v)
 	}
 
 	if cpuPerc, err := proc.Percent(time.Duration(0)); err == nil {
-		f["%cpu"] = cpuPerc
+		f["%cpu"] = util.Float64(cpuPerc)
 	}
 
 	if mem, err := proc.MemoryInfo(); err == nil {
-		f["rss"] = internal.BytesToMEGA(mem.RSS)
-		f["vms"] = internal.BytesToMEGA(mem.VMS)
-		f["swap"] = internal.BytesToMEGA(mem.Swap)
+		f["rss"] = util.BytesToMEGA(mem.RSS)
+		f["vms"] = util.BytesToMEGA(mem.VMS)
+		f["swap"] = util.BytesToMEGA(mem.Swap)
 	}
 
 	return f

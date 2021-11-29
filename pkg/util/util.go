@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -15,6 +16,47 @@ import (
 
 	"github.com/bingoohuang/gg/pkg/ss"
 )
+
+type Float64 float64
+
+func (f Float64) MarshalJSON() ([]byte, error) {
+	b := []byte(strconv.FormatFloat(float64(f), 'f', 3, 64))
+	i := len(b) - 1
+	for ; i >= 0; i-- {
+		if b[i] != '0' {
+			if b[i] != '.' {
+				i++
+			}
+			break
+		}
+	}
+
+	return b[:i], nil
+}
+
+type SizeUnit int
+
+const (
+	KILO SizeUnit = 1000
+	MEGA          = 1000 * KILO
+	GIGA          = 1000 * MEGA
+)
+
+func BytesToGiga(bytes uint64) Float64 {
+	return Float64(float64(bytes) / float64(GIGA))
+}
+
+func BytesToMEGA(bytes uint64) Float64 {
+	return Float64(float64(bytes) / float64(MEGA))
+}
+
+func BytesToBPS(bytes uint64, d time.Duration) Float64 {
+	return Float64(float64(bytes*8) / float64(MEGA) / d.Seconds())
+}
+
+func NumberToRate(num uint64, d time.Duration) Float64 {
+	return Float64(float64(num) / d.Seconds())
+}
 
 type JSONLogFile struct {
 	F *os.File

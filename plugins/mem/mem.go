@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/bingoohuang/perf/plugins/internal"
+	"github.com/bingoohuang/perf/pkg/util"
 
 	"github.com/bingoohuang/perf/plugins"
 	"github.com/bingoohuang/perf/plugins/system"
@@ -34,39 +34,39 @@ func (ms *MemStats) Gather() ([]interface{}, error) {
 		return nil, fmt.Errorf("error getting virtual memory info: %s", err)
 	}
 
-	f := map[string]float64{
-		"total":  internal.BytesToGiga(vm.Total),
-		"avail":  internal.BytesToGiga(vm.Available),
-		"used":   internal.BytesToGiga(vm.Used),
-		"%used":  100 * float64(vm.Used) / float64(vm.Total),
-		"%avail": 100 * float64(vm.Available) / float64(vm.Total),
+	f := map[string]util.Float64{
+		"total":  util.BytesToGiga(vm.Total),
+		"avail":  util.BytesToGiga(vm.Available),
+		"used":   util.BytesToGiga(vm.Used),
+		"%used":  util.Float64(100 * float64(vm.Used) / float64(vm.Total)),
+		"%avail": util.Float64(100 * float64(vm.Available) / float64(vm.Total)),
 	}
 
 	switch ms.platform {
 	case "darwin":
-		f["active"] = internal.BytesToGiga(vm.Active)
-		f["free"] = internal.BytesToGiga(vm.Free)
-		f["inactive"] = internal.BytesToGiga(vm.Inactive)
-		f["wired"] = internal.BytesToGiga(vm.Wired)
+		f["active"] = util.BytesToGiga(vm.Active)
+		f["free"] = util.BytesToGiga(vm.Free)
+		f["inactive"] = util.BytesToGiga(vm.Inactive)
+		f["wired"] = util.BytesToGiga(vm.Wired)
 	case "openbsd":
-		f["active"] = internal.BytesToGiga(vm.Active)
-		f["cached"] = internal.BytesToGiga(vm.Cached)
-		f["free"] = internal.BytesToGiga(vm.Free)
-		f["inactive"] = internal.BytesToGiga(vm.Inactive)
-		f["wired"] = internal.BytesToGiga(vm.Wired)
+		f["active"] = util.BytesToGiga(vm.Active)
+		f["cached"] = util.BytesToGiga(vm.Cached)
+		f["free"] = util.BytesToGiga(vm.Free)
+		f["inactive"] = util.BytesToGiga(vm.Inactive)
+		f["wired"] = util.BytesToGiga(vm.Wired)
 	case "freebsd":
-		f["active"] = internal.BytesToGiga(vm.Active)
-		f["buffered"] = internal.BytesToGiga(vm.Buffers)
-		f["cached"] = internal.BytesToGiga(vm.Cached)
-		f["free"] = internal.BytesToGiga(vm.Free)
-		f["inactive"] = internal.BytesToGiga(vm.Inactive)
-		f["wired"] = internal.BytesToGiga(vm.Wired)
+		f["active"] = util.BytesToGiga(vm.Active)
+		f["buffered"] = util.BytesToGiga(vm.Buffers)
+		f["cached"] = util.BytesToGiga(vm.Cached)
+		f["free"] = util.BytesToGiga(vm.Free)
+		f["inactive"] = util.BytesToGiga(vm.Inactive)
+		f["wired"] = util.BytesToGiga(vm.Wired)
 	case "linux":
-		f["active"] = internal.BytesToGiga(vm.Active)
-		f["buffered"] = internal.BytesToGiga(vm.Buffers)
-		f["cached"] = internal.BytesToGiga(vm.Cached)
-		f["dirty"] = internal.BytesToGiga(vm.Dirty)
-		f["free"] = internal.BytesToGiga(vm.Free)
+		f["active"] = util.BytesToGiga(vm.Active)
+		f["buffered"] = util.BytesToGiga(vm.Buffers)
+		f["cached"] = util.BytesToGiga(vm.Cached)
+		f["dirty"] = util.BytesToGiga(vm.Dirty)
+		f["free"] = util.BytesToGiga(vm.Free)
 	}
 
 	return []interface{}{f["total"], f["avail"], f["used"], f["%used"], f["%avail"], f["active"], f["buffered"], f["cached"], f["free"]}, nil

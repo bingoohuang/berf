@@ -6,7 +6,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/bingoohuang/perf/plugins/internal"
+	"github.com/bingoohuang/perf/pkg/util"
 
 	"github.com/bingoohuang/perf/pkg/filter"
 	"github.com/bingoohuang/perf/plugins"
@@ -112,8 +112,8 @@ func (n *NetIOStats) diff(stat netStat) []interface{} {
 	var points []interface{}
 	for _, ns := range n.gCurNetStats.netDevStats {
 		nsDiff := getNetDevStatDiff(ns, n.gPrevNetStats)
-		points = append(points, internal.BytesToBPS(nsDiff.txBytes, d), internal.BytesToBPS(nsDiff.rxBytes, d),
-			internal.NumberToRate(nsDiff.txPkts, d), internal.NumberToRate(nsDiff.rxPkts, d))
+		points = append(points, util.BytesToBPS(nsDiff.txBytes, d), util.BytesToBPS(nsDiff.rxBytes, d),
+			util.NumberToRate(nsDiff.txPkts, d), util.NumberToRate(nsDiff.rxPkts, d))
 	}
 
 	return points

@@ -3,6 +3,8 @@ package system
 import (
 	"strings"
 
+	"github.com/bingoohuang/perf/pkg/util"
+
 	"github.com/bingoohuang/perf/plugins"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/host"
@@ -30,7 +32,7 @@ func (s *SystemStats) Gather() ([]interface{}, error) {
 	}
 
 	users, _ := host.Users()
-	return []interface{}{loadavg.Load1, loadavg.Load5, loadavg.Load15, numCPUs, len(users)}, nil
+	return []interface{}{util.Float64(loadavg.Load1), util.Float64(loadavg.Load5), util.Float64(loadavg.Load15), numCPUs, len(users)}, nil
 }
 
 func init() {
