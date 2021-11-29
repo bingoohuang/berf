@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/bingoohuang/gg/pkg/osx"
@@ -104,6 +105,7 @@ func StartBench(ctx context.Context, fn Benchable, fns ...ConfigFn) {
 	c.Setup()
 
 	osx.ExitIfErr(fn.Init(ctx, c))
+
 	requester, err := c.NewRequester(ctx, fn)
 	osx.ExitIfErr(err)
 
@@ -113,25 +115,28 @@ func StartBench(ctx context.Context, fn Benchable, fns ...ConfigFn) {
 	}
 
 	report := NewStreamReport(requester)
-	c.serveCharts(report, desc)
+	wg := &sync.WaitGroup{}
+	c.serveCharts(report, desc, wg)
 
 	if c.IsNop() {
 		<-requester.ctx.Done()
 	}
 
-	go requester.Run()
+	go requester.run()
 	go report.Collect(requester.recordChan)
 
 	p := c.createTerminalPrinter(&requester.concurrent)
 	p.PrintLoop(report.Snapshot, 500*time.Millisecond, report.Done(), c.N)
 
+	wg.Wait()
 	fn.Final(ctx, c)
 }
 
-func (c *Config) serveCharts(report *StreamReport, desc string) {
+func (c *Config) serveCharts(report *StreamReport, desc string, wg *sync.WaitGroup) {
 	charts := NewCharts(report.Charts, desc, c)
 
-	go c.collectChartData(report.requester.ctx, report.Charts, charts)
+	wg.Add(1)
+	go c.collectChartData(report.requester.ctx, report.Charts, charts, wg)
 
 	if c.IsDryPlots() || c.ChartPort > 0 && c.N != 1 && c.Verbose >= 1 {
 		addr := fmt.Sprintf(":%d", c.ChartPort)
@@ -143,7 +148,9 @@ func (c *Config) serveCharts(report *StreamReport, desc string) {
 	}
 }
 
-func (c *Config) collectChartData(ctx context.Context, chartsFn func() *ChartsReport, charts *Charts) {
+func (c *Config) collectChartData(ctx context.Context, chartsFn func() *ChartsReport, charts *Charts, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	tickDur := 15 * time.Second
 	tickConf := ss.Or(os.Getenv("PERF_TICK"), "5s")
 	if v, _ := time.ParseDuration(tickConf); v > 0 {

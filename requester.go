@@ -105,7 +105,7 @@ func (r *Requester) doRequest(ctx context.Context, rr *ReportRecord) (err error)
 	return nil
 }
 
-func (r *Requester) Run() {
+func (r *Requester) run() {
 	// handle ctrl-c
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
