@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bingoohuang/perf/cmd/util"
+	"github.com/bingoohuang/perf/pkg/util"
 
 	"github.com/axiomhq/hyperloglog"
 	"github.com/beorn7/perks/histogram"

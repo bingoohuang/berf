@@ -11,13 +11,15 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/bingoohuang/gg/pkg/osx"
+
+	util2 "github.com/bingoohuang/perf/pkg/util"
+
 	"github.com/bingoohuang/gg/pkg/mapp"
 	"github.com/bingoohuang/jj"
 
 	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/bingoohuang/perf/plugins"
-
-	"github.com/bingoohuang/perf/cmd/util"
 
 	_ "embed"
 
@@ -100,7 +102,7 @@ func (c *Views) genViewTemplate(routerChartsMap map[string]string) string {
 
 type Views struct {
 	routerChartsMap map[string]string
-	size            util.WidthHeight
+	size            util2.WidthHeight
 	dryPlots        bool
 	num             int
 }
@@ -108,7 +110,7 @@ type Views struct {
 func NewViews(size string, dryPlots bool) *Views {
 	return &Views{
 		routerChartsMap: make(map[string]string),
-		size:            util.ParseWidthHeight(size, 500, 300),
+		size:            util2.ParseWidthHeight(size, 500, 300),
 		dryPlots:        dryPlots,
 	}
 }
@@ -265,7 +267,7 @@ func (c *Charts) renderCharts(w io.Writer, size, viewsArg string) {
 	var fns []func() components.Charter
 
 	if !c.config.IsNop() {
-		if views := util.NewFeatureMap(viewsArg); len(views) == 0 {
+		if views := util2.NewFeatures(viewsArg); len(views) == 0 {
 			fns = append(fns, v.newLatencyView, v.newTPSView, v.newLatencyPercentileView)
 			if !c.config.Incr.IsEmpty() || c.config.IsDryPlots() {
 				fns = append(fns, v.newConcurrentView)
@@ -306,14 +308,14 @@ func (c *Charts) Serve(ln net.Listener, port int) {
 
 	if c.config.IsDryPlots() {
 		log.Printf("Running in dry mode for %s", c.config.PlotsFile)
-		go util.OpenBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
-		util.ExitIfErr(server.Serve(ln))
+		go osx.OpenBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
+		util2.ExitIfErr(server.Serve(ln))
 		return
 	}
 
 	go func() {
 		time.Sleep(3 * time.Second) // 3s之后再弹出，避免运行时间过短，程序已经退出
-		go util.OpenBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
-		util.ExitIfErr(server.Serve(ln))
+		go osx.OpenBrowser(fmt.Sprintf("http://127.0.0.1:%d", port))
+		util2.ExitIfErr(server.Serve(ln))
 	}()
 }

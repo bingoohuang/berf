@@ -47,8 +47,8 @@ github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kB
 github.com/bingoohuang/easyjson v0.0.0-20211118132814-5606aa48c508 h1:Ew6KVZFgaX/C93v95gc1spL8H+4pis70mLSXFlvyk0E=
 github.com/bingoohuang/easyjson v0.0.0-20211118132814-5606aa48c508/go.mod h1:pj5RZaMJwbOBOXIzDlvOY1kQBJ1unO/XA+gHt17QxBQ=
 github.com/bingoohuang/gg v0.0.0-20211118031105-819d456e7da9/go.mod h1:wKGr+YHWfyrVwP0vlrNkM5PJSamrjt01oyaRvRDSGvo=
-github.com/bingoohuang/gg v0.0.0-20211126014437-9148c5d4cdb9 h1:55zT4c/CtyFLAWF7DYXJqa/Ce6SVC3HE0EhkTmpXdyg=
-github.com/bingoohuang/gg v0.0.0-20211126014437-9148c5d4cdb9/go.mod h1:wKGr+YHWfyrVwP0vlrNkM5PJSamrjt01oyaRvRDSGvo=
+github.com/bingoohuang/gg v0.0.0-20211129025559-24f5a987a10b h1:TxZBAk5dnEpwKdm//np6BCkAA2GyzLZNa3YYoXDSr/E=
+github.com/bingoohuang/gg v0.0.0-20211129025559-24f5a987a10b/go.mod h1:wKGr+YHWfyrVwP0vlrNkM5PJSamrjt01oyaRvRDSGvo=
 github.com/bingoohuang/golog v0.0.0-20211112131923-101b7e1b3d4c/go.mod h1:atiVUeYe0Rsi80P0eDEF8lpf9qvt/w/qpil8PpNGYvw=
 github.com/bingoohuang/jj v0.0.0-20211125042349-4752d135093f h1:J/85KM+WkuNFliiOMGBRNDFzP9Sf3HPbE4duatNSWkY=
 github.com/bingoohuang/jj v0.0.0-20211125042349-4752d135093f/go.mod h1:EyzfstRweHguUY6QqVAggZZifwEaGLv8/S/XI9Tv0Kc=

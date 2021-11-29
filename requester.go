@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bingoohuang/perf/cmd/util"
+	"github.com/bingoohuang/perf/pkg/util"
 
 	"github.com/bingoohuang/gg/pkg/ss"
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/bingoohuang/perf/cmd/util"
+	"github.com/bingoohuang/gg/pkg/osx"
 
 	"github.com/bingoohuang/gg/pkg/fla9"
 	"github.com/bingoohuang/gg/pkg/randx"
@@ -26,7 +26,7 @@ func demo(ctx context.Context, conf *perf.Config) (*perf.Result, error) {
 		}
 
 		d := time.Duration(10 + randx.IntN(10))
-		util.SleepContext(ctx, d*time.Millisecond)
+		osx.SleepContext(ctx, d*time.Millisecond)
 		return &perf.Result{Status: "200"}, nil
 	}
 

@@ -8,12 +8,12 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/bingoohuang/perf/pkg/util"
+
 	"github.com/bingoohuang/gg/pkg/ss"
 
-	"github.com/bingoohuang/gg/pkg/netx/freeport"
-	"github.com/bingoohuang/perf/cmd/util"
-
 	"github.com/bingoohuang/gg/pkg/fla9"
+	"github.com/bingoohuang/gg/pkg/netx/freeport"
 	_ "github.com/bingoohuang/perf/plugins/all"
 )
 
@@ -40,14 +40,14 @@ type Config struct {
 	Duration   time.Duration
 	Incr       util.GoroutineIncr
 
-	GoMaxProcs int
-	Qps        float64
-	Features   string
-	Verbose    int
-	ThinkTime  string
-	ChartPort  int
+	GoMaxProcs   int
+	Qps          float64
+	FeaturesConf string
+	Verbose      int
+	ThinkTime    string
+	ChartPort    int
 
-	util.FeatureMap
+	util.Features
 	CountingName string
 	OkStatus     string
 	PlotsFile    string
@@ -79,7 +79,7 @@ func StartBench(fn F, fns ...ConfigFn) {
 	c := &Config{
 		N: *pN, Duration: *pDuration, Goroutines: *pGoroutines, GoMaxProcs: *pGoMaxProcs,
 		Incr: util.ParseGoIncr(*pGoIncr), PlotsFile: *pPlotsFile,
-		Qps: *pQps, Features: *pFeatures, Verbose: *pVerbose, ThinkTime: *pThinkTime, ChartPort: *pPort,
+		Qps: *pQps, FeaturesConf: *pFeatures, Verbose: *pVerbose, ThinkTime: *pThinkTime, ChartPort: *pPort,
 	}
 	for _, f := range fns {
 		f(c)
@@ -175,8 +175,8 @@ func (c *Config) Setup() {
 		c.ChartPort = freeport.PortStart(c.ChartPort)
 	}
 
-	if c.FeatureMap == nil {
-		c.FeatureMap = util.NewFeatureMap(c.Features)
+	if c.Features == nil {
+		c.Features = util.NewFeatures(c.FeaturesConf)
 	}
 }
 
@@ -186,8 +186,8 @@ func (c *Config) Description() string {
 	}
 
 	desc := "Benchmarking"
-	if c.Features != "" {
-		desc += fmt.Sprintf(" %s", c.Features)
+	if c.FeaturesConf != "" {
+		desc += fmt.Sprintf(" %s", c.FeaturesConf)
 	}
 	if c.N > 0 {
 		desc += fmt.Sprintf(" with %d request(s)", c.N)

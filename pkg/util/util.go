@@ -1,13 +1,10 @@
 package util
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"os/exec"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -150,17 +147,17 @@ func (f *JSONLogFile) Close() error {
 	return f.F.Close()
 }
 
-func NewFeatureMap(features string) FeatureMap {
-	m := make(FeatureMap)
+func NewFeatures(features string) Features {
+	m := make(Features)
 	m.Setup(features)
 	return m
 }
 
-// FeatureMap defines a feature map.
-type FeatureMap map[string]bool
+// Features defines a feature map.
+type Features map[string]bool
 
 // Setup sets up a feature map by features string, which separates feature names by comma.
-func (f *FeatureMap) Setup(features string) {
+func (f *Features) Setup(features string) {
 	for _, feature := range strings.Split(strings.ToLower(features), ",") {
 		if v := strings.TrimSpace(feature); v != "" {
 			(*f)[v] = true
@@ -168,15 +165,15 @@ func (f *FeatureMap) Setup(features string) {
 	}
 }
 
-func (f *FeatureMap) IsNop() bool { return f.Has("nop") }
+func (f *Features) IsNop() bool { return f.Has("nop") }
 
 // Has tells the feature map contains a features.
-func (f *FeatureMap) Has(feature string) bool {
+func (f *Features) Has(feature string) bool {
 	return (*f)[feature] || (*f)[strings.ToLower(feature)]
 }
 
 // HasAny tells the feature map contains any of the features.
-func (f *FeatureMap) HasAny(features ...string) bool {
+func (f *Features) HasAny(features ...string) bool {
 	for _, feature := range features {
 		if f.Has(feature) {
 			return true
@@ -288,58 +285,6 @@ func ParseGoIncr(s string) GoroutineIncr {
 	}
 
 	return ret
-}
-
-// OpenBrowser go/src/cmd/internal/browser/browser.go
-func OpenBrowser(url string) bool {
-	var cmds [][]string
-	if exe := os.Getenv("BROWSER"); exe != "" {
-		cmds = append(cmds, []string{exe})
-	}
-	switch runtime.GOOS {
-	case "darwin":
-		cmds = append(cmds, []string{"/usr/bin/open"})
-	case "windows":
-		cmds = append(cmds, []string{"cmd", "/c", "start"})
-	default:
-		if os.Getenv("DISPLAY") != "" {
-			// xdg-open is only for use in a desktop environment.
-			cmds = append(cmds, []string{"xdg-open"})
-		}
-	}
-	cmds = append(cmds, []string{"chrome"}, []string{"google-chrome"}, []string{"chromium"}, []string{"firefox"})
-	for _, args := range cmds {
-		cmd := exec.Command(args[0], append(args[1:], url)...)
-		if cmd.Start() == nil && WaitTimeout(cmd, 3*time.Second) {
-			return true
-		}
-	}
-	return false
-}
-
-// WaitTimeout reports whether the command appears to have run successfully.
-// If the command runs longer than the timeout, it's deemed successful.
-// If the command runs within the timeout, it's deemed successful if it exited cleanly.
-func WaitTimeout(cmd *exec.Cmd, timeout time.Duration) bool {
-	ch := make(chan error, 1)
-	go func() {
-		ch <- cmd.Wait()
-	}()
-
-	select {
-	case <-time.After(timeout):
-		return true
-	case err := <-ch:
-		return err == nil
-	}
-}
-
-func SleepContext(ctx context.Context, duration time.Duration) {
-	select {
-	case <-ctx.Done():
-	case <-time.After(duration):
-	}
-	return
 }
 
 func ExitIfErr(err error) {
