@@ -7,6 +7,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bingoohuang/gg/pkg/ctl"
+
 	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/bingoohuang/gg/pkg/osx"
@@ -19,6 +21,7 @@ import (
 
 func init() {
 	fla9.Parse()
+	ctl.Config{Initing: *perf.PInit, PrintVersion: *perf.PVersion}.ProcessInit()
 }
 
 func main() {

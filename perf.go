@@ -31,6 +31,8 @@ var (
 	pVerbose    = fla9.Count(pf+"v", 0, "Verbose level, e.g. -v -vv")
 	pThinkTime  = fla9.String(pf+"think", "", "Think time among requests, eg. 1s, 10ms, 10-20ms and etc. (unit ns, us/µs, ms, s, m, h)")
 	pPort       = fla9.Int(pf+"p", 28888, "Listen port for serve Web UI")
+	PVersion    = fla9.Bool("version", false, "Show version and exit")
+	PInit       = fla9.Bool("init", false, "Create initial ctl and exit")
 )
 
 // Config defines the bench configuration.

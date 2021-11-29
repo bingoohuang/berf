@@ -1,16 +1,25 @@
 .PHONY: test install
 all: test install
 
-app := $(notdir $(shell pwd))
+app=$(notdir $(shell pwd))
+appVersion := 1.0.0
 goVersion := $(shell go version | sed 's/go version //'|sed 's/ /_/')
+# e.g. 2021-10-28T11:49:52+0800
 buildTime := $(shell date +%FT%T%z)
+# https://git-scm.com/docs/git-rev-list#Documentation/git-rev-list.txt-emaIem
 gitCommit := $(shell git rev-list --oneline --format=format:'%h@%aI' --max-count=1 `git rev-parse HEAD` | tail -1)
+#gitCommit := $(shell git rev-list -1 HEAD)
 # https://stackoverflow.com/a/47510909
-pkg := main
-# https://ms2008.github.io/2018/10/08/golang-build-version/
-# -extldflags=-static
-flags = "-s -w -X '$(pkg).buildTime=$(buildTime)' -X $(pkg).gitCommit=$(gitCommit) -X '$(pkg).goVersion=$(goVersion)'"
+pkg := github.com/bingoohuang/gg/pkg/v
 
+extldflags := -extldflags -static
+# https://ms2008.github.io/2018/10/08/golang-build-version/
+# https://github.com/kubermatic/kubeone/blob/master/Makefile
+flags = "-s -w -X $(pkg).BuildTime=$(buildTime) -X $(pkg).AppVersion=$(appVersion) -X $(pkg).GitCommit=$(gitCommit) -X $(pkg).GoVersion=$(goVersion)"
+flags2 = "$(extldflags) -s -w -X $(pkg).BuildTime=$(buildTime) -X $(pkg).AppVersion=$(appVersion) -X $(pkg).GitCommit=$(gitCommit) -X $(pkg).GoVersion=$(goVersion)"
+gobin := $(shell go env GOBIN)
+# try $GOPATN/bin if $gobin is empty
+gobin := $(if $(gobin),$(gobin),$(shell go env GOPATH)/bin)
 tool:
 	go get github.com/securego/gosec/cmd/gosec
 
