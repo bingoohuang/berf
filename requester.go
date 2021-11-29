@@ -38,9 +38,6 @@ type Requester struct {
 	closeOnce  sync.Once
 	wg         sync.WaitGroup
 
-	readBytes  int64
-	writeBytes int64
-
 	cancelFunc func()
 	think      *thinktime.ThinkTime
 
@@ -87,7 +84,12 @@ func (r *Requester) doRequest(ctx context.Context, rr *ReportRecord) (err error)
 	var result *Result
 	t1 := time.Now()
 	result, err = r.benchable.Invoke(ctx, r.config)
-	rr.cost = time.Since(t1)
+
+	if result.Cost > 0 {
+		rr.cost = result.Cost
+	} else {
+		rr.cost = time.Since(t1)
+	}
 	if err != nil {
 		return err
 	}
@@ -96,6 +98,9 @@ func (r *Requester) doRequest(ctx context.Context, rr *ReportRecord) (err error)
 	if r.verbose >= 1 {
 		rr.counting = result.Counting
 	}
+
+	rr.readBytes = result.ReadBytes
+	rr.writeBytes = result.WriteBytes
 
 	return nil
 }
@@ -229,8 +234,6 @@ func (r *Requester) runOne(ctx context.Context, rr *ReportRecord) *ReportRecord 
 		rr.error = err.Error()
 	}
 
-	rr.readBytes = atomic.LoadInt64(&r.readBytes)
-	rr.writeBytes = atomic.LoadInt64(&r.writeBytes)
 	return rr
 }
 

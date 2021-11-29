@@ -176,8 +176,8 @@ func (s *StreamReport) Collect(records <-chan *ReportRecord) {
 			s.counts.Insert([]byte(counting))
 		}
 		r.counting = nil
-		s.readBytes = r.readBytes
-		s.writeBytes = r.writeBytes
+		s.readBytes += r.readBytes
+		s.writeBytes += r.writeBytes
 		s.lock.Unlock()
 		recordPool.Put(r)
 	}
@@ -235,8 +235,8 @@ func (s *StreamReport) Snapshot() *SnapshotReport {
 
 	elapseInSec := rs.Elapsed.Seconds()
 	rs.RPS = float64(rs.Count) / elapseInSec
-	rs.ReadThroughput = float64(s.readBytes) / 1024. / 1024. / elapseInSec
-	rs.WriteThroughput = float64(s.writeBytes) / 1024. / 1024. / elapseInSec
+	rs.ReadThroughput = float64(s.readBytes) * 8 / 1000. / 1000. / elapseInSec
+	rs.WriteThroughput = float64(s.writeBytes) * 8 / 1000. / 1000. / elapseInSec
 	rs.Counting = int64(s.counts.Estimate())
 	rs.ElapseInSec = elapseInSec
 

@@ -195,9 +195,15 @@ func (r *Invoker) runOne(req *fasthttp.Request, resp *fasthttp.Response) (*perf.
 		return nil, err
 	}
 
-	rr.ReadBytes = atomic.LoadInt64(&r.readBytes)
-	rr.WriteBytes = atomic.LoadInt64(&r.writeBytes)
+	r.updateThroughput(rr)
 	return rr, nil
+}
+
+func (r *Invoker) updateThroughput(rr *perf.Result) {
+	rr.ReadBytes = atomic.LoadInt64(&r.readBytes)
+	atomic.StoreInt64(&r.readBytes, 0)
+	rr.WriteBytes = atomic.LoadInt64(&r.writeBytes)
+	atomic.StoreInt64(&r.writeBytes, 0)
 }
 
 func (r *Invoker) doRequest(req *fasthttp.Request, rsp *fasthttp.Response, rr *perf.Result) (err error) {
@@ -252,6 +258,7 @@ func (r *Invoker) logDetail(req *fasthttp.Request, rsp *fasthttp.Response, rr *p
 
 func (r *Invoker) runProfiles(req *fasthttp.Request, rsp *fasthttp.Response) (*perf.Result, error) {
 	rr := &perf.Result{}
+	defer r.updateThroughput(rr)
 
 	for _, p := range r.clientOpt.profiles {
 		if err := r.runOneProfile(p, req, rsp, rr); err != nil {

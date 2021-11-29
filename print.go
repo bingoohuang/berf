@@ -378,7 +378,7 @@ func (p *Printer) buildSummary(r *SnapshotReport, isFinal bool, sr *SummaryRepor
 	sr.RPS = fmt.Sprintf("%.3f", r.RPS)
 
 	if r.ReadThroughput > 0 || r.WriteThroughput > 0 {
-		sr.ReadsWrites = fmt.Sprintf("%.3f %.3f MiB/s", r.ReadThroughput, r.WriteThroughput)
+		sr.ReadsWrites = fmt.Sprintf("%.3f %.3f Mbps", r.ReadThroughput, r.WriteThroughput)
 		summaryBulk = append(summaryBulk, []string{"ReadWrite", sr.ReadsWrites})
 	}
 
