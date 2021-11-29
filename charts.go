@@ -63,14 +63,14 @@ let views = {{.ViewsMap}};
 `
 )
 
-func (c *Views) genViewTemplate(routerChartsMap map[string]string) string {
+func (c *Views) genViewTemplate(viewChartsMap map[string]string) string {
 	tpl, err := template.New("view").Parse(ViewTpl)
 	if err != nil {
 		panic("failed to parse template " + err.Error())
 	}
 
 	viewsMap := "{"
-	for k, v := range routerChartsMap {
+	for k, v := range viewChartsMap {
 		viewsMap += k + ": goecharts_" + v + ","
 	}
 	viewsMap += "noop: null}"
@@ -101,17 +101,17 @@ func (c *Views) genViewTemplate(routerChartsMap map[string]string) string {
 }
 
 type Views struct {
-	routerChartsMap map[string]string
-	size            util2.WidthHeight
-	dryPlots        bool
-	num             int
+	viewChartsMap map[string]string
+	size          util2.WidthHeight
+	dryPlots      bool
+	num           int
 }
 
 func NewViews(size string, dryPlots bool) *Views {
 	return &Views{
-		routerChartsMap: make(map[string]string),
-		size:            util2.ParseWidthHeight(size, 500, 300),
-		dryPlots:        dryPlots,
+		viewChartsMap: make(map[string]string),
+		size:          util2.ParseWidthHeight(size, 500, 300),
+		dryPlots:      dryPlots,
 	}
 }
 
@@ -124,11 +124,31 @@ func (c *Views) newBasicView(route string) *charts.Line {
 	)
 	g.SetXAxis([]string{}).SetSeriesOptions(charts.WithLineChartOpts(opts.LineChart{Smooth: true}))
 
-	c.routerChartsMap[route] = g.ChartID
-	if len(c.routerChartsMap) == c.num {
-		g.AddJSFuncs(c.genViewTemplate(c.routerChartsMap))
+	c.viewChartsMap[route] = g.ChartID
+	if len(c.viewChartsMap) == c.num {
+		g.AddJSFuncs(c.genViewTemplate(c.viewChartsMap))
 	}
 	return g
+}
+
+var titleCn = map[string]string{
+	"tps":               "吞吐量",
+	"latency":           "延时",
+	"latencypercentile": "百分位延时",
+	"concurrent":        "并发",
+	"procstat":          "进程",
+	"mem":               "内存",
+	"netstat":           "网络",
+	"net":               "网卡",
+	"system":            "系统",
+}
+
+func title(name string) string {
+	if t := titleCn[strings.ToLower(name)]; t != "" {
+		return t
+	}
+
+	return strings.Title(name)
 }
 
 func (c *Views) newView(name, unit string, series plugins.Series) components.Charter {
@@ -142,7 +162,7 @@ func (c *Views) newView(name, unit string, series plugins.Series) components.Cha
 	if unit != "" {
 		axisLabel = &opts.AxisLabel{Formatter: "{value} " + unit}
 	}
-	g.SetGlobalOptions(charts.WithTitleOpts(opts.Title{Title: strings.Title(name)}),
+	g.SetGlobalOptions(charts.WithTitleOpts(opts.Title{Title: title(name)}),
 		charts.WithYAxisOpts(opts.YAxis{Scale: true, AxisLabel: axisLabel}),
 		charts.WithLegendOpts(opts.Legend{Show: true, Selected: selected}),
 	)

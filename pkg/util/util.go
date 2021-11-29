@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bingoohuang/gg/pkg/osx"
+
 	"go.uber.org/multierr"
 
 	"github.com/bingoohuang/gg/pkg/ss"
@@ -20,12 +22,16 @@ type JSONLogFile struct {
 	Dry     bool
 	Closed  bool
 	HasRows bool
+	Name    string
 }
 
-const DrySuffix = ":dry"
+const (
+	DrySuffix = ":dry"
+	GzSuffix  = ".gz"
+)
 
 func IsDrySuffix(file string) bool {
-	return strings.HasSuffix(file, DrySuffix)
+	return strings.HasSuffix(file, DrySuffix) || strings.HasSuffix(file, GzSuffix)
 }
 
 func NewJsonLogFile(file string) *JSONLogFile {
@@ -35,11 +41,17 @@ func NewJsonLogFile(file string) *JSONLogFile {
 	} else if dry {
 		file = strings.TrimSuffix(file, DrySuffix)
 	}
+	logFile := &JSONLogFile{Name: file, Mutex: &sync.Mutex{}, Dry: dry}
+
+	if dry {
+		return logFile
+	}
+
 	f, err := os.OpenFile(file, os.O_RDWR|os.O_CREATE, 0o600)
-	logFile := &JSONLogFile{F: f, Mutex: &sync.Mutex{}, Dry: dry}
 	if err != nil {
 		log.Printf("E! Fail to open log file %s error: %v", file, err)
 	}
+	logFile.F = f
 	if n, err := f.Seek(0, io.SeekEnd); err != nil {
 		log.Printf("E! fail to seek file %s error: %v", file, err)
 	} else if n == 0 {
@@ -51,15 +63,11 @@ func NewJsonLogFile(file string) *JSONLogFile {
 }
 
 func (f JSONLogFile) ReadAll() []byte {
-	if f.F == nil {
-		return nil
-	}
-
 	f.Lock()
 	defer f.Unlock()
 
-	if f.Closed {
-		data, _ := os.ReadFile(f.F.Name())
+	if f.F == nil || f.Closed {
+		data, _ := osx.ReadFile(f.Name)
 		return data
 	}
 
