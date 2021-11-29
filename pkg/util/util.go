@@ -1,8 +1,11 @@
 package util
 
 import (
+	"bufio"
+	"compress/gzip"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -198,7 +201,36 @@ func (f *JSONLogFile) Close() error {
 	f.Lock()
 	defer f.Unlock()
 	f.Closed = true
-	return f.F.Close()
+	f.F.Close()
+
+	gzipFile(f.Name)
+
+	return nil
+}
+
+func gzipFile(name string) error {
+	f, err := os.Open(name)
+	if err != nil {
+		return err
+	}
+
+	reader := bufio.NewReader(f)
+	content, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return err
+	}
+
+	if f, err = os.Create(name + ".gz"); err != nil {
+		return err
+	}
+	w := gzip.NewWriter(f)
+	w.Write(content)
+	if err = w.Close(); err == nil {
+		f.Close()
+		os.Remove(name)
+	}
+
+	return err
 }
 
 func NewFeatures(features string) Features {
