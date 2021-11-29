@@ -76,12 +76,16 @@ func IsDrySuffix(file string) bool {
 	return strings.HasSuffix(file, DrySuffix) || strings.HasSuffix(file, GzSuffix)
 }
 
+func CleanDrySuffix(file string) string {
+	return strings.TrimSuffix(file, DrySuffix)
+}
+
 func NewJsonLogFile(file string) *JSONLogFile {
 	dry := IsDrySuffix(file)
 	if file == "" {
 		file = "perf_" + time.Now().Format(`200601021504`) + ".log"
 	} else if dry {
-		file = strings.TrimSuffix(file, DrySuffix)
+		file = CleanDrySuffix(file)
 	}
 	logFile := &JSONLogFile{Name: file, Mutex: &sync.Mutex{}, Dry: dry}
 

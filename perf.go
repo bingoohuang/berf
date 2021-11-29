@@ -173,9 +173,7 @@ func (c *Config) collectChartData(ctx context.Context, chartsFn func() *ChartsRe
 
 // Setup setups the environment by the config.
 func (c *Config) Setup() {
-	if c.Goroutines < 0 {
-		c.Goroutines = 100
-	}
+	c.Goroutines = ss.Ifi(c.Goroutines < 0, 100, c.Goroutines)
 	if c.GoMaxProcs < 0 {
 		c.GoMaxProcs = int(2.5 * float64(runtime.GOMAXPROCS(0)))
 	}
@@ -200,11 +198,15 @@ func (c *Config) Setup() {
 }
 
 func (c *Config) Description(benchableName string) string {
-	if c.IsNop() {
-		return "Perf is starting to collect hardware metrics."
+	if c.IsDryPlots() {
+		return fmt.Sprintf(" showing metrics from existing plots file %s.", util.CleanDrySuffix(c.PlotsFile))
 	}
 
-	desc := "Benchmarking"
+	if c.IsNop() {
+		return " starting to collect hardware metrics."
+	}
+
+	desc := " benchmarking"
 	if benchableName != "" {
 		desc += " " + benchableName
 	}
