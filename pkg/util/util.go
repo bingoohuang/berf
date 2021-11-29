@@ -20,7 +20,7 @@ import (
 type Float64 float64
 
 func (f Float64) MarshalJSON() ([]byte, error) {
-	b := []byte(strconv.FormatFloat(float64(f), 'f', 3, 64))
+	b := []byte(strconv.FormatFloat(float64(f), 'f', 1, 64))
 	i := len(b) - 1
 	for ; i >= 0; i-- {
 		if b[i] != '0' {
