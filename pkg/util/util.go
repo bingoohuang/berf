@@ -337,17 +337,6 @@ func ParseGoIncr(s string) GoroutineIncr {
 	return ret
 }
 
-func ExitIfErr(err error) {
-	if err != nil {
-		Exit(err.Error())
-	}
-}
-
-func Exit(msg string) {
-	fmt.Fprintln(os.Stderr, "blow: "+msg)
-	os.Exit(1)
-}
-
 func MergeCodes(codes []string) string {
 	n := 0
 	last := ""

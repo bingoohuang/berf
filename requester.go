@@ -9,8 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bingoohuang/perf/pkg/util"
-
+	"github.com/bingoohuang/gg/pkg/osx"
 	"github.com/bingoohuang/gg/pkg/ss"
 
 	"github.com/bingoohuang/gg/pkg/thinktime"
@@ -48,19 +47,19 @@ type Requester struct {
 	// Qps is the rate limit in queries per second.
 	QPS float64
 
-	ctx    context.Context
-	fn     F
-	config *Config
+	ctx       context.Context
+	benchable Benchable
+	config    *Config
 
 	concurrent int64
 }
 
-func (c *Config) NewRequester(fn F) (*Requester, error) {
+func (c *Config) NewRequester(ctx context.Context, fn Benchable) (*Requester, error) {
 	maxResult := c.Goroutines * 100
 	think, err := thinktime.ParseThinkTime(c.ThinkTime)
-	util.ExitIfErr(err)
+	osx.ExitIfErr(err)
 
-	ctx, cancelFunc := context.WithCancel(context.Background())
+	ctx, cancelFunc := context.WithCancel(ctx)
 	r := &Requester{
 		goroutines: c.Goroutines,
 		n:          c.N,
@@ -70,7 +69,7 @@ func (c *Config) NewRequester(fn F) (*Requester, error) {
 		QPS:        c.Qps,
 		ctx:        ctx,
 		cancelFunc: cancelFunc,
-		fn:         fn,
+		benchable:  fn,
 		think:      think,
 		config:     c,
 	}
@@ -87,15 +86,15 @@ func (r *Requester) closeRecord() {
 func (r *Requester) doRequest(ctx context.Context, rr *ReportRecord) (err error) {
 	var result *Result
 	t1 := time.Now()
-	result, err = r.fn(ctx, r.config)
+	result, err = r.benchable.Invoke(ctx, r.config)
 	rr.cost = time.Since(t1)
 	if err != nil {
 		return err
 	}
 
-	rr.code = []string{result.Status}
+	rr.code = result.Status
 	if r.verbose >= 1 {
-		rr.counting = []string{result.Counting}
+		rr.counting = result.Counting
 	}
 
 	return nil

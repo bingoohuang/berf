@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"reflect"
 	"runtime"
 	"time"
+
+	"github.com/bingoohuang/gg/pkg/osx"
 
 	"github.com/bingoohuang/perf/pkg/util"
 
@@ -31,8 +34,6 @@ var (
 	pVerbose    = fla9.Count(pf+"v", 0, "Verbose level, e.g. -v -vv")
 	pThinkTime  = fla9.String(pf+"think", "", "Think time among requests, eg. 1s, 10ms, 10-20ms and etc. (unit ns, us/µs, ms, s, m, h)")
 	pPort       = fla9.Int(pf+"p", 28888, "Listen port for serve Web UI")
-	PVersion    = fla9.Bool("version", false, "Show version and exit")
-	PInit       = fla9.Bool("init", false, "Create initial ctl and exit")
 )
 
 // Config defines the bench configuration.
@@ -70,14 +71,27 @@ func WithConfig(v *Config) ConfigFn { return func(c *Config) { *c = *v } }
 type Result struct {
 	ReadBytes  int64
 	WriteBytes int64
-	Status     string
-	Counting   string
+	Status     []string
+	Counting   []string
+	Cost       time.Duration
+}
+
+type Benchable interface {
+	Name(context.Context, *Config) string
+	Init(context.Context, *Config) error
+	Invoke(context.Context, *Config) (*Result, error)
+	Final(context.Context, *Config) error
 }
 
 type F func(context.Context, *Config) (*Result, error)
 
+func (f F) Name(context.Context, *Config) string                   { return reflect.ValueOf(f).Type().Name() }
+func (f F) Init(context.Context, *Config) error                    { return nil }
+func (f F) Final(context.Context, *Config) error                   { return nil }
+func (f F) Invoke(ctx context.Context, c *Config) (*Result, error) { return f(ctx, c) }
+
 // StartBench starts a benchmark.
-func StartBench(fn F, fns ...ConfigFn) {
+func StartBench(ctx context.Context, fn Benchable, fns ...ConfigFn) {
 	c := &Config{
 		N: *pN, Duration: *pDuration, Goroutines: *pGoroutines, GoMaxProcs: *pGoMaxProcs,
 		Incr: util.ParseGoIncr(*pGoIncr), PlotsFile: *pPlotsFile,
@@ -89,10 +103,11 @@ func StartBench(fn F, fns ...ConfigFn) {
 
 	c.Setup()
 
-	requester, err := c.NewRequester(fn)
-	util.ExitIfErr(err)
+	osx.ExitIfErr(fn.Init(ctx, c))
+	requester, err := c.NewRequester(ctx, fn)
+	osx.ExitIfErr(err)
 
-	desc := c.Description()
+	desc := c.Description(fn.Name(ctx, c))
 	if !c.IsDryPlots() {
 		fmt.Println(desc)
 	}
@@ -109,6 +124,8 @@ func StartBench(fn F, fns ...ConfigFn) {
 
 	p := c.createTerminalPrinter(&requester.concurrent)
 	p.PrintLoop(report.Snapshot, 500*time.Millisecond, report.Done(), c.N)
+
+	fn.Final(ctx, c)
 }
 
 func (c *Config) serveCharts(report *StreamReport, desc string) {
@@ -119,7 +136,7 @@ func (c *Config) serveCharts(report *StreamReport, desc string) {
 	if c.IsDryPlots() || c.ChartPort > 0 && c.N != 1 && c.Verbose >= 1 {
 		addr := fmt.Sprintf(":%d", c.ChartPort)
 		ln, err := net.Listen("tcp", addr)
-		util.ExitIfErr(err)
+		osx.ExitIfErr(err)
 		fmt.Printf("@Real-time charts is on http://127.0.0.1:%d\n", c.ChartPort)
 
 		charts.Serve(ln, c.ChartPort)
@@ -182,14 +199,17 @@ func (c *Config) Setup() {
 	}
 }
 
-func (c *Config) Description() string {
+func (c *Config) Description(benchableName string) string {
 	if c.IsNop() {
 		return "Perf is starting to collect hardware metrics."
 	}
 
 	desc := "Benchmarking"
+	if benchableName != "" {
+		desc += " " + benchableName
+	}
 	if c.FeaturesConf != "" {
-		desc += fmt.Sprintf(" %s", c.FeaturesConf)
+		desc += fmt.Sprintf(" (%s)", c.FeaturesConf)
 	}
 	if c.N > 0 {
 		desc += fmt.Sprintf(" with %d request(s)", c.N)

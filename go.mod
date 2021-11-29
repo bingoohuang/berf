@@ -6,12 +6,15 @@ require (
 	github.com/AdhityaRamadhanus/fasthttpcors v0.0.0-20170121111917-d4c07198763a
 	github.com/axiomhq/hyperloglog v0.0.0-20211021164851-7f2dfa314bc7
 	github.com/beorn7/perks v1.0.1
-	github.com/bingoohuang/gg v0.0.0-20211129044027-4421e018aaa0
+	github.com/bingoohuang/gg v0.0.0-20211129102113-829071d1053d
 	github.com/bingoohuang/jj v0.0.0-20211125042349-4752d135093f
+	github.com/dustin/go-humanize v1.0.0
 	github.com/go-echarts/go-echarts/v2 v2.2.4
 	github.com/gobwas/glob v0.2.3
+	github.com/karrick/godirwalk v1.16.1
 	github.com/mattn/go-isatty v0.0.15-0.20210929170527-d423e9c6c3bf
 	github.com/mattn/go-runewidth v0.0.13
+	github.com/mitchellh/go-homedir v1.1.0
 	github.com/shirou/gopsutil/v3 v3.21.10
 	github.com/stretchr/testify v1.7.0
 	github.com/valyala/fasthttp v1.31.0
@@ -37,7 +40,11 @@ require (
 	github.com/tklauser/numcpus v0.3.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
+	golang.org/x/net v0.0.0-20210510120150-4163338589ed // indirect
 	golang.org/x/sys v0.0.0-20211013075003-97ac67df715c // indirect
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1 // indirect
+	golang.org/x/text v0.3.6 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
+
+//replace github.com/bingoohuang/gg => /Users/bingoobjca/github/gg
