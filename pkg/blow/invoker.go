@@ -200,10 +200,8 @@ func (r *Invoker) runOne(req *fasthttp.Request, resp *fasthttp.Response) (*perf.
 }
 
 func (r *Invoker) updateThroughput(rr *perf.Result) {
-	rr.ReadBytes = atomic.LoadInt64(&r.readBytes)
-	atomic.StoreInt64(&r.readBytes, 0)
-	rr.WriteBytes = atomic.LoadInt64(&r.writeBytes)
-	atomic.StoreInt64(&r.writeBytes, 0)
+	rr.ReadBytes = atomic.SwapInt64(&r.readBytes, 0)
+	rr.WriteBytes = atomic.SwapInt64(&r.writeBytes, 0)
 }
 
 func (r *Invoker) doRequest(req *fasthttp.Request, rsp *fasthttp.Response, rr *perf.Result) (err error) {
