@@ -6,7 +6,7 @@ require (
 	github.com/AdhityaRamadhanus/fasthttpcors v0.0.0-20170121111917-d4c07198763a
 	github.com/axiomhq/hyperloglog v0.0.0-20211021164851-7f2dfa314bc7
 	github.com/beorn7/perks v1.0.1
-	github.com/bingoohuang/gg v0.0.0-20211129102113-829071d1053d
+	github.com/bingoohuang/gg v0.0.0-20211130004811-caf06aa9f608
 	github.com/bingoohuang/jj v0.0.0-20211125042349-4752d135093f
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-echarts/go-echarts/v2 v2.2.4
