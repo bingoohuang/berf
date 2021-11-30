@@ -34,3 +34,13 @@ Latency Histogram:
 ```
 
 ![img.png](_doc/img.png)
+
+
+## 部署
+
+1. 上传 perf 到 `/usr/local/bin` 目录
+2. 建一个 perf 目录，放入perf 程序: `mkdir perf; cd perf`
+3. 在 perf 目录中创建 ctl 脚本: `perf -init`
+4. `./ctl start -f nop` 启动硬件监控采点后台进程
+5. 下载目录中最新的形如 `perf_202111301122.log.gz` 采点日志
+6. 本地使用命令 `perf perf_202111301122.log.gz` 在浏览器中查看采点曲线，进行分析
