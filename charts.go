@@ -207,8 +207,8 @@ type Charts struct {
 	hardwares      map[string]plugins.Input
 }
 
-func NewCharts(chartsData func() *ChartsReport, desc string, config *Config) *Charts {
-	templates.PageTpl = fmt.Sprintf(PageTpl, desc)
+func NewCharts(chartsData func() *ChartsReport, config *Config) *Charts {
+	templates.PageTpl = fmt.Sprintf(PageTpl, config.Desc)
 	c := &Charts{chartsData: chartsData, config: config}
 	c.initHardwareCollectors()
 	return c

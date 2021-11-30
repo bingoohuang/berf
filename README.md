@@ -44,3 +44,5 @@ Latency Histogram:
 4. `./ctl start -f nop` 启动硬件监控采点后台进程
 5. 下载目录中最新的形如 `perf_202111301122.log.gz` 采点日志
 6. 本地使用命令 `perf perf_202111301122.log.gz` 在浏览器中查看采点曲线，进行分析
+7. 参数
+   - `export PERF_TICK=1s` 每 1s 生成一个点，默认 5s 生成一个.

@@ -16,6 +16,10 @@ import (
 	"github.com/bingoohuang/perf"
 )
 
+func init() {
+	fla9.EnvPrefix = "BLOW"
+}
+
 var (
 	pURL             = fla9.String("url", "", "URL")
 	pBody            = fla9.String("body,b", "", "HTTP request body, or @file to read from")
@@ -23,11 +27,11 @@ var (
 	pStream          = fla9.Bool("stream", false, "Specify stream file specified by '--body @file' using chunked encoding")
 	pMethod          = fla9.String("method,m", "", "HTTP method")
 	pNetwork         = fla9.String("network", "", "Network simulation, local: simulates local network, lan: local, wan: wide, bad: bad network, or BPS:latency like 20M:20ms")
-	pHeaders         = fla9.Strings("header, H", nil, "Custom HTTP headers, K:V")
+	pHeaders         = fla9.Strings("header,H", nil, "Custom HTTP headers, K:V")
 	pProfileArg      = fla9.Strings("profile,P", nil, "Profile file, append :new to create a demo profile, or :tag to run only specified profile")
 	pHost            = fla9.String("host", "", "Host header")
 	pEnableGzip      = fla9.Bool("gzip", false, "Enabled gzip if gzipped content is less more")
-	pBasicAuth       = fla9.String("user", "", "basic auth username:password")
+	pBasicAuth       = fla9.String("basic", "", "basic auth username:password")
 	pContentType     = fla9.String("content,T", "", "Content-Type header")
 	pCertKey         = fla9.String("cert", "", "Path to the client's TLS Cert and private key file, eg. ca.pem,ca.key")
 	pInsecure        = fla9.Bool("insecure,k", false, "Controls whether a client verifies the server's certificate chain and host name")

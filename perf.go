@@ -38,6 +38,7 @@ var (
 	pVerbose    = fla9.Count(pf+"v", 0, "Verbose level, e.g. -v -vv")
 	pThinkTime  = fla9.String(pf+"think", "", "Think time among requests, eg. 1s, 10ms, 10-20ms and etc. (unit ns, us/µs, ms, s, m, h)")
 	pPort       = fla9.Int(pf+"p", 28888, "Listen port for serve Web UI")
+	pName       = fla9.String(pf+"name", "", "Name for this benchmarking test")
 )
 
 // Config defines the bench configuration.
@@ -59,6 +60,8 @@ type Config struct {
 	OkStatus     string
 	PlotsFile    string
 	PlotsHandle  *util.JSONLogFile
+
+	Desc string
 }
 
 type ConfigFn func(*Config)
@@ -124,14 +127,14 @@ func StartBench(ctx context.Context, fn Benchable, fns ...ConfigFn) {
 	requester, err := c.NewRequester(ctx, fn)
 	osx.ExitIfErr(err)
 
-	desc := c.Description(fn.Name(ctx, c))
+	c.Desc = c.Description(fn.Name(ctx, c))
 	if !c.IsDryPlots() {
-		fmt.Println("Perf" + desc)
+		fmt.Println("Perf" + c.Desc)
 	}
 
 	report := NewStreamReport(requester)
 	wg := &sync.WaitGroup{}
-	c.serveCharts(report, desc, wg)
+	c.serveCharts(report, wg)
 
 	if c.IsNop() {
 		<-requester.ctx.Done()
@@ -155,8 +158,8 @@ func setupPlotsFile() {
 	}
 }
 
-func (c *Config) serveCharts(report *StreamReport, desc string, wg *sync.WaitGroup) {
-	charts := NewCharts(report.Charts, desc, c)
+func (c *Config) serveCharts(report *StreamReport, wg *sync.WaitGroup) {
+	charts := NewCharts(report.Charts, c)
 
 	wg.Add(1)
 	go c.collectChartData(report.requester.ctx, report.Charts, charts, wg)
@@ -232,6 +235,10 @@ func (c *Config) Setup() {
 }
 
 func (c *Config) Description(benchableName string) string {
+	if c.Desc != "" {
+		return c.Desc
+	}
+
 	if c.IsDryPlots() {
 		return fmt.Sprintf(" showing metrics from existing plots file %s.", util.TrimDrySuffix(c.PlotsFile))
 	}
@@ -243,6 +250,9 @@ func (c *Config) Description(benchableName string) string {
 	desc := " benchmarking"
 	if benchableName != "" {
 		desc += " " + benchableName
+	}
+	if *pName != "" {
+		desc += " " + *pName
 	}
 	if c.FeaturesConf != "" {
 		desc += fmt.Sprintf(" (%s)", c.FeaturesConf)
