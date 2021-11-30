@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/bingoohuang/gg/pkg/sigx"
 	"os"
 	"syscall"
 	"time"
@@ -31,6 +32,7 @@ var (
 func init() {
 	fla9.Parse()
 	ctl.Config{Initing: *pInit, PrintVersion: *pVersion}.ProcessInit()
+	sigx.RegisterSignalProfile()
 }
 
 func main() {
