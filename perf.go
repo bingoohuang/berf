@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bingoohuang/gg/pkg/filex"
+
 	"github.com/bingoohuang/gg/pkg/osx"
 
 	"github.com/bingoohuang/perf/pkg/util"
@@ -93,6 +95,8 @@ func (f F) Invoke(ctx context.Context, c *Config) (*Result, error) { return f(ct
 
 // StartBench starts a benchmark.
 func StartBench(ctx context.Context, fn Benchable, fns ...ConfigFn) {
+	setupPlotsFile()
+
 	c := &Config{
 		N: *pN, Duration: *pDuration, Goroutines: *pGoroutines, GoMaxProcs: *pGoMaxProcs,
 		Incr: util.ParseGoIncr(*pGoIncr), PlotsFile: *pPlotsFile,
@@ -111,7 +115,7 @@ func StartBench(ctx context.Context, fn Benchable, fns ...ConfigFn) {
 
 	desc := c.Description(fn.Name(ctx, c))
 	if !c.IsDryPlots() {
-		fmt.Println(desc)
+		fmt.Println("Perf" + desc)
 	}
 
 	report := NewStreamReport(requester)
@@ -132,6 +136,14 @@ func StartBench(ctx context.Context, fn Benchable, fns ...ConfigFn) {
 	fn.Final(ctx, c)
 }
 
+func setupPlotsFile() {
+	if *pPlotsFile == "" && len(fla9.Args()) == 1 {
+		if filex.Exists(util.TrimDrySuffix(fla9.Args()[0])) {
+			*pPlotsFile = fla9.Args()[0]
+		}
+	}
+}
+
 func (c *Config) serveCharts(report *StreamReport, desc string, wg *sync.WaitGroup) {
 	charts := NewCharts(report.Charts, desc, c)
 
@@ -143,7 +155,6 @@ func (c *Config) serveCharts(report *StreamReport, desc string, wg *sync.WaitGro
 		ln, err := net.Listen("tcp", addr)
 		osx.ExitIfErr(err)
 		fmt.Printf("@Real-time charts is on http://127.0.0.1:%d\n", c.ChartPort)
-
 		charts.Serve(ln, c.ChartPort)
 	}
 }
@@ -167,8 +178,13 @@ func (c *Config) collectChartData(ctx context.Context, chartsFn func() *ChartsRe
 		return
 	}
 
-	for ctx.Err() == nil {
-		<-ticker.C
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+
 		rd := chartsFn()
 		plots := createMetrics(rd, c.IsNop())
 		plots = charts.mergeHardwareMetrics(plots)
@@ -206,7 +222,7 @@ func (c *Config) Setup() {
 
 func (c *Config) Description(benchableName string) string {
 	if c.IsDryPlots() {
-		return fmt.Sprintf(" showing metrics from existing plots file %s.", util.CleanDrySuffix(c.PlotsFile))
+		return fmt.Sprintf(" showing metrics from existing plots file %s.", util.TrimDrySuffix(c.PlotsFile))
 	}
 
 	if c.IsNop() {

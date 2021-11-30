@@ -17,6 +17,7 @@ import (
 )
 
 var (
+	pURL             = fla9.String("url", "", "URL")
 	pBody            = fla9.String("body,b", "", "HTTP request body, or @file to read from")
 	pUpload          = fla9.String("upload,u", "", "HTTP upload multipart form file or directory, or add prefix file: to set form field name ")
 	pStream          = fla9.Bool("stream", false, "Specify stream file specified by '--body @file' using chunked encoding")
@@ -27,7 +28,7 @@ var (
 	pHost            = fla9.String("host", "", "Host header")
 	pEnableGzip      = fla9.Bool("gzip", false, "Enabled gzip if gzipped content is less more")
 	pBasicAuth       = fla9.String("user", "", "basic auth username:password")
-	pContentType     = fla9.String("content, T", "", "Content-Type header")
+	pContentType     = fla9.String("content,T", "", "Content-Type header")
 	pCertKey         = fla9.String("cert", "", "Path to the client's TLS Cert and private key file, eg. ca.pem,ca.key")
 	pInsecure        = fla9.Bool("insecure,k", false, "Controls whether a client verifies the server's certificate chain and host name")
 	pTimeout         = fla9.Duration("timeout", 0, "Timeout for each http request")
@@ -105,6 +106,10 @@ type ClientOpt struct {
 }
 
 func IsBlowEnv() bool {
+	if *pURL != "" {
+		return true
+	}
+
 	if isBlow := len(*pProfileArg) > 0; isBlow {
 		return true
 	}
@@ -119,7 +124,7 @@ func IsBlowEnv() bool {
 }
 
 func Blow(ctx context.Context, conf *perf.Config) *Invoker {
-	urlAddr := ""
+	urlAddr := *pURL
 
 	if len(fla9.Args()) > 0 {
 		urlAddr, _ = rest.FixURI(fla9.Args()[0])
