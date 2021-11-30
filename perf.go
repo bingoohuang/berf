@@ -2,6 +2,7 @@ package perf
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -85,6 +86,16 @@ type Benchable interface {
 	Invoke(context.Context, *Config) (*Result, error)
 	Final(context.Context, *Config) error
 }
+
+type BenchEmpty struct{}
+
+// ErrNoop means there is no operation defined.
+var ErrNoop = errors.New("noop")
+
+func (f *BenchEmpty) Name(context.Context, *Config) string                   { return "bench" }
+func (f *BenchEmpty) Init(context.Context, *Config) error                    { return nil }
+func (f *BenchEmpty) Final(context.Context, *Config) error                   { return nil }
+func (f *BenchEmpty) Invoke(ctx context.Context, c *Config) (*Result, error) { return nil, ErrNoop }
 
 type F func(context.Context, *Config) (*Result, error)
 
