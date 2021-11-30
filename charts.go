@@ -31,12 +31,6 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-//go:embed echarts.min.js jquery.min.js
-var assetsFS embed.FS
-
-//go:embed views_sync.js
-var viewSyncJs string
-
 const (
 	assetsPath = "/echarts/statics/"
 )
@@ -62,6 +56,9 @@ let views = {{.ViewsMap}};
 {{ end }}
 `
 )
+
+//go:embed views_sync.js
+var viewSyncJs string
 
 func (c *Views) genViewTemplate(viewChartsMap map[string]string) string {
 	tpl, err := template.New("view").Parse(ViewTpl)
@@ -231,6 +228,9 @@ func (c *Charts) initHardwareCollectors() {
 	}
 }
 
+//go:embed echarts.min.js jquery.min.js
+var assetsFS embed.FS
+
 func (c *Charts) Handler(ctx *fasthttp.RequestCtx) {
 	switch path := string(ctx.Path()); {
 	case path == "/data/":
@@ -242,8 +242,7 @@ func (c *Charts) Handler(ctx *fasthttp.RequestCtx) {
 		views := ctx.QueryArgs().Peek("views")
 		c.renderCharts(ctx, string(size), string(views))
 	case strings.HasPrefix(path, assetsPath):
-		ap := path[len(assetsPath):]
-		if f, err := assetsFS.Open(ap); err != nil {
+		if f, err := assetsFS.Open(path[len(assetsPath):]); err != nil {
 			ctx.Error(err.Error(), 404)
 		} else {
 			ctx.SetBodyStream(f, -1)

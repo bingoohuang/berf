@@ -134,9 +134,8 @@ func (s *StreamReport) Collect(records <-chan *ReportRecord) {
 			select {
 			case <-ticker.C:
 				s.lock.Lock()
-				dc := s.latencyStats.count - lastCount
-				if dc > 0 {
-					rps := float64(dc) / time.Since(lastTime).Seconds()
+				if diff := s.latencyStats.count - lastCount; diff > 0 {
+					rps := float64(diff) / time.Since(lastTime).Seconds()
 					s.rpsStats.Update(rps)
 					lastCount = s.latencyStats.count
 					lastTime = time.Now()
