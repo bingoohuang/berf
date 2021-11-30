@@ -32,7 +32,7 @@ var (
 	pGoroutines = fla9.Int(pf+"c", 100, "Number of goroutines")
 	pGoIncr     = fla9.String(pf+"ci", "", "Goroutines incremental mode. empty: none; 1: up by step 1 to max every 1m; 1:10s: up to max by step 1 by n every 10s; 1:10s:1 up to max then down to 0 by step1 every 10s.")
 	pQps        = fla9.Float64(pf+"qps", 0, "QPS rate limit")
-	pFeatures   = fla9.String(pf+"f", "", "Features, e.g. a,b,c")
+	pFeatures   = fla9.String(pf+"f", "", "Customized features, e.g. a,b,c, specifically nop to run no benchmarking job for collect hardware metrics only")
 	pPlotsFile  = fla9.String(pf+"plots", "", "Plots filename, append :dry to show exists plots in dry mode")
 	pVerbose    = fla9.Count(pf+"v", 0, "Verbose level, e.g. -v -vv")
 	pThinkTime  = fla9.String(pf+"think", "", "Think time among requests, eg. 1s, 10ms, 10-20ms and etc. (unit ns, us/µs, ms, s, m, h)")
