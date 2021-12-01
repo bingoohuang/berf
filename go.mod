@@ -1,4 +1,4 @@
-module github.com/bingoohuang/perf
+module github.com/bingoohuang/berf
 
 go 1.17
 
@@ -17,6 +17,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/shirou/gopsutil/v3 v3.21.10
 	github.com/stretchr/testify v1.7.0
+	github.com/thoas/go-funk v0.9.2-0.20211112205042-658cf4758bf8
 	github.com/valyala/fasthttp v1.31.0
 	go.uber.org/multierr v1.6.0
 	golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a

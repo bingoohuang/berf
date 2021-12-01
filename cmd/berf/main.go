@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/bingoohuang/gg/pkg/sigx"
 	"os"
 	"syscall"
 	"time"
 
+	"github.com/bingoohuang/gg/pkg/sigx"
+
+	"github.com/bingoohuang/berf/pkg/blow"
 	"github.com/bingoohuang/gg/pkg/ss"
-	"github.com/bingoohuang/perf/pkg/blow"
 
 	"github.com/bingoohuang/gg/pkg/ctl"
 
@@ -17,14 +18,13 @@ import (
 
 	"github.com/bingoohuang/gg/pkg/osx"
 
+	"github.com/bingoohuang/berf"
 	"github.com/bingoohuang/gg/pkg/fla9"
 	"github.com/bingoohuang/gg/pkg/randx"
-	"github.com/bingoohuang/perf"
 	"github.com/mattn/go-isatty"
 )
 
 var (
-	pBlow    = fla9.Bool("blow", false, "Blow as a high-performance HTTP benchmarking tool")
 	pVersion = fla9.Bool("version", false, "Show version and exit")
 	pInit    = fla9.Bool("init", false, "Create initial ctl and exit")
 )
@@ -36,31 +36,31 @@ func init() {
 }
 
 func main() {
-	if *pBlow || blow.IsBlowEnv() {
-		perf.StartBench(context.Background(), &blow.BlowBench{},
-			perf.WithOkStatus(ss.Or(blow.StatusName(), "200")),
-			perf.WithCounting("Connections"))
+	if blow.IsBlowEnv() {
+		berf.StartBench(context.Background(), &blow.Bench{},
+			berf.WithOkStatus(ss.Or(blow.StatusName(), "200")),
+			berf.WithCounting("Connections"))
 		return
 	}
 
-	perf.StartBench(context.Background(), perf.F(demo), perf.WithOkStatus("200"))
+	berf.StartBench(context.Background(), berf.F(demo), berf.WithOkStatus("200"))
 }
 
-func demo(ctx context.Context, conf *perf.Config) (*perf.Result, error) {
+func demo(ctx context.Context, conf *berf.Config) (*berf.Result, error) {
 	if conf.Has("demo") {
 		if randx.IntN(100) >= 90 {
-			return &perf.Result{Status: []string{"500"}}, nil
+			return &berf.Result{Status: []string{"500"}}, nil
 		}
 
 		d := time.Duration(10 + randx.IntN(10))
 		osx.SleepContext(ctx, d*time.Millisecond)
-		return &perf.Result{Status: []string{"200"}}, nil
+		return &berf.Result{Status: []string{"200"}}, nil
 	} else if conf.Has("tty") {
 		checkStdin()
 		os.Exit(0)
 	}
 
-	return &perf.Result{Status: []string{"Noop"}}, nil
+	return &berf.Result{Status: []string{"Noop"}}, nil
 }
 
 // https://mozillazg.com/2016/03/go-let-cli-support-pipe-read-data-from-stdin.html

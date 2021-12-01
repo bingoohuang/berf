@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"syscall"
 
-	"github.com/bingoohuang/perf/plugins"
-	"github.com/bingoohuang/perf/plugins/system"
+	"github.com/bingoohuang/berf/plugins"
+	"github.com/bingoohuang/berf/plugins/system"
 )
 
 type NetStats struct {

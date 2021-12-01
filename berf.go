@@ -1,4 +1,4 @@
-package perf
+package berf
 
 import (
 	"context"
@@ -15,13 +15,13 @@ import (
 
 	"github.com/bingoohuang/gg/pkg/osx"
 
-	"github.com/bingoohuang/perf/pkg/util"
+	"github.com/bingoohuang/berf/pkg/util"
 
 	"github.com/bingoohuang/gg/pkg/ss"
 
+	_ "github.com/bingoohuang/berf/plugins/all"
 	"github.com/bingoohuang/gg/pkg/fla9"
 	"github.com/bingoohuang/gg/pkg/netx/freeport"
-	_ "github.com/bingoohuang/perf/plugins/all"
 )
 
 var (

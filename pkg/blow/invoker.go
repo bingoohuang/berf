@@ -18,13 +18,15 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/thoas/go-funk"
+
 	"github.com/bingoohuang/gg/pkg/ss"
 
-	"github.com/bingoohuang/perf/pkg/blow/internal"
+	"github.com/bingoohuang/berf/pkg/blow/internal"
 
+	"github.com/bingoohuang/berf"
 	"github.com/bingoohuang/gg/pkg/gz"
 	"github.com/bingoohuang/jj"
-	"github.com/bingoohuang/perf"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpproxy"
 )
@@ -114,15 +116,29 @@ func (r *Invoker) buildRequestClient(opt *ClientOpt) (*fasthttp.RequestHeader, e
 		cli.Dial = fasthttpproxy.FasthttpProxyHTTPDialerTimeout(opt.dialTimeout)
 	}
 
-	cli.Dial = internal.ThroughputStatDial(internal.NetworkWrap(opt.network), cli.Dial, &r.readBytes, &r.writeBytes)
-
+	wrap := internal.NetworkWrap(opt.network)
+	cli.Dial = internal.ThroughputStatDial(wrap, cli.Dial, &r.readBytes, &r.writeBytes)
 	if cli.TLSConfig, err = opt.buildTLSConfig(); err != nil {
 		return nil, err
 	}
 
 	var h fasthttp.RequestHeader
 	h.SetContentType(adjustContentType(opt))
-	h.SetHost(ss.If(opt.host != "", opt.host, u.Host))
+
+	host := ""
+	for _, hdr := range opt.headers {
+		k, v := ss.Split2(hdr, ss.WithSeps(":"))
+		if strings.EqualFold(k, "Host") {
+			host = v
+			break
+		}
+	}
+	h.SetHost(ss.If(host != "", host, u.Host))
+
+	opt.headers = funk.FilterString(opt.headers, func(hdr string) bool {
+		k, _ := ss.Split2(hdr, ss.WithSeps(":"))
+		return !strings.EqualFold(k, "Host")
+	})
 
 	h.SetMethod(adjustMethod(opt))
 	h.SetRequestURI(u.RequestURI())
@@ -145,7 +161,7 @@ func (r *Invoker) buildRequestClient(opt *ClientOpt) (*fasthttp.RequestHeader, e
 	return &h, nil
 }
 
-func (r *Invoker) Run() (*perf.Result, error) {
+func (r *Invoker) Run() (*berf.Result, error) {
 	req := fasthttp.AcquireRequest()
 	resp := fasthttp.AcquireResponse()
 	defer fasthttp.ReleaseRequest(req)
@@ -171,11 +187,11 @@ func (r *Invoker) Run() (*perf.Result, error) {
 	return r.runOne(req, resp)
 }
 
-func (r *Invoker) runOne(req *fasthttp.Request, resp *fasthttp.Response) (*perf.Result, error) {
+func (r *Invoker) runOne(req *fasthttp.Request, resp *fasthttp.Response) (*berf.Result, error) {
 	closers, err := r.setBody(req)
 	defer closers.Close()
 
-	rr := &perf.Result{}
+	rr := &berf.Result{}
 	if err == nil {
 		err = r.doRequest(req, resp, rr)
 	}
@@ -184,12 +200,12 @@ func (r *Invoker) runOne(req *fasthttp.Request, resp *fasthttp.Response) (*perf.
 	return rr, err
 }
 
-func (r *Invoker) updateThroughput(rr *perf.Result) {
+func (r *Invoker) updateThroughput(rr *berf.Result) {
 	rr.ReadBytes = atomic.SwapInt64(&r.readBytes, 0)
 	rr.WriteBytes = atomic.SwapInt64(&r.writeBytes, 0)
 }
 
-func (r *Invoker) doRequest(req *fasthttp.Request, rsp *fasthttp.Response, rr *perf.Result) (err error) {
+func (r *Invoker) doRequest(req *fasthttp.Request, rsp *fasthttp.Response, rr *berf.Result) (err error) {
 	t1 := time.Now()
 	err = r.httpInvoke(req, rsp)
 	rr.Cost = time.Since(t1)
@@ -200,7 +216,7 @@ func (r *Invoker) doRequest(req *fasthttp.Request, rsp *fasthttp.Response, rr *p
 	return r.processRsp(req, rsp, rr)
 }
 
-func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *perf.Result) error {
+func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *berf.Result) error {
 	rr.Status = append(rr.Status, parseStatus(rsp, r.clientOpt.statusName))
 	if r.clientOpt.verbose >= 1 {
 		rr.Counting = append(rr.Counting, rsp.LocalAddr().String()+"->"+rsp.RemoteAddr().String())
@@ -238,8 +254,8 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 	return nil
 }
 
-func (r *Invoker) runProfiles(req *fasthttp.Request, rsp *fasthttp.Response) (*perf.Result, error) {
-	rr := &perf.Result{}
+func (r *Invoker) runProfiles(req *fasthttp.Request, rsp *fasthttp.Response) (*berf.Result, error) {
+	rr := &berf.Result{}
 	defer r.updateThroughput(rr)
 
 	for _, p := range r.clientOpt.profiles {
@@ -258,7 +274,7 @@ func (r *Invoker) runProfiles(req *fasthttp.Request, rsp *fasthttp.Response) (*p
 	return rr, nil
 }
 
-func (r *Invoker) runOneProfile(p *internal.Profile, req *fasthttp.Request, rsp *fasthttp.Response, rr *perf.Result) error {
+func (r *Invoker) runOneProfile(p *internal.Profile, req *fasthttp.Request, rsp *fasthttp.Response, rr *berf.Result) error {
 	closers, err := p.CreateReq(r.isTLS, req, r.clientOpt.enableGzip)
 	defer closers.Close()
 

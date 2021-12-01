@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bingoohuang/perf/pkg/blow/lossy"
+	"github.com/bingoohuang/berf/pkg/blow/lossy"
 
 	"github.com/dustin/go-humanize"
 	"github.com/valyala/fasthttp"

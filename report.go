@@ -1,4 +1,4 @@
-package perf
+package berf
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bingoohuang/perf/pkg/util"
+	"github.com/bingoohuang/berf/pkg/util"
 
 	"github.com/axiomhq/hyperloglog"
 	"github.com/beorn7/perks/histogram"

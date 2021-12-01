@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bingoohuang/perf/plugins/internal"
+	"github.com/bingoohuang/berf/plugins/internal"
 )
 
 // Implementation of PIDGatherer that execs pgrep to find processes

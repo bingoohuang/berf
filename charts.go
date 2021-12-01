@@ -1,4 +1,4 @@
-package perf
+package berf
 
 import (
 	"bytes"
@@ -13,13 +13,13 @@ import (
 
 	"github.com/bingoohuang/gg/pkg/osx"
 
-	util2 "github.com/bingoohuang/perf/pkg/util"
+	util2 "github.com/bingoohuang/berf/pkg/util"
 
 	"github.com/bingoohuang/gg/pkg/mapp"
 	"github.com/bingoohuang/jj"
 
+	"github.com/bingoohuang/berf/plugins"
 	"github.com/bingoohuang/gg/pkg/ss"
-	"github.com/bingoohuang/perf/plugins"
 
 	_ "embed"
 
@@ -48,7 +48,7 @@ let views = {{.ViewsMap}};
 <html>
 	{{- template "header" . }}
 <body>
-<p align="center">🚀 <a href="https://github.com/bingoohuang/perf"><b>Perf</b></a> %s</p>
+<p align="center">🚀 <a href="https://github.com/bingoohuang/berf"><b>Perf</b></a> %s</p>
 <style> .box { justify-content:center; display:flex; flex-wrap:wrap } </style>
 <div class="box"> {{- range .Charts }} {{ template "base" . }} {{- end }} </div>
 </body>
@@ -309,7 +309,7 @@ func (c *Charts) renderCharts(w io.Writer, size, viewsArg string) {
 
 	v.num = len(fns) + len(plugins.Inputs)
 	p := components.NewPage()
-	p.PageTitle = "perf"
+	p.PageTitle = "berf"
 	p.AssetsHost = assetsPath
 	p.Assets.JSAssets.Add("jquery.min.js")
 

@@ -8,12 +8,12 @@ import (
 
 	"github.com/bingoohuang/gg/pkg/rest"
 
-	"github.com/bingoohuang/perf/pkg/blow/internal"
+	"github.com/bingoohuang/berf/pkg/blow/internal"
 
+	"github.com/bingoohuang/berf"
 	"github.com/bingoohuang/gg/pkg/fla9"
 	"github.com/bingoohuang/gg/pkg/osx"
 	"github.com/bingoohuang/gg/pkg/ss"
-	"github.com/bingoohuang/perf"
 )
 
 func init() {
@@ -29,7 +29,6 @@ var (
 	pNetwork         = fla9.String("network", "", "Network simulation, local: simulates local network, lan: local, wan: wide, bad: bad network, or BPS:latency like 20M:20ms")
 	pHeaders         = fla9.Strings("header,H", nil, "Custom HTTP headers, K:V")
 	pProfileArg      = fla9.Strings("profile,P", nil, "Profile file, append :new to create a demo profile, or :tag to run only specified profile")
-	pHost            = fla9.String("host", "", "Host header")
 	pEnableGzip      = fla9.Bool("gzip", false, "Enabled gzip if gzipped content is less more")
 	pBasicAuth       = fla9.String("basic", "", "basic auth username:password")
 	pContentType     = fla9.String("content,T", "", "Content-Type header")
@@ -45,11 +44,11 @@ var (
 
 func StatusName() string { return *pStatusName }
 
-type BlowBench struct {
+type Bench struct {
 	invoker *Invoker
 }
 
-func (b *BlowBench) Name(context.Context, *perf.Config) string {
+func (b *Bench) Name(context.Context, *berf.Config) string {
 	opt := b.invoker.clientOpt
 	if v := opt.url; v != "" {
 		return v
@@ -58,7 +57,7 @@ func (b *BlowBench) Name(context.Context, *perf.Config) string {
 	return "profiles " + strings.Join(*pProfileArg, ",")
 }
 
-func (b *BlowBench) Final(_ context.Context, conf *perf.Config) error {
+func (b *Bench) Final(_ context.Context, conf *berf.Config) error {
 	opt := b.invoker.clientOpt
 	if conf.N == 1 && opt.logf != nil {
 		if v := opt.logf.GetLastLog(); v != "" {
@@ -68,12 +67,12 @@ func (b *BlowBench) Final(_ context.Context, conf *perf.Config) error {
 	return nil
 }
 
-func (b *BlowBench) Init(ctx context.Context, conf *perf.Config) error {
+func (b *Bench) Init(ctx context.Context, conf *berf.Config) error {
 	b.invoker = Blow(ctx, conf)
 	return nil
 }
 
-func (b *BlowBench) Invoke(context.Context, *perf.Config) (*perf.Result, error) {
+func (b *Bench) Invoke(context.Context, *berf.Config) (*berf.Result, error) {
 	return b.invoker.Run()
 }
 
@@ -96,7 +95,6 @@ type ClientOpt struct {
 
 	socks5Proxy string
 	contentType string
-	host        string
 	upload      string
 
 	basicAuth  string
@@ -127,7 +125,7 @@ func IsBlowEnv() bool {
 	return false
 }
 
-func Blow(ctx context.Context, conf *perf.Config) *Invoker {
+func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 	urlAddr := *pURL
 
 	if len(fla9.Args()) > 0 {
@@ -156,7 +154,6 @@ func Blow(ctx context.Context, conf *perf.Config) *Invoker {
 
 		socks5Proxy: *pSocks5,
 		contentType: *pContentType,
-		host:        *pHost,
 
 		network:   *pNetwork,
 		basicAuth: *pBasicAuth,

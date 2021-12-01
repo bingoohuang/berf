@@ -3,9 +3,9 @@ package system
 import (
 	"strings"
 
-	"github.com/bingoohuang/perf/pkg/util"
+	"github.com/bingoohuang/berf/pkg/util"
 
-	"github.com/bingoohuang/perf/plugins"
+	"github.com/bingoohuang/berf/plugins"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/host"
 	"github.com/shirou/gopsutil/v3/load"

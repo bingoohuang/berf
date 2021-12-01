@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/bingoohuang/perf/pkg/util"
+	"github.com/bingoohuang/berf/pkg/util"
 
-	"github.com/bingoohuang/perf/plugins"
-	"github.com/bingoohuang/perf/plugins/system"
+	"github.com/bingoohuang/berf/plugins"
+	"github.com/bingoohuang/berf/plugins/system"
 )
 
 type MemStats struct {

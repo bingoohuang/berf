@@ -1,9 +1,9 @@
-# perf
+# berf
 
-perf framework for local methods.
+berf framework for local methods.
 
 ```sh
-$ perf -f demo -v -ci 1 -c10
+$ berf -f demo -v -ci 1 -c10
 Benchmarking demo using max 10 goroutine(s), 12 GoMaxProcs.
 @Real-time charts is on http://127.0.0.1:28888
 
@@ -38,11 +38,11 @@ Latency Histogram:
 
 ## 部署
 
-1. 上传 perf 到 `/usr/local/bin` 目录
-2. 建一个 perf 目录，放入perf 程序: `mkdir perf; cd perf`
-3. 在 perf 目录中创建 ctl 脚本: `perf -init`
+1. 上传 berf 到 `/usr/local/bin` 目录
+2. 建一个 berf 目录，放入perf 程序: `mkdir berf; cd berf`
+3. 在 berf 目录中创建 ctl 脚本: `berf -init`
 4. `./ctl start -f nop` 启动硬件监控采点后台进程
 5. 下载目录中最新的形如 `perf_202111301122.log.gz` 采点日志
-6. 本地使用命令 `perf perf_202111301122.log.gz` 在浏览器中查看采点曲线，进行分析
+6. 本地使用命令 `berf perf_202111301122.log.gz` 在浏览器中查看采点曲线，进行分析
 7. 参数
    - `export PERF_TICK=1s` 每 1s 生成一个点，默认 5s 生成一个.

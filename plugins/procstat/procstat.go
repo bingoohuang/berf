@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/bingoohuang/perf/pkg/util"
+	"github.com/bingoohuang/berf/pkg/util"
 
-	"github.com/bingoohuang/perf/plugins"
+	"github.com/bingoohuang/berf/plugins"
 )
 
 type PID int32

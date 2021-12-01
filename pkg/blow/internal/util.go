@@ -1,9 +1,10 @@
 package internal
 
 import (
-	"github.com/bingoohuang/gg/pkg/ss"
 	"io"
 	"strings"
+
+	"github.com/bingoohuang/gg/pkg/ss"
 
 	"github.com/bingoohuang/gg/pkg/filex"
 	"github.com/bingoohuang/gg/pkg/fla9"
