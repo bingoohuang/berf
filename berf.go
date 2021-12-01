@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	pf = os.Getenv("PERF_PRE")
+	pf = os.Getenv("BERF_PRE")
 
 	pN          = fla9.Int(pf+"n", 0, "Total number of requests")
 	pDuration   = fla9.Duration(pf+"d", 0, "Duration of test, examples: -d10s -d3m")
@@ -129,7 +129,7 @@ func StartBench(ctx context.Context, fn Benchable, fns ...ConfigFn) {
 
 	c.Desc = c.Description(fn.Name(ctx, c))
 	if !c.IsDryPlots() {
-		fmt.Println("Perf" + c.Desc)
+		fmt.Println("Berf" + c.Desc)
 	}
 
 	report := NewStreamReport(requester)
@@ -177,7 +177,7 @@ func (c *Config) collectChartData(ctx context.Context, chartsFn func() *ChartsRe
 	defer wg.Done()
 
 	tickDur := 15 * time.Second
-	tickConf := ss.Or(os.Getenv("PERF_TICK"), "5s")
+	tickConf := ss.Or(os.Getenv("BERF_TICK"), "5s")
 	if v, _ := time.ParseDuration(tickConf); v > 0 {
 		tickDur = v
 	}

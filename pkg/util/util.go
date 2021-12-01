@@ -86,7 +86,7 @@ func TrimDrySuffix(file string) string {
 func NewJsonLogFile(file string) *JSONLogFile {
 	dry := IsDrySuffix(file)
 	if file == "" {
-		file = "perf_" + time.Now().Format(`200601021504`) + ".log"
+		file = "berf_" + time.Now().Format(`200601021504`) + ".log"
 	} else if dry {
 		file = TrimDrySuffix(file)
 	}

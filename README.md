@@ -35,14 +35,13 @@ Latency Histogram:
 
 ![img.png](_doc/img.png)
 
-
 ## 部署
 
 1. 上传 berf 到 `/usr/local/bin` 目录
-2. 建一个 berf 目录，放入perf 程序: `mkdir berf; cd berf`
+2. 建一个 berf 目录，放入 berf 程序: `mkdir berf; cd berf`
 3. 在 berf 目录中创建 ctl 脚本: `berf -init`
 4. `./ctl start -f nop` 启动硬件监控采点后台进程
-5. 下载目录中最新的形如 `perf_202111301122.log.gz` 采点日志
-6. 本地使用命令 `berf perf_202111301122.log.gz` 在浏览器中查看采点曲线，进行分析
+5. 下载目录中最新的形如 `berf_202111301122.log.gz` 采点日志
+6. 本地使用命令 `berf berf_202111301122.log.gz` 在浏览器中查看采点曲线，进行分析
 7. 参数
-   - `export PERF_TICK=1s` 每 1s 生成一个点，默认 5s 生成一个.
+   - `export BERF_TICK=1s` 每 1s 生成一个点，默认 5s 生成一个.
