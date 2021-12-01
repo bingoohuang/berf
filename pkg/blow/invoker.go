@@ -123,21 +123,23 @@ func (r *Invoker) buildRequestClient(opt *ClientOpt) (*fasthttp.RequestHeader, e
 	}
 
 	var h fasthttp.RequestHeader
-	h.SetContentType(adjustContentType(opt))
 
 	host := ""
+	contentType := ""
 	for _, hdr := range opt.headers {
 		k, v := ss.Split2(hdr, ss.WithSeps(":"))
 		if strings.EqualFold(k, "Host") {
 			host = v
-			break
+		} else if strings.EqualFold(k, "Content-Type") {
+			contentType = v
 		}
 	}
+	h.SetContentType(adjustContentType(opt, contentType))
 	h.SetHost(ss.If(host != "", host, u.Host))
 
 	opt.headers = funk.FilterString(opt.headers, func(hdr string) bool {
 		k, _ := ss.Split2(hdr, ss.WithSeps(":"))
-		return !strings.EqualFold(k, "Host")
+		return !strings.EqualFold(k, "Host") && !strings.EqualFold(k, "Content-Type")
 	})
 
 	h.SetMethod(adjustMethod(opt))
@@ -334,9 +336,9 @@ func (r *Invoker) setBody(req *fasthttp.Request) (internal.Closers, error) {
 	return nil, nil
 }
 
-func adjustContentType(opt *ClientOpt) string {
-	if opt.contentType != "" {
-		return opt.contentType
+func adjustContentType(opt *ClientOpt, contentType string) string {
+	if contentType != "" {
+		return contentType
 	}
 
 	if json.Valid(opt.bodyBytes) {

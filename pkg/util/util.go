@@ -241,7 +241,7 @@ func gzipFile(name string) error {
 	return err
 }
 
-func NewFeatures(features string) Features {
+func NewFeatures(features ...string) Features {
 	m := make(Features)
 	m.Setup(features)
 	return m
@@ -251,10 +251,12 @@ func NewFeatures(features string) Features {
 type Features map[string]bool
 
 // Setup sets up a feature map by features string, which separates feature names by comma.
-func (f *Features) Setup(features string) {
-	for _, feature := range strings.Split(strings.ToLower(features), ",") {
-		if v := strings.TrimSpace(feature); v != "" {
-			(*f)[v] = true
+func (f *Features) Setup(featuresArr []string) {
+	for _, features := range featuresArr {
+		for _, feature := range strings.Split(strings.ToLower(features), ",") {
+			if v := strings.TrimSpace(feature); v != "" {
+				(*f)[v] = true
+			}
 		}
 	}
 }
@@ -275,40 +277,6 @@ func (f *Features) HasAny(features ...string) bool {
 	}
 
 	return false
-}
-
-type PushResult int
-
-const (
-	PushOK PushResult = iota
-	PushOKDrop
-	PushFail
-)
-
-func TryWrite(c chan []byte, v []byte) PushResult {
-	select {
-	case c <- v:
-		return PushOK
-	default:
-	}
-
-	dropped := false
-	select {
-	case <-c:
-		dropped = true
-	default:
-	}
-
-	select {
-	case c <- v:
-		if dropped {
-			return PushOKDrop
-		} else {
-			return PushOK
-		}
-	default:
-		return PushFail
-	}
 }
 
 type WidthHeight struct {

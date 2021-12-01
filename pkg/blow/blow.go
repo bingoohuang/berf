@@ -2,9 +2,12 @@ package blow
 
 import (
 	"context"
+	"log"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/bingoohuang/berf/pkg/util"
 
 	"github.com/bingoohuang/gg/pkg/rest"
 
@@ -21,25 +24,19 @@ func init() {
 }
 
 var (
-	pURL             = fla9.String("url", "", "URL")
-	pBody            = fla9.String("body,b", "", "HTTP request body, or @file to read from")
-	pUpload          = fla9.String("upload,u", "", "HTTP upload multipart form file or directory, or add prefix file: to set form field name ")
-	pStream          = fla9.Bool("stream", false, "Specify stream file specified by '--body @file' using chunked encoding")
-	pMethod          = fla9.String("method,m", "", "HTTP method")
-	pNetwork         = fla9.String("network", "", "Network simulation, local: simulates local network, lan: local, wan: wide, bad: bad network, or BPS:latency like 20M:20ms")
-	pHeaders         = fla9.Strings("header,H", nil, "Custom HTTP headers, K:V")
-	pProfileArg      = fla9.Strings("profile,P", nil, "Profile file, append :new to create a demo profile, or :tag to run only specified profile")
-	pEnableGzip      = fla9.Bool("gzip", false, "Enabled gzip if gzipped content is less more")
-	pBasicAuth       = fla9.String("basic", "", "basic auth username:password")
-	pContentType     = fla9.String("content,T", "", "Content-Type header")
-	pCertKey         = fla9.String("cert", "", "Path to the client's TLS Cert and private key file, eg. ca.pem,ca.key")
-	pInsecure        = fla9.Bool("insecure,k", false, "Controls whether a client verifies the server's certificate chain and host name")
-	pTimeout         = fla9.Duration("timeout", 0, "Timeout for each http request")
-	pDialTimeout     = fla9.Duration("dial-timeout", 0, "Timeout for dial addr")
-	pReqWriteTimeout = fla9.Duration("req-timeout", 0, "Timeout for full request writing")
-	pRspReadTimeout  = fla9.Duration("rsp-timeout", 0, "Timeout for full response reading")
-	pSocks5          = fla9.String("socks5", "", "Socks5 proxy, ip:port")
-	pStatusName      = fla9.String("status", "", "Status name in json, like resultCode")
+	pURL        = fla9.String("url", "", "URL")
+	pBody       = fla9.String("body,b", "", "HTTP request body, or @file to read from, or @file:stream to enable chunked encoding for the file")
+	pUpload     = fla9.String("upload,u", "", "HTTP upload multipart form file or directory, or add prefix file: to set form field name ")
+	pMethod     = fla9.String("method,m", "", "HTTP method")
+	pNetwork    = fla9.String("network", "", "Network simulation, local: simulates local network, lan: local, wan: wide, bad: bad network, or BPS:latency like 20M:20ms")
+	pHeaders    = fla9.Strings("header,H", nil, "Custom HTTP headers, K:V, e.g. Content-Type")
+	pProfiles   = fla9.Strings("profile,P", nil, "Profile file, append :new to create a demo profile, or :tag to run only specified profile")
+	pOpts       = fla9.Strings("opt", nil, "Options. gzip: Enabled content gzip, k: not verify the server's cert chain and host name")
+	pBasicAuth  = fla9.String("basic", "", "basic auth username:password")
+	pCertKey    = fla9.String("cert", "", "Path to the client's TLS Cert and private key file, eg. ca.pem,ca.key")
+	pTimeout    = fla9.String("timeout", "", "Timeout for each http request, e.g. 5s for do:5s,dial:5s,write:5s,read:5s")
+	pSocks5     = fla9.String("socks5", "", "Socks5 proxy, ip:port")
+	pStatusName = fla9.String("status", "", "Status name in json, like resultCode")
 )
 
 func StatusName() string { return *pStatusName }
@@ -54,7 +51,7 @@ func (b *Bench) Name(context.Context, *berf.Config) string {
 		return v
 	}
 
-	return "profiles " + strings.Join(*pProfileArg, ",")
+	return "profiles " + strings.Join(*pProfiles, ",")
 }
 
 func (b *Bench) Final(_ context.Context, conf *berf.Config) error {
@@ -94,7 +91,6 @@ type ClientOpt struct {
 	dialTimeout  time.Duration
 
 	socks5Proxy string
-	contentType string
 	upload      string
 
 	basicAuth  string
@@ -112,7 +108,7 @@ func IsBlowEnv() bool {
 		return true
 	}
 
-	if isBlow := len(*pProfileArg) > 0; isBlow {
+	if isBlow := len(*pProfiles) > 0; isBlow {
 		return true
 	}
 
@@ -132,8 +128,16 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 		urlAddr, _ = rest.FixURI(fla9.Args()[0])
 	}
 
-	bodyFile, bodyBytes := internal.ParseBodyArg(*pBody, *pStream)
+	stream := strings.HasSuffix(*pBody, ":stream")
+	if stream {
+		*pBody = strings.TrimSuffix(*pBody, ":stream")
+	}
+	bodyFile, bodyBytes := internal.ParseBodyArg(*pBody, stream)
 	cert, key := ss.Split2(*pCertKey)
+
+	opts := util.NewFeatures(*pOpts...)
+
+	timeout := parseDurations(*pTimeout)
 
 	opt := &ClientOpt{
 		url:       urlAddr,
@@ -145,29 +149,63 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 
 		certPath: cert,
 		keyPath:  key,
-		insecure: *pInsecure,
+		insecure: opts.HasAny("k", "insecure"),
 
-		doTimeout:    *pTimeout,
-		readTimeout:  *pRspReadTimeout,
-		writeTimeout: *pReqWriteTimeout,
-		dialTimeout:  *pDialTimeout,
+		doTimeout:    timeout.Get("do"),
+		readTimeout:  timeout.Get("read", "r"),
+		writeTimeout: timeout.Get("write", "w"),
+		dialTimeout:  timeout.Get("dial", "d"),
 
 		socks5Proxy: *pSocks5,
-		contentType: *pContentType,
 
 		network:   *pNetwork,
 		basicAuth: *pBasicAuth,
 		maxConns:  conf.Goroutines,
 
-		enableGzip: *pEnableGzip,
+		enableGzip: opts.HasAny("g", "gzip"),
 		verbose:    conf.Verbose,
 		statusName: *pStatusName,
 	}
 
 	opt.logf = internal.CreateLogFile(opt.verbose)
 
-	opt.profiles = internal.ParseProfileArg(*pProfileArg)
+	opt.profiles = internal.ParseProfileArg(*pProfiles)
 	invoker, err := NewInvoker(ctx, opt)
 	osx.ExitIfErr(err)
 	return invoker
+}
+
+type Durations struct {
+	Default time.Duration
+	Map     map[string]time.Duration
+}
+
+func (d *Durations) Get(keys ...string) time.Duration {
+	for _, key := range keys {
+		if v, ok := d.Map[strings.ToLower(key)]; ok {
+			return v
+		}
+	}
+	return d.Default
+}
+
+func parseDurations(s string) *Durations {
+	d := &Durations{Map: make(map[string]time.Duration)}
+	var err error
+	for _, one := range ss.Split(s, ss.WithSeps(","), ss.WithTrimSpace(true), ss.WithIgnoreEmpty(true)) {
+		if p := strings.IndexRune(one, ':'); p > 0 {
+			k, v := strings.TrimSpace(one[:p]), strings.TrimSpace(one[p+1:])
+			d.Map[strings.ToLower(k)], err = time.ParseDuration(v)
+			if err != nil {
+				log.Fatalf("E! failed to parse expressions %s, err: %v", s, err)
+			}
+		} else {
+			d.Default, err = time.ParseDuration(one)
+			if err != nil {
+				log.Fatalf("E! failed to parse expressions %s, err: %v", s, err)
+			}
+		}
+	}
+
+	return d
 }
