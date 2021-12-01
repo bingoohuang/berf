@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"github.com/bingoohuang/gg/pkg/ss"
 	"io"
 	"strings"
 
@@ -43,18 +44,15 @@ func SetHeader(r *fasthttp.Request, header, value string) {
 }
 
 func ParseBodyArg(body string, stream bool) (fileName string, bodyBytes []byte) {
-	fileName = body
 	if strings.HasPrefix(body, "@") {
 		fileName = (body)[1:]
+		if !filex.Exists(fileName) {
+			return "", []byte(body)
+		}
+
 	}
 
-	if !filex.Exists(fileName) {
-		return "", nil
-	}
+	fileName, bodyBytes = fla9.ParseFileArg(body)
 
-	if stream {
-		return fileName, bodyBytes
-	}
-
-	return fla9.ParseFileArg(body)
+	return ss.If(stream, fileName, ""), bodyBytes
 }
