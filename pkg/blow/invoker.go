@@ -32,7 +32,7 @@ import (
 )
 
 type Invoker struct {
-	clientOpt       *ClientOpt
+	opt             *Opt
 	httpHeader      *fasthttp.RequestHeader
 	noUploadCache   bool
 	uploadFileField string
@@ -45,30 +45,28 @@ type Invoker struct {
 	isTLS      bool
 }
 
-func NewInvoker(ctx context.Context, clientOpt *ClientOpt) (*Invoker, error) {
-	r := &Invoker{
-		clientOpt: clientOpt,
-	}
+func NewInvoker(ctx context.Context, opt *Opt) (*Invoker, error) {
+	r := &Invoker{opt: opt}
 
-	header, err := r.buildRequestClient(clientOpt)
+	header, err := r.buildRequestClient(opt)
 	if err != nil {
 		return nil, err
 	}
 	r.httpHeader = header
 
-	if clientOpt.upload != "" {
+	if opt.upload != "" {
 		const nocacheTag = ":nocache"
-		if strings.HasSuffix(clientOpt.upload, nocacheTag) {
+		if strings.HasSuffix(opt.upload, nocacheTag) {
 			r.noUploadCache = true
-			clientOpt.upload = strings.TrimSuffix(clientOpt.upload, nocacheTag)
+			opt.upload = strings.TrimSuffix(opt.upload, nocacheTag)
 		}
 
-		if pos := strings.IndexRune(clientOpt.upload, ':'); pos > 0 {
-			r.uploadFileField = clientOpt.upload[:pos]
-			r.upload = clientOpt.upload[pos+1:]
+		if pos := strings.IndexRune(opt.upload, ':'); pos > 0 {
+			r.uploadFileField = opt.upload[:pos]
+			r.upload = opt.upload[pos+1:]
 		} else {
 			r.uploadFileField = "file"
-			r.upload = clientOpt.upload
+			r.upload = opt.upload
 		}
 	}
 
@@ -80,7 +78,7 @@ func NewInvoker(ctx context.Context, clientOpt *ClientOpt) (*Invoker, error) {
 	return r, nil
 }
 
-func (r *Invoker) buildRequestClient(opt *ClientOpt) (*fasthttp.RequestHeader, error) {
+func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) {
 	var u *url.URL
 	var err error
 
@@ -152,11 +150,11 @@ func (r *Invoker) buildRequestClient(opt *ClientOpt) (*fasthttp.RequestHeader, e
 		h.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(opt.basicAuth)))
 	}
 
-	if r.clientOpt.doTimeout == 0 {
+	if r.opt.doTimeout == 0 {
 		r.httpInvoke = cli.Do
 	} else {
 		r.httpInvoke = func(req *fasthttp.Request, rsp *fasthttp.Response) error {
-			return cli.DoTimeout(req, rsp, r.clientOpt.doTimeout)
+			return cli.DoTimeout(req, rsp, r.opt.doTimeout)
 		}
 	}
 
@@ -169,11 +167,11 @@ func (r *Invoker) Run() (*berf.Result, error) {
 	defer fasthttp.ReleaseRequest(req)
 	defer fasthttp.ReleaseResponse(resp)
 
-	if r.clientOpt.logf != nil {
-		r.clientOpt.logf.MarkPos()
+	if r.opt.logf != nil {
+		r.opt.logf.MarkPos()
 	}
 
-	if len(r.clientOpt.profiles) > 0 {
+	if len(r.opt.profiles) > 0 {
 		return r.runProfiles(req, resp)
 	}
 
@@ -183,7 +181,7 @@ func (r *Invoker) Run() (*berf.Result, error) {
 		req.URI().SetHostBytes(req.Header.Host())
 	}
 
-	if r.clientOpt.enableGzip {
+	if r.opt.enableGzip {
 		req.Header.Set("Accept-Encoding", "gzip")
 	}
 	return r.runOne(req, resp)
@@ -219,17 +217,17 @@ func (r *Invoker) doRequest(req *fasthttp.Request, rsp *fasthttp.Response, rr *b
 }
 
 func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *berf.Result) error {
-	rr.Status = append(rr.Status, parseStatus(rsp, r.clientOpt.statusName))
-	if r.clientOpt.verbose >= 1 {
+	rr.Status = append(rr.Status, parseStatus(rsp, r.opt.statusName))
+	if r.opt.verbose >= 1 {
 		rr.Counting = append(rr.Counting, rsp.LocalAddr().String()+"->"+rsp.RemoteAddr().String())
 	}
 
-	if r.clientOpt.logf == nil {
+	if r.opt.logf == nil {
 		return rsp.BodyWriteTo(ioutil.Discard)
 	}
 
 	b := &bytes.Buffer{}
-	defer r.clientOpt.logf.Write(b)
+	defer r.opt.logf.Write(b)
 
 	conn := rsp.LocalAddr().String() + "->" + rsp.RemoteAddr().String()
 	_, _ = b.WriteString(fmt.Sprintf("### %s time: %s cost: %s\n",
@@ -260,7 +258,7 @@ func (r *Invoker) runProfiles(req *fasthttp.Request, rsp *fasthttp.Response) (*b
 	rr := &berf.Result{}
 	defer r.updateThroughput(rr)
 
-	for _, p := range r.clientOpt.profiles {
+	for _, p := range r.opt.profiles {
 		if err := r.runOneProfile(p, req, rsp, rr); err != nil {
 			return rr, err
 		}
@@ -277,7 +275,7 @@ func (r *Invoker) runProfiles(req *fasthttp.Request, rsp *fasthttp.Response) (*b
 }
 
 func (r *Invoker) runOneProfile(p *internal.Profile, req *fasthttp.Request, rsp *fasthttp.Response, rr *berf.Result) error {
-	closers, err := p.CreateReq(r.isTLS, req, r.clientOpt.enableGzip)
+	closers, err := p.CreateReq(r.isTLS, req, r.opt.enableGzip)
 	defer closers.Close()
 
 	if err != nil {
@@ -303,8 +301,8 @@ func parseStatus(resp *fasthttp.Response, statusName string) string {
 }
 
 func (r *Invoker) setBody(req *fasthttp.Request) (internal.Closers, error) {
-	if r.clientOpt.bodyFile != "" {
-		file, err := os.Open(r.clientOpt.bodyFile)
+	if r.opt.bodyFile != "" {
+		file, err := os.Open(r.opt.bodyFile)
 		if err != nil {
 			return nil, err
 		}
@@ -323,9 +321,9 @@ func (r *Invoker) setBody(req *fasthttp.Request) (internal.Closers, error) {
 		return nil, nil
 	}
 
-	bodyBytes := r.clientOpt.bodyBytes
+	bodyBytes := r.opt.bodyBytes
 
-	if r.clientOpt.enableGzip {
+	if r.opt.enableGzip {
 		if d, err := gz.Gzip(bodyBytes); err == nil && len(d) < len(bodyBytes) {
 			bodyBytes = d
 			req.Header.Set("Content-Encoding", "gzip")
@@ -336,7 +334,7 @@ func (r *Invoker) setBody(req *fasthttp.Request) (internal.Closers, error) {
 	return nil, nil
 }
 
-func adjustContentType(opt *ClientOpt, contentType string) string {
+func adjustContentType(opt *Opt, contentType string) string {
 	if contentType != "" {
 		return contentType
 	}
@@ -348,7 +346,7 @@ func adjustContentType(opt *ClientOpt, contentType string) string {
 	return `plain/text; charset=utf-8`
 }
 
-func adjustMethod(opt *ClientOpt) string {
+func adjustMethod(opt *Opt) string {
 	if opt.method != "" {
 		return opt.method
 	}
@@ -372,7 +370,7 @@ func addMissingPort(addr string, isTLS bool) string {
 	return net.JoinHostPort(addr, ss.If(isTLS, "443", "80"))
 }
 
-func (opt *ClientOpt) buildTLSConfig() (*tls.Config, error) {
+func (opt *Opt) buildTLSConfig() (*tls.Config, error) {
 	var certs []tls.Certificate
 	if opt.certPath != "" && opt.keyPath != "" {
 		c, err := tls.LoadX509KeyPair(opt.certPath, opt.keyPath)

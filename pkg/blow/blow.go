@@ -46,7 +46,7 @@ type Bench struct {
 }
 
 func (b *Bench) Name(context.Context, *berf.Config) string {
-	opt := b.invoker.clientOpt
+	opt := b.invoker.opt
 	if v := opt.url; v != "" {
 		return v
 	}
@@ -55,7 +55,7 @@ func (b *Bench) Name(context.Context, *berf.Config) string {
 }
 
 func (b *Bench) Final(_ context.Context, conf *berf.Config) error {
-	opt := b.invoker.clientOpt
+	opt := b.invoker.opt
 	if conf.N == 1 && opt.logf != nil {
 		if v := opt.logf.GetLastLog(); v != "" {
 			os.Stdout.WriteString(v)
@@ -73,7 +73,7 @@ func (b *Bench) Invoke(context.Context, *berf.Config) (*berf.Result, error) {
 	return b.invoker.Run()
 }
 
-type ClientOpt struct {
+type Opt struct {
 	url       string
 	method    string
 	headers   []string
@@ -139,7 +139,7 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 
 	timeout := parseDurations(*pTimeout)
 
-	opt := &ClientOpt{
+	opt := &Opt{
 		url:       urlAddr,
 		method:    *pMethod,
 		headers:   *pHeaders,
