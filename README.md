@@ -2,6 +2,12 @@
 
 berf framework for local methods.
 
+## Features
+
+1. `TPS_CMP=0 berf http://127.0.0.1:5003/health -v` to add a comparing series to the TPS plots, 2021-12-02.
+
+## Demo
+
 ```sh
 $ berf -f demo -v -ci 1 -c10
 Benchmarking demo using max 10 goroutine(s), 12 GoMaxProcs.

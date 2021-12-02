@@ -302,6 +302,8 @@ func createMetrics(rd *ChartsReport, noop bool) []byte {
 		m["tps"] = []interface{}{rd.RPS}
 	}
 
+	m = appendComparePoint(m, "tps")
+
 	md := Metrics{Time: time.Now().Format("2006-01-02 15:04:05"), Values: m}
 	data, _ := json.Marshal(md)
 	return data
