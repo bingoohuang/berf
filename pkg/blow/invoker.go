@@ -86,6 +86,8 @@ func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) 
 		u, err = url.Parse(opt.url)
 	} else if len(opt.profiles) > 0 {
 		u, err = url.Parse(opt.profiles[0].URL)
+	} else {
+		return nil, fmt.Errorf("failed to parse url")
 	}
 
 	if err != nil {

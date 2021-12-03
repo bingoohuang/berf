@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -16,7 +17,10 @@ type TagValue interface {
 
 type Tag struct {
 	Values []TagValue
+	Raw    string
 }
+
+func (t Tag) String() string { return t.Raw }
 
 func (t *Tag) Contains(s string) bool {
 	for _, value := range t.Values {
@@ -59,7 +63,7 @@ func (r *RangeValue) containsString(v string) bool {
 }
 
 func ParseTag(s string) *Tag {
-	tag := &Tag{}
+	tag := &Tag{Raw: s}
 	parts := ss.Split(s, ss.WithSeps(","), ss.WithTrimSpace(true), ss.WithIgnoreEmpty(true))
 	for _, part := range parts {
 		p := strings.Index(part, "-")
@@ -130,5 +134,10 @@ func ParseProfileArg(profileArg []string) []*Profile {
 	if hasNew {
 		os.Exit(0)
 	}
+
+	if len(profileArg) > 0 && len(profiles) == 0 && tag != nil {
+		log.Fatalf("failed to find profile with tag %v", tag)
+	}
+
 	return profiles
 }
