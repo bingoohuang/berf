@@ -299,10 +299,8 @@ func createMetrics(rd *ChartsReport, noop bool) []byte {
 		m["latencyPercentile"] = rd.LatencyPercentiles
 		m["latency"] = rd.Latency
 		m["concurrent"] = []interface{}{rd.Concurrent}
-		m["tps"] = []interface{}{rd.RPS}
+		m["tps"] = []interface{}{rd.RPS, 0}
 	}
-
-	m = appendComparePoint(m, "tps")
 
 	md := Metrics{Time: time.Now().Format("2006-01-02 15:04:05"), Values: m}
 	data, _ := json.Marshal(md)

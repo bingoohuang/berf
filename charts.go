@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"os"
 	"strings"
 	"text/template"
 	"time"
@@ -197,32 +196,7 @@ func (c *Views) newConcurrentView() components.Charter {
 }
 
 func (c *Views) newTPSView() components.Charter {
-	series := appendCompareSeries([]string{"TPS"}, "tps")
-	return c.newView("tps", "", plugins.Series{Series: series, Selected: series})
-}
-
-var comparePoints = map[string]util2.Float64{}
-
-func init() {
-	if v := os.Getenv("TPS_CMP"); v != "" {
-		comparePoints["tps"] = util2.Float64(ss.ParseFloat64(v))
-	}
-}
-
-func appendComparePoint(m map[string]interface{}, name string) map[string]interface{} {
-	if v, ok := comparePoints[name]; ok {
-		m[name] = append(m[name].([]interface{}), v)
-	}
-
-	return m
-}
-
-func appendCompareSeries(series []string, name string) []string {
-	if _, ok := comparePoints[name]; ok {
-		return append(series, strings.ToUpper(name)+"_CMP")
-	}
-
-	return series
+	return c.newView("tps", "", plugins.Series{Series: []string{"TPS", "TPS-0"}, Selected: []string{"TPS"}})
 }
 
 type Charts struct {
