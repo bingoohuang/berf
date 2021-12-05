@@ -196,7 +196,8 @@ func (c *Views) newConcurrentView() components.Charter {
 }
 
 func (c *Views) newTPSView() components.Charter {
-	return c.newView("tps", "", plugins.Series{Series: []string{"TPS", "TPS-0"}, Selected: []string{"TPS"}})
+	series := []string{"TPS", "TPS-0"}
+	return c.newView("tps", "", plugins.Series{Series: series, Selected: series})
 }
 
 type Charts struct {
