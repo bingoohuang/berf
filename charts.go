@@ -136,6 +136,8 @@ var titleCn = map[string]string{
 	"procstat":          "进程",
 	"mem":               "内存",
 	"netstat":           "网络",
+	"disk":              "磁盘",
+	"diskio":            "磁盘IO",
 	"net":               "网卡",
 	"system":            "系统",
 }

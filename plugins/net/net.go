@@ -6,6 +6,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/bingoohuang/berf/plugins/internal"
+
 	"github.com/bingoohuang/berf/pkg/util"
 
 	"github.com/bingoohuang/berf/pkg/filter"
@@ -119,21 +121,13 @@ func (n *NetIOStats) diff(stat netStat) []interface{} {
 	return points
 }
 
-func adjust(cur, prev uint64) uint64 {
-	if cur >= prev {
-		return cur - prev
-	}
-
-	return cur + ^uint64(0) - prev
-}
-
 func getNetDevStatDiff(cur netDevStat, pre netStat) netDevStat {
 	for _, p := range pre.netDevStats {
 		if p.interfaceName == cur.interfaceName {
-			cur.rxBytes = adjust(cur.rxBytes, p.rxBytes)
-			cur.txBytes = adjust(cur.txBytes, p.txBytes)
-			cur.rxPkts = adjust(cur.rxPkts, p.rxPkts)
-			cur.txPkts = adjust(cur.txPkts, p.txPkts)
+			cur.rxBytes = internal.Adjust(cur.rxBytes, p.rxBytes)
+			cur.txBytes = internal.Adjust(cur.txBytes, p.txBytes)
+			cur.rxPkts = internal.Adjust(cur.rxPkts, p.rxPkts)
+			cur.txPkts = internal.Adjust(cur.txPkts, p.txPkts)
 			break
 		}
 	}

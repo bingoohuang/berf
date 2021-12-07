@@ -57,6 +57,10 @@ func BytesToBPS(bytes uint64, d time.Duration) Float64 {
 	return Float64(float64(bytes*8) / float64(MEGA) / d.Seconds())
 }
 
+func BytesToMBS(bytes uint64, d time.Duration) Float64 {
+	return Float64(float64(bytes) / float64(MEGA) / d.Seconds())
+}
+
 func NumberToRate(num uint64, d time.Duration) Float64 {
 	return Float64(float64(num) / d.Seconds())
 }

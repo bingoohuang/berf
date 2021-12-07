@@ -1,6 +1,8 @@
 package all
 
 import (
+	_ "github.com/bingoohuang/berf/plugins/disk"
+	_ "github.com/bingoohuang/berf/plugins/diskio"
 	_ "github.com/bingoohuang/berf/plugins/mem"
 	_ "github.com/bingoohuang/berf/plugins/net"
 	_ "github.com/bingoohuang/berf/plugins/netstat"

@@ -149,14 +149,14 @@ func (p *Procstat) addMetric(proc Process) map[string]util.Float64 {
 		f["fds"] = util.Float64(v)
 	}
 
-	if cpuPerc, err := proc.Percent(time.Duration(0)); err == nil {
-		f["%cpu"] = util.Float64(cpuPerc)
+	if v, err := proc.Percent(time.Duration(0)); err == nil {
+		f["%cpu"] = util.Float64(v)
 	}
 
-	if mem, err := proc.MemoryInfo(); err == nil {
-		f["rss"] = util.BytesToMEGA(mem.RSS)
-		f["vms"] = util.BytesToMEGA(mem.VMS)
-		f["swap"] = util.BytesToMEGA(mem.Swap)
+	if v, err := proc.MemoryInfo(); err == nil {
+		f["rss"] = util.BytesToMEGA(v.RSS)
+		f["vms"] = util.BytesToMEGA(v.VMS)
+		f["swap"] = util.BytesToMEGA(v.Swap)
 	}
 
 	return f

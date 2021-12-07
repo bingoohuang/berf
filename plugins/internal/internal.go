@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"errors"
 	"os/exec"
 	"syscall"
 )
@@ -15,4 +16,14 @@ func ExitStatus(err error) (int, bool) {
 		}
 	}
 	return 0, false
+}
+
+var ErrorNotImplemented = errors.New("not implemented yet")
+
+func Adjust(cur, prev uint64) uint64 {
+	if cur >= prev {
+		return cur - prev
+	}
+
+	return cur + ^uint64(0) - prev
 }

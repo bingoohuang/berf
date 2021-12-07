@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bingoohuang/berf/plugins/internal"
+
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/mem"
@@ -15,6 +17,7 @@ type PS interface {
 	CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error)
 	DiskUsage(mountPointFilter []string, fstypeExclude []string) ([]*disk.UsageStat, []*disk.PartitionStat, error)
 	NetIO() ([]net.IOCountersStat, error)
+	DiskIO(names []string) (map[string]disk.IOCountersStat, error)
 	VMStat() (*mem.VirtualMemoryStat, error)
 	NetConnections() ([]net.ConnectionStat, error)
 }
@@ -126,6 +129,14 @@ func (s *SystemPS) DiskUsage(mountPointFilter []string, fstypeExclude []string) 
 func (s *SystemPS) NetIO() ([]net.IOCountersStat, error)          { return net.IOCounters(true) }
 func (s *SystemPS) NetConnections() ([]net.ConnectionStat, error) { return net.Connections("all") }
 
+func (s *SystemPS) DiskIO(names []string) (map[string]disk.IOCountersStat, error) {
+	m, err := disk.IOCounters(names...)
+	if err == internal.ErrorNotImplemented {
+		return nil, nil
+	}
+
+	return m, err
+}
 func (s *SystemPS) VMStat() (*mem.VirtualMemoryStat, error) { return mem.VirtualMemory() }
 
 func (s *SystemPSDisk) Partitions(all bool) ([]disk.PartitionStat, error) {
