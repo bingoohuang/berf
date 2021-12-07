@@ -144,7 +144,7 @@ func StartBench(ctx context.Context, fn Benchable, fns ...ConfigFn) {
 	go report.Collect(requester.recordChan)
 
 	p := c.createTerminalPrinter(&requester.concurrent)
-	p.PrintLoop(report.Snapshot, 500*time.Millisecond, report.Done(), c.N)
+	p.PrintLoop(report.Snapshot, report.Done(), c.N)
 
 	wg.Wait()
 	fn.Final(ctx, c)

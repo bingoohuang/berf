@@ -40,7 +40,7 @@ func (ds *DiskStats) Series() plugins.Series {
 	}
 
 	for _, p := range paths {
-		pp := p + "-"
+		pp := p + ":"
 
 		ps.Series = append(ps.Series,
 			pp+"total",

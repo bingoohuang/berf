@@ -10,7 +10,10 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"syscall"
 	"time"
+
+	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/mattn/go-isatty"
 	"github.com/mattn/go-runewidth"
@@ -65,24 +68,42 @@ func (p *Printer) updateProgressValue(rs *SnapshotReport) {
 	}
 }
 
-func (p *Printer) PrintLoop(snapshot func() *SnapshotReport, interval time.Duration, doneChan <-chan struct{}, requests int) {
+func (p *Printer) PrintLoop(snapshot func() *SnapshotReport, doneChan <-chan struct{}, requests int) {
+	interval := 500 * time.Millisecond
+	isTerm := terminal.IsTerminal(syscall.Stdout)
+	if !isTerm {
+		interval = 1 * time.Minute
+	}
 	out := os.Stdout
 
 	var echo func(isFinal bool)
 	buf := &bytes.Buffer{}
 
-	var backCursor string
-	echo = func(isFinal bool) {
-		r := snapshot()
-		p.updateProgressValue(r)
-		out.WriteString(backCursor)
+	if isTerm {
+		var backCursor string
+		echo = func(isFinal bool) {
+			r := snapshot()
+			p.updateProgressValue(r)
+			out.WriteString(backCursor)
 
-		buf.Reset()
-		p.formatTableReports(buf, r, isFinal)
+			buf.Reset()
+			p.formatTableReports(buf, r, isFinal)
 
-		n := printLines(buf.Bytes(), out)
-		backCursor = fmt.Sprintf("\033[%dA", n)
-		out.Sync()
+			n := printLines(buf.Bytes(), out)
+			backCursor = fmt.Sprintf("\033[%dA", n)
+			out.Sync()
+		}
+	} else {
+		echo = func(isFinal bool) {
+			r := snapshot()
+			p.updateProgressValue(r)
+
+			buf.Reset()
+			p.formatTableReports(buf, r, isFinal)
+
+			printLines(buf.Bytes(), out)
+			out.Sync()
+		}
 	}
 
 	if interval > 0 && requests != 1 {

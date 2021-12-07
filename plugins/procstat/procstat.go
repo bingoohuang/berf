@@ -108,7 +108,7 @@ func (p *Procstat) Series() plugins.Series {
 			name = name[len(name)-5:]
 		}
 
-		pp := name + "-"
+		pp := name + ":"
 		if len(p.procs) > 1 {
 			pp = fmt.Sprintf("%s-%d-", name, pid)
 		}

@@ -58,8 +58,9 @@ func (n *NetIOStats) Init() (err error) {
 func (n *NetIOStats) Series() plugins.Series {
 	s := plugins.Series{}
 	for _, v := range n.interfacesName {
-		s.Series = append(s.Series, v+"_Tx", v+"_Rx", v+"_TxP", v+"_RxP")
-		s.Selected = append(s.Selected, v+"_Tx", v+"_Rx")
+		p := v + ":"
+		s.Series = append(s.Series, p+"Tx", p+"Rx", p+"TxP", p+"RxP")
+		s.Selected = append(s.Selected, p+"Tx", p+"Rx")
 	}
 
 	return s

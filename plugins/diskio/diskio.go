@@ -54,7 +54,7 @@ func (d *DiskIO) Series() plugins.Series {
 		if len(d.names) == 1 {
 			pp = ""
 		} else {
-			pp += "-"
+			pp += ":"
 		}
 
 		ps.Series = append(ps.Series,
