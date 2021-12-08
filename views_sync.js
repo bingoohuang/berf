@@ -4,13 +4,17 @@ function renderView(dict) {
         if (!view) {
             continue;
         }
-        let opt = view.getOption();
 
+        let arr = dict.values[key];
+        if (arr == null) {
+            continue
+        }
+
+        let opt = view.getOption();
         let x = opt.xAxis[0].data;
         x.push(dict.time);
         opt.xAxis[0].data = x;
 
-        let arr = dict.values[key];
         for (let i = 0; i < arr.length; i++) {
             let y = opt.series[i].data;
             y.push({value: arr[i]});
