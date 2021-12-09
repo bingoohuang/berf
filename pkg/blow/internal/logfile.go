@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -95,10 +96,15 @@ func ReadFileFromPos(f *os.File, pos int64) ([]byte, error) {
 		n, err := f.Read(data[len(data):cap(data)])
 		data = data[:len(data)+n]
 		if err != nil {
-			if err == io.EOF {
-				err = nil
-			}
-			return data, err
+			return data, ErrorIf(errors.Is(err, io.EOF), nil, err)
 		}
 	}
+}
+
+func ErrorIf(b bool, err1, err2 error) error {
+	if b {
+		return err1
+	}
+
+	return err2
 }

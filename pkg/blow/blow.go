@@ -2,6 +2,8 @@ package blow
 
 import (
 	"context"
+	"fmt"
+	"github.com/bingoohuang/jj"
 	"log"
 	"os"
 	"strings"
@@ -37,6 +39,7 @@ var (
 	pTimeout    = fla9.String("timeout", "", "Timeout for each http request, e.g. 5s for do:5s,dial:5s,write:5s,read:5s")
 	pSocks5     = fla9.String("socks5", "", "Socks5 proxy, ip:port")
 	pStatusName = fla9.String("status", "", "Status name in json, like resultCode")
+	pPretty     = fla9.Bool("pretty", false, "Pretty JSON output")
 )
 
 func StatusName() string { return *pStatusName }
@@ -58,10 +61,38 @@ func (b *Bench) Final(_ context.Context, conf *berf.Config) error {
 	opt := b.invoker.opt
 	if conf.N == 1 && opt.logf != nil {
 		if v := opt.logf.GetLastLog(); v != "" {
+			v = colorJSON(v, *pPretty)
 			os.Stdout.WriteString(v)
 		}
 	}
 	return nil
+}
+
+func colorJSON(v string, pretty bool) string {
+	p := strings.Index(v, "\n{")
+	if p < 0 {
+		p = strings.Index(v, "\n[")
+	}
+
+	if p < 0 {
+		return v
+	}
+
+	s2 := v[p+1:]
+	q := jj.StreamParse([]byte(s2), nil)
+	if q < 0 {
+		q = -q
+	}
+	if q > 0 {
+		s := []byte(v[p+1 : p+1+q])
+		if pretty {
+			s = jj.Pretty(s)
+		}
+		s = jj.Color(s, nil)
+		return v[:p+1] + string(s) + colorJSON(v[p+1+q:], pretty)
+	}
+
+	return v
 }
 
 func (b *Bench) Init(ctx context.Context, conf *berf.Config) error {
@@ -137,7 +168,10 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 
 	opts := util.NewFeatures(*pOpts...)
 
-	timeout := parseDurations(*pTimeout)
+	timeout, err := parseDurations(*pTimeout)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 
 	opt := &Opt{
 		url:       urlAddr,
@@ -189,7 +223,8 @@ func (d *Durations) Get(keys ...string) time.Duration {
 	return d.Default
 }
 
-func parseDurations(s string) *Durations {
+// parseDurations parses expression like do:5s,dial:5s,write:5s,read:5s to Durations struct.
+func parseDurations(s string) (*Durations, error) {
 	d := &Durations{Map: make(map[string]time.Duration)}
 	var err error
 	for _, one := range ss.Split(s, ss.WithSeps(","), ss.WithTrimSpace(true), ss.WithIgnoreEmpty(true)) {
@@ -197,15 +232,14 @@ func parseDurations(s string) *Durations {
 			k, v := strings.TrimSpace(one[:p]), strings.TrimSpace(one[p+1:])
 			d.Map[strings.ToLower(k)], err = time.ParseDuration(v)
 			if err != nil {
-				log.Fatalf("E! failed to parse expressions %s, err: %v", s, err)
+				return nil, fmt.Errorf("failed to parse expressions %s, err: %w", s, err)
 			}
 		} else {
-			d.Default, err = time.ParseDuration(one)
-			if err != nil {
-				log.Fatalf("E! failed to parse expressions %s, err: %v", s, err)
+			if d.Default, err = time.ParseDuration(one); err != nil {
+				return nil, fmt.Errorf("failed to parse expressions %s, err: %w", s, err)
 			}
 		}
 	}
 
-	return d
+	return d, nil
 }
