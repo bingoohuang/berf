@@ -69,6 +69,10 @@ func (b *Bench) Final(_ context.Context, conf *berf.Config) error {
 }
 
 func colorJSON(v string, pretty bool) string {
+	if !berf.IsStdoutTerminal {
+		return v
+	}
+
 	p := strings.Index(v, "\n{")
 	if p < 0 {
 		p = strings.Index(v, "\n[")

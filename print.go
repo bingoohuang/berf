@@ -10,10 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
-	"syscall"
 	"time"
-
-	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/mattn/go-isatty"
 	"github.com/mattn/go-runewidth"
@@ -27,9 +24,9 @@ const (
 )
 
 var (
-	barSpinner = []string{"|", "/", "-", "\\"}
-	clearLine  = []byte("\r\033[K")
-	isTerminal = isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd())
+	barSpinner       = []string{"|", "/", "-", "\\"}
+	clearLine        = []byte("\r\033[K")
+	IsStdoutTerminal = isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd())
 )
 
 type Printer struct {
@@ -70,8 +67,7 @@ func (p *Printer) updateProgressValue(rs *SnapshotReport) {
 
 func (p *Printer) PrintLoop(snapshot func() *SnapshotReport, doneChan <-chan struct{}, requests int) {
 	interval := 500 * time.Millisecond
-	isTerm := terminal.IsTerminal(syscall.Stdout)
-	if !isTerm {
+	if !IsStdoutTerminal {
 		interval = 1 * time.Minute
 	}
 	out := os.Stdout
@@ -79,7 +75,7 @@ func (p *Printer) PrintLoop(snapshot func() *SnapshotReport, doneChan <-chan str
 	var echo func(isFinal bool)
 	buf := &bytes.Buffer{}
 
-	if isTerm {
+	if IsStdoutTerminal {
 		var backCursor string
 		echo = func(isFinal bool) {
 			r := snapshot()
@@ -171,7 +167,7 @@ const (
 )
 
 func colorize(s string, seq int) string {
-	if !isTerminal {
+	if !IsStdoutTerminal {
 		return s
 	}
 	return fmt.Sprintf("\033[%dm%s\033[0m", seq, s)
