@@ -16,7 +16,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.13
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/shirou/gopsutil/v3 v3.21.10
-	github.com/stretchr/testify v1.7.0
 	github.com/thoas/go-funk v0.9.2-0.20211112205042-658cf4758bf8
 	github.com/valyala/fasthttp v1.31.0
 	go.uber.org/multierr v1.6.0
@@ -26,21 +25,19 @@ require (
 
 require (
 	github.com/Pallinder/go-randomdata v1.2.0 // indirect
-	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/andybalholm/brotli v1.0.2 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-metro v0.0.0-20180109044635-280f6062b5bc // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/pbnjay/pixfont v0.0.0-20200714042608-33b744692567 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
-	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
+	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	golang.org/x/net v0.0.0-20210510120150-4163338589ed // indirect
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1 // indirect
@@ -49,3 +46,5 @@ require (
 )
 
 //replace github.com/bingoohuang/gg => /Users/bingoobjca/github/gg
+
+replace github.com/shirou/gopsutil/v3 => /Users/bingoo/GitHub/gopsutil

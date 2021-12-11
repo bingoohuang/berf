@@ -65,10 +65,7 @@ func (d *DiskIO) Series() plugins.Series {
 			pp+"read_time",
 			pp+"write_time",
 			pp+"io_time",
-			pp+"weighted_io_time",
-			pp+"iops_in_progress",
-			pp+"merged_reads",
-			pp+"merged_writes")
+		)
 
 		ps.Selected = append(ps.Selected,
 			pp+"read_bytes",
@@ -109,18 +106,14 @@ func (d *DiskIO) Gather() ([]interface{}, error) {
 		}
 
 		stats = append(stats, ioStat{
-			Name:             io.Name,
-			ReadCount:        io.ReadCount,
-			WriteCount:       io.WriteCount,
-			ReadBytes:        io.ReadBytes,
-			WriteBytes:       io.WriteBytes,
-			ReadTime:         io.ReadTime,
-			WriteTime:        io.WriteTime,
-			IoTime:           io.IoTime,
-			WeightedIO:       io.WeightedIO,
-			IopsInProgress:   io.IopsInProgress,
-			MergedReadCount:  io.MergedReadCount,
-			MergedWriteCount: io.MergedWriteCount,
+			Name:       io.Name,
+			ReadCount:  io.ReadCount,
+			WriteCount: io.WriteCount,
+			ReadBytes:  io.ReadBytes,
+			WriteBytes: io.WriteBytes,
+			ReadTime:   io.ReadTime,
+			WriteTime:  io.WriteTime,
+			IoTime:     io.IoTime,
 		})
 	}
 
@@ -165,10 +158,6 @@ func (d *DiskIO) diff(stat []ioStat) []interface{} {
 			util.Float64(di.ReadTime),
 			util.Float64(di.WriteTime),
 			util.Float64(di.IoTime),
-			util.Float64(di.WeightedIO),
-			util.Float64(di.IopsInProgress),
-			util.Float64(di.MergedReadCount),
-			util.Float64(di.MergedWriteCount),
 		)
 	}
 
