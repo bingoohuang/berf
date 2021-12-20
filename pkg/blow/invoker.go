@@ -152,6 +152,14 @@ func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) 
 		h.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(opt.basicAuth)))
 	}
 
+	if r.opt.enableGzip {
+		h.Set("Accept-Encoding", "gzip")
+	}
+
+	if r.opt.noKeepalive {
+		h.Set("Connection", "close")
+	}
+
 	if r.opt.doTimeout == 0 {
 		r.httpInvoke = cli.Do
 	} else {
@@ -163,7 +171,7 @@ func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) 
 	return &h, nil
 }
 
-func (r *Invoker) Run() (*berf.Result, error) {
+func (r *Invoker) Run(conf *berf.Config) (*berf.Result, error) {
 	req := fasthttp.AcquireRequest()
 	resp := fasthttp.AcquireResponse()
 	defer fasthttp.ReleaseRequest(req)
@@ -183,9 +191,6 @@ func (r *Invoker) Run() (*berf.Result, error) {
 		req.URI().SetHostBytes(req.Header.Host())
 	}
 
-	if r.opt.enableGzip {
-		req.Header.Set("Accept-Encoding", "gzip")
-	}
 	return r.runOne(req, resp)
 }
 

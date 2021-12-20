@@ -33,7 +33,7 @@ var (
 	pNetwork    = fla9.String("network", "", "Network simulation, local: simulates local network, lan: local, wan: wide, bad: bad network, or BPS:latency like 20M:20ms")
 	pHeaders    = fla9.Strings("header,H", nil, "Custom HTTP headers, K:V, e.g. Content-Type")
 	pProfiles   = fla9.Strings("profile,P", nil, "Profile file, append :new to create a demo profile, or :tag to run only specified profile")
-	pOpts       = fla9.Strings("opt", nil, "Options. gzip: Enabled content gzip, k: not verify the server's cert chain and host name")
+	pOpts       = fla9.Strings("opt", nil, "Options. gzip: Enabled content gzip, k: not verify the server's cert chain and host name, no-keepalive/no-ka: disable keepalive")
 	pBasicAuth  = fla9.String("basic", "", "basic auth username:password")
 	pCertKey    = fla9.String("cert", "", "Path to the client's TLS Cert and private key file, eg. ca.pem,ca.key")
 	pTimeout    = fla9.String("timeout", "", "Timeout for each http request, e.g. 5s for do:5s,dial:5s,write:5s,read:5s")
@@ -104,8 +104,8 @@ func (b *Bench) Init(ctx context.Context, conf *berf.Config) error {
 	return nil
 }
 
-func (b *Bench) Invoke(context.Context, *berf.Config) (*berf.Result, error) {
-	return b.invoker.Run()
+func (b *Bench) Invoke(ctx context.Context, conf *berf.Config) (*berf.Result, error) {
+	return b.invoker.Run(conf)
 }
 
 type Opt struct {
@@ -128,14 +128,15 @@ type Opt struct {
 	socks5Proxy string
 	upload      string
 
-	basicAuth  string
-	network    string
-	logf       *internal.LogFile
-	maxConns   int
-	enableGzip bool
-	verbose    int
-	profiles   []*internal.Profile
-	statusName string
+	basicAuth   string
+	network     string
+	logf        *internal.LogFile
+	maxConns    int
+	enableGzip  bool
+	noKeepalive bool
+	verbose     int
+	profiles    []*internal.Profile
+	statusName  string
 }
 
 func IsBlowEnv() bool {
@@ -200,9 +201,10 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 		basicAuth: *pBasicAuth,
 		maxConns:  conf.Goroutines,
 
-		enableGzip: opts.HasAny("g", "gzip"),
-		verbose:    conf.Verbose,
-		statusName: *pStatusName,
+		enableGzip:  opts.HasAny("g", "gzip"),
+		noKeepalive: opts.HasAny("no-keepalive", "no-ka"),
+		verbose:     conf.Verbose,
+		statusName:  *pStatusName,
 	}
 
 	opt.logf = internal.CreateLogFile(opt.verbose)
