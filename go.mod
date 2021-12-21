@@ -47,4 +47,4 @@ require (
 
 //replace github.com/bingoohuang/gg => /Users/bingoobjca/github/gg
 
-replace github.com/shirou/gopsutil/v3 => /Users/bingoo/GitHub/gopsutil
+replace github.com/shirou/gopsutil/v3 => ../gopsutil

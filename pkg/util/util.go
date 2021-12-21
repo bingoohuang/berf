@@ -20,6 +20,18 @@ import (
 	"github.com/bingoohuang/gg/pkg/ss"
 )
 
+func ParseEnvDuration(name string, defaultValue time.Duration) time.Duration {
+	if e := os.Getenv(name); e != "" {
+		if v, err := time.ParseDuration(e); err != nil {
+			log.Printf("W! env $%s %s is invalid, default %s is used, error: %v", name, e, defaultValue, err)
+		} else if v > 0 {
+			return v
+		}
+	}
+
+	return defaultValue
+}
+
 type Float64 float64
 
 func (f Float64) MarshalJSON() ([]byte, error) {

@@ -95,10 +95,10 @@ type BenchEmpty struct{}
 // ErrNoop means there is no operation defined.
 var ErrNoop = errors.New("noop")
 
-func (f *BenchEmpty) Name(context.Context, *Config) string                   { return "bench" }
-func (f *BenchEmpty) Init(context.Context, *Config) error                    { return nil }
-func (f *BenchEmpty) Final(context.Context, *Config) error                   { return nil }
-func (f *BenchEmpty) Invoke(ctx context.Context, c *Config) (*Result, error) { return nil, ErrNoop }
+func (f *BenchEmpty) Name(context.Context, *Config) string             { return "bench" }
+func (f *BenchEmpty) Init(context.Context, *Config) error              { return nil }
+func (f *BenchEmpty) Final(context.Context, *Config) error             { return nil }
+func (f *BenchEmpty) Invoke(context.Context, *Config) (*Result, error) { return nil, ErrNoop }
 
 type F func(context.Context, *Config) (*Result, error)
 
@@ -147,7 +147,7 @@ func StartBench(ctx context.Context, fn Benchable, fns ...ConfigFn) {
 	p.PrintLoop(report.Snapshot, report.Done(), c.N)
 
 	wg.Wait()
-	fn.Final(ctx, c)
+	osx.ExitIfErr(fn.Final(ctx, c))
 }
 
 func setupPlotsFile() {
@@ -176,13 +176,7 @@ func (c *Config) serveCharts(report *StreamReport, wg *sync.WaitGroup) {
 func (c *Config) collectChartData(ctx context.Context, chartsFn func() *ChartsReport, charts *Charts, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	tickDur := 15 * time.Second
-	tickConf := ss.Or(os.Getenv("BERF_TICK"), "5s")
-	if v, _ := time.ParseDuration(tickConf); v > 0 {
-		tickDur = v
-	}
-
-	ticker := time.NewTicker(tickDur)
+	ticker := time.NewTicker(util.ParseEnvDuration("BERF_TICK", 15*time.Second))
 	defer ticker.Stop()
 
 	c.PlotsHandle = util.NewJsonLogFile(c.PlotsFile)
@@ -203,7 +197,7 @@ func (c *Config) collectChartData(ctx context.Context, chartsFn func() *ChartsRe
 		plots := createMetrics(rd, c.IsNop())
 		plots = charts.mergeHardwareMetrics(plots)
 		if rd != nil {
-			c.PlotsHandle.WriteJSON(plots)
+			_ = c.PlotsHandle.WriteJSON(plots)
 		}
 	}
 }

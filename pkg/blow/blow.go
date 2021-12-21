@@ -3,11 +3,12 @@ package blow
 import (
 	"context"
 	"fmt"
-	"github.com/bingoohuang/jj"
 	"log"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/bingoohuang/jj"
 
 	"github.com/bingoohuang/berf/pkg/util"
 
@@ -137,6 +138,18 @@ type Opt struct {
 	verbose     int
 	profiles    []*internal.Profile
 	statusName  string
+}
+
+func TryStartAsBlow() bool {
+	if !IsBlowEnv() {
+		return false
+	}
+
+	berf.StartBench(context.Background(),
+		&Bench{},
+		berf.WithOkStatus(ss.Or(*pStatusName, "200")),
+		berf.WithCounting("Connections"))
+	return true
 }
 
 func IsBlowEnv() bool {

@@ -7,10 +7,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bingoohuang/gg/pkg/sigx"
-
 	"github.com/bingoohuang/berf/pkg/blow"
-	"github.com/bingoohuang/gg/pkg/ss"
+
+	"github.com/bingoohuang/gg/pkg/sigx"
 
 	"github.com/bingoohuang/gg/pkg/ctl"
 
@@ -36,13 +35,9 @@ func init() {
 }
 
 func main() {
-	if blow.IsBlowEnv() {
-		berf.StartBench(context.Background(), &blow.Bench{},
-			berf.WithOkStatus(ss.Or(blow.StatusName(), "200")),
-			berf.WithCounting("Connections"))
+	if blow.TryStartAsBlow() {
 		return
 	}
-
 	berf.StartBench(context.Background(), berf.F(demo), berf.WithOkStatus("200"))
 }
 

@@ -2,8 +2,9 @@ package net
 
 import (
 	"fmt"
-	"github.com/shirou/gopsutil/v3/net"
 	"syscall"
+
+	"github.com/shirou/gopsutil/v3/net"
 
 	"github.com/bingoohuang/berf/plugins"
 	"github.com/bingoohuang/berf/plugins/system"
