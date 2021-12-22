@@ -8,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bingoohuang/jj"
-
 	"github.com/bingoohuang/berf/pkg/util"
 
 	"github.com/bingoohuang/gg/pkg/rest"
@@ -95,37 +93,6 @@ func (b *Bench) Final(_ context.Context, conf *berf.Config) error {
 		}
 	}
 	return nil
-}
-
-func colorJSON(v string, pretty bool) string {
-	if !berf.IsStdoutTerminal {
-		return v
-	}
-
-	p := strings.Index(v, "{")
-	if p < 0 {
-		p = strings.Index(v, "[")
-	}
-
-	if p < 0 {
-		return v
-	}
-
-	s2 := v[p:]
-	q := jj.StreamParse([]byte(s2), nil)
-	if q < 0 {
-		q = -q
-	}
-	if q > 0 {
-		s := []byte(v[p : p+q])
-		if pretty {
-			s = jj.Pretty(s)
-		}
-		s = jj.Color(s, nil)
-		return v[:p] + string(s) + colorJSON(v[p+q:], pretty)
-	}
-
-	return v
 }
 
 func (b *Bench) Init(ctx context.Context, conf *berf.Config) (*berf.BenchOption, error) {

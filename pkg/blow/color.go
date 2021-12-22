@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/bingoohuang/berf"
+	"github.com/bingoohuang/jj"
 )
 
 const (
@@ -92,4 +95,35 @@ func formatBytes(body []byte, pretty, hasDevice bool) string {
 	}
 
 	return string(body)
+}
+
+func colorJSON(v string, pretty bool) string {
+	if !berf.IsStdoutTerminal {
+		return v
+	}
+
+	p := strings.Index(v, "{")
+	if p < 0 {
+		p = strings.Index(v, "[")
+	}
+
+	if p < 0 {
+		return v
+	}
+
+	s2 := v[p:]
+	q := jj.StreamParse([]byte(s2), nil)
+	if q < 0 {
+		q = -q
+	}
+	if q > 0 {
+		s := []byte(v[p : p+q])
+		if pretty {
+			s = jj.Pretty(s)
+		}
+		s = jj.Color(s, nil)
+		return v[:p] + string(s) + colorJSON(v[p+q:], pretty)
+	}
+
+	return v
 }
