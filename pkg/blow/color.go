@@ -1,0 +1,95 @@
+package blow
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"strings"
+)
+
+const (
+	Gray = uint8(iota + 90)
+	Red
+	Green
+	Yellow
+	Blue
+	Magenta
+	Cyan
+	White
+
+	EndColor = "\033[0m"
+)
+
+func Color(str string, color uint8) string {
+	return fmt.Sprintf("%s%s%s", ColorStart(color), str, EndColor)
+}
+
+func ColorStart(color uint8) string {
+	return fmt.Sprintf("\033[%dm", color)
+}
+
+func ColorfulHeader(str string) string {
+	lines := strings.Split(str, "\n")
+	firstLineProcessed := false
+	for i, line := range lines {
+		if strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		if !firstLineProcessed {
+			firstLineProcessed = true
+
+			strs := strings.Split(line, " ")
+			strs[0] = Color(strs[0], Magenta)
+			if len(strs) > 1 {
+				strs[1] = Color(strs[1], Cyan)
+			}
+			if len(strs) > 2 {
+				strs[2] = Color(strs[2], Magenta)
+			}
+			lines[i] = strings.Join(strs, " ")
+			continue
+		}
+
+		substr := strings.Split(line, ":")
+		if len(substr) < 2 {
+			continue
+		}
+		substr[0] = Color(substr[0], Gray)
+		substr[1] = Color(strings.Join(substr[1:], ":"), Cyan)
+		lines[i] = strings.Join(substr[:2], ":")
+	}
+	return strings.Join(lines, "\n")
+}
+
+func ColorfulResponse(str string, isJSON bool, pretty bool) string {
+	if isJSON {
+		return colorJSON(str, pretty)
+	}
+
+	return ColorfulHTML(str)
+}
+
+func ColorfulHTML(str string) string {
+	return Color(str, Green)
+}
+
+func formatResponseBody(body []byte, pretty, hasDevice bool) string {
+	return formatBytes(body, pretty, hasDevice)
+}
+
+func formatBytes(body []byte, pretty, hasDevice bool) string {
+	isJSON := json.Valid(body)
+	if pretty && isJSON {
+		var output bytes.Buffer
+		if err := json.Indent(&output, body, "", "  "); err == nil {
+			body = output.Bytes()
+		}
+	}
+
+	if hasDevice {
+		return ColorfulResponse(string(body), isJSON, pretty)
+	}
+
+	return string(body)
+}

@@ -15,8 +15,10 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
+	"unicode"
 
 	"github.com/thoas/go-funk"
 
@@ -39,14 +41,17 @@ type Invoker struct {
 	upload          string
 	uploadChan      chan string
 
-	httpInvoke func(req *fasthttp.Request, rsp *fasthttp.Response) error
-	readBytes  int64
-	writeBytes int64
-	isTLS      bool
+	httpInvoke  func(req *fasthttp.Request, rsp *fasthttp.Response) error
+	readBytes   int64
+	writeBytes  int64
+	printOption uint8
+	isTLS       bool
+	printLock   sync.Locker
 }
 
 func NewInvoker(ctx context.Context, opt *Opt) (*Invoker, error) {
-	r := &Invoker{opt: opt}
+	r := &Invoker{opt: opt, printOption: parsePrintOption(*pPrint)}
+	r.printLock = NewConditionalLock(r.printOption > 0)
 
 	header, err := r.buildRequestClient(opt)
 	if err != nil {
@@ -229,36 +234,129 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 		rr.Counting = append(rr.Counting, rsp.LocalAddr().String()+"->"+rsp.RemoteAddr().String())
 	}
 
-	if r.opt.logf == nil {
+	if r.opt.logf == nil && r.printOption == 0 {
 		return rsp.BodyWriteTo(ioutil.Discard)
 	}
 
-	b := &bytes.Buffer{}
-	defer r.opt.logf.Write(b)
+	bx := &bytes.Buffer{}
+	b1 := &bytes.Buffer{}
+
+	if r.opt.logf != nil {
+		defer r.opt.logf.Write(bx)
+	}
 
 	conn := rsp.LocalAddr().String() + "->" + rsp.RemoteAddr().String()
-	_, _ = b.WriteString(fmt.Sprintf("### %s time: %s cost: %s\n",
+	_, _ = b1.WriteString(fmt.Sprintf("### %s time: %s cost: %s\n",
 		conn, time.Now().Format(time.RFC3339Nano), rr.Cost))
 
-	bw := bufio.NewWriter(b)
+	bw := bufio.NewWriter(b1)
 	_ = req.Write(bw)
 	_ = bw.Flush()
-	_, _ = b.Write([]byte("\n"))
 
-	_, _ = b.Write(rsp.Header.Header())
+	r.printLock.Lock()
+	defer r.printLock.Unlock()
+
+	r.printReq(b1)
+	_, _ = b1.WriteTo(bx)
+
+	_, _ = bx.Write([]byte("\n"))
+	header := rsp.Header.Header()
+	_, _ = b1.Write(header)
 
 	if string(rsp.Header.Peek("Content-Encoding")) == "gzip" {
 		if d, err := rsp.BodyGunzip(); err != nil {
 			return err
 		} else {
-			b.Write(d)
+			b1.Write(d)
 		}
-	} else if err := rsp.BodyWriteTo(b); err != nil {
+	} else if err := rsp.BodyWriteTo(b1); err != nil {
 		return err
 	}
 
-	_, _ = b.Write([]byte("\n\n"))
+	_, _ = b1.Write([]byte("\n\n"))
+	r.printResp(b1, rsp)
+	_, _ = b1.WriteTo(bx)
+
 	return nil
+}
+
+func (r *Invoker) printReq(b *bytes.Buffer) {
+	if r.printOption == 0 {
+		return
+	}
+
+	dump := b.String()
+	var dumpHeader, dumpBody []byte
+	dps := strings.Split(dump, "\n")
+	for i, line := range dps {
+		if len(strings.Trim(line, "\r\n ")) == 0 {
+			dumpHeader = []byte(strings.Join(dps[:i], "\n"))
+			dumpBody = []byte(strings.Join(dps[i:], "\n"))
+			break
+		}
+	}
+
+	printNum := 0
+	if r.printOption&printReqHeader == printReqHeader {
+		fmt.Println(ColorfulHeader(string(dumpHeader)))
+		printNum++
+	}
+	if r.printOption&printReqBody == printReqBody {
+		if string(dumpBody) != "\r\n" {
+			fmt.Println(string(dumpBody))
+			printNum++
+		}
+	}
+
+	if printNum > 0 {
+		fmt.Println()
+	}
+}
+
+func (r *Invoker) printResp(b *bytes.Buffer, rsp *fasthttp.Response) {
+	if r.printOption == 0 {
+		return
+	}
+
+	dump := b.String()
+	var dumpHeader, dumpBody []byte
+	dps := strings.Split(dump, "\n")
+	for i, line := range dps {
+		if len(strings.Trim(line, "\r\n ")) == 0 {
+			dumpHeader = []byte(strings.Join(dps[:i], "\n"))
+			dumpBody = []byte(strings.Join(dps[i:], "\n"))
+			break
+		}
+	}
+
+	printNum := 0
+	if r.printOption&printRespStatusCode == printRespStatusCode {
+		fmt.Println(Color(strconv.Itoa(rsp.StatusCode()), Magenta))
+		printNum++
+	}
+	if r.printOption&printRespHeader == printRespHeader {
+		fmt.Println(ColorfulHeader(string(dumpHeader)))
+		printNum++
+	}
+	if r.printOption&printRespBody == printRespBody {
+		if string(dumpBody) != "\r\n" {
+			if r.opt.statusName != "" {
+				dumpBody = []byte(parseStatus(rsp, r.opt.statusName))
+			}
+			body := formatResponseBody(dumpBody, *pPretty, berf.IsStdoutTerminal)
+
+			if printNum > 0 && strings.IndexFunc(body, func(r rune) bool { return !unicode.IsSpace(r) }) == 0 {
+				fmt.Println()
+			}
+
+			body = strings.TrimRightFunc(body, func(r rune) bool { return unicode.IsSpace(r) })
+			fmt.Println(body)
+			printNum++
+		}
+	}
+	if printNum > 0 && r.printOption != printRespStatusCode {
+		fmt.Println()
+	}
 }
 
 func (r *Invoker) runProfiles(req *fasthttp.Request, rsp *fasthttp.Response) (*berf.Result, error) {

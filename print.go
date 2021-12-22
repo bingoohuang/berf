@@ -40,6 +40,7 @@ type Printer struct {
 	verbose     int
 	config      *Config
 	concurrent  *int64
+	benchOption *BenchOption
 }
 
 func (p *Printer) updateProgressValue(rs *SnapshotReport) {
@@ -66,6 +67,11 @@ func (p *Printer) updateProgressValue(rs *SnapshotReport) {
 }
 
 func (p *Printer) PrintLoop(snapshot func() *SnapshotReport, doneChan <-chan struct{}, requests int) {
+	if p.benchOption.NoReport {
+		<-doneChan
+		return
+	}
+
 	interval := 500 * time.Millisecond
 	if !IsStdoutTerminal {
 		interval = 1 * time.Minute

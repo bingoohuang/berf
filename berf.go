@@ -37,7 +37,7 @@ var (
 	pPlotsFile  = fla9.String(pf+"plots", "", "Plots filename, append :dry to show exists plots in dry mode")
 	pVerbose    = fla9.Count(pf+"v", 0, "Verbose level, e.g. -v -vv")
 	pThinkTime  = fla9.String(pf+"think", "", "Think time among requests, eg. 1s, 10ms, 10-20ms and etc. (unit ns, us/µs, ms, s, m, h)")
-	pPort       = fla9.Int(pf+"p", 28888, "Listen port for serve Web UI")
+	pPort       = fla9.Int(pf+"port", 28888, "Listen port for serve Web UI")
 	pName       = fla9.String(pf+"name", "", "Name for this benchmarking test")
 )
 
@@ -83,9 +83,13 @@ type Result struct {
 	Cost       time.Duration
 }
 
+type BenchOption struct {
+	NoReport bool
+}
+
 type Benchable interface {
 	Name(context.Context, *Config) string
-	Init(context.Context, *Config) error
+	Init(context.Context, *Config) (*BenchOption, error)
 	Invoke(context.Context, *Config) (*Result, error)
 	Final(context.Context, *Config) error
 }
@@ -103,7 +107,7 @@ func (f *BenchEmpty) Invoke(context.Context, *Config) (*Result, error) { return 
 type F func(context.Context, *Config) (*Result, error)
 
 func (f F) Name(context.Context, *Config) string                   { return reflect.ValueOf(f).Type().Name() }
-func (f F) Init(context.Context, *Config) error                    { return nil }
+func (f F) Init(context.Context, *Config) (*BenchOption, error)    { return &BenchOption{}, nil }
 func (f F) Final(context.Context, *Config) error                   { return nil }
 func (f F) Invoke(ctx context.Context, c *Config) (*Result, error) { return f(ctx, c) }
 
@@ -122,7 +126,8 @@ func StartBench(ctx context.Context, fn Benchable, fns ...ConfigFn) {
 
 	c.Setup()
 
-	osx.ExitIfErr(fn.Init(ctx, c))
+	benchOption, err := fn.Init(ctx, c)
+	osx.ExitIfErr(err)
 
 	requester, err := c.NewRequester(ctx, fn)
 	osx.ExitIfErr(err)
@@ -143,7 +148,7 @@ func StartBench(ctx context.Context, fn Benchable, fns ...ConfigFn) {
 	go requester.run()
 	go report.Collect(requester.recordChan)
 
-	p := c.createTerminalPrinter(&requester.concurrent)
+	p := c.createTerminalPrinter(&requester.concurrent, benchOption)
 	p.PrintLoop(report.Snapshot, report.Done(), c.N)
 
 	wg.Wait()
@@ -261,10 +266,11 @@ func (c *Config) Description(benchableName string) string {
 	return desc + fmt.Sprintf(" using %s%d goroutine(s), %d GoMaxProcs.", c.Incr.Modifier(), c.Goroutines, c.GoMaxProcs)
 }
 
-func (c *Config) createTerminalPrinter(concurrent *int64) *Printer {
+func (c *Config) createTerminalPrinter(concurrent *int64, benchOption *BenchOption) *Printer {
 	return &Printer{
 		maxNum: int64(c.N), maxDuration: c.Duration, verbose: c.Verbose, config: c,
-		concurrent: concurrent,
+		concurrent:  concurrent,
+		benchOption: benchOption,
 	}
 }
 

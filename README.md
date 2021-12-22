@@ -4,7 +4,8 @@ berf framework for local methods.
 
 ## Features
 
-1. Add a TPS-0 comparing series to the TPS plots, 2021-12-02.
+1. `berf :5003/api/demo -n20 -pA` to print all details instead of realtime statistics on terminal, 2021-12-22.
+2. Add a TPS-0 comparing series to the TPS plots, 2021-12-02.
 
 ## Demo
 
@@ -50,4 +51,4 @@ Latency Histogram:
 5. 下载目录中最新的形如 `berf_202111301122.log.gz` 采点日志
 6. 本地使用命令 `berf berf_202111301122.log.gz` 在浏览器中查看采点曲线，进行分析
 7. 参数
-   - `export BERF_TICK=1s` 每 1s 生成一个点，默认 5s 生成一个.
+    - `export BERF_TICK=1s` 每 1s 生成一个点，默认 5s 生成一个.

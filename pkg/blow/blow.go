@@ -39,11 +39,39 @@ var (
 	pCertKey    = fla9.String("cert", "", "Path to the client's TLS Cert and private key file, eg. ca.pem,ca.key")
 	pTimeout    = fla9.String("timeout", "", "Timeout for each http request, e.g. 5s for do:5s,dial:5s,write:5s,read:5s")
 	pSocks5     = fla9.String("socks5", "", "Socks5 proxy, ip:port")
+	pPrint      = fla9.String("print,p", "", "A: all H: req headers  B: req body  h: resp headers  b: resp body c: status code")
 	pStatusName = fla9.String("status", "", "Status name in json, like resultCode")
 	pPretty     = fla9.Bool("pretty", false, "Pretty JSON output")
 )
 
-func StatusName() string { return *pStatusName }
+const (
+	printReqHeader uint8 = 1 << iota
+	printReqBody
+	printRespHeader
+	printRespBody
+	printRespStatusCode
+)
+
+func parsePrintOption(s string) (printOption uint8) {
+	for r, v := range map[rune]uint8{
+		'A': printReqHeader | printReqBody | printRespHeader | printRespBody,
+		'H': printReqHeader,
+		'B': printReqBody,
+		'h': printRespHeader,
+		'b': printRespBody,
+		'c': printRespStatusCode,
+	} {
+		if strings.ContainsRune(s, r) {
+			printOption |= v
+		}
+	}
+
+	if printOption&printRespHeader == printRespHeader {
+		printOption &^= printRespStatusCode
+	}
+
+	return printOption
+}
 
 type Bench struct {
 	invoker *Invoker
@@ -74,35 +102,37 @@ func colorJSON(v string, pretty bool) string {
 		return v
 	}
 
-	p := strings.Index(v, "\n{")
+	p := strings.Index(v, "{")
 	if p < 0 {
-		p = strings.Index(v, "\n[")
+		p = strings.Index(v, "[")
 	}
 
 	if p < 0 {
 		return v
 	}
 
-	s2 := v[p+1:]
+	s2 := v[p:]
 	q := jj.StreamParse([]byte(s2), nil)
 	if q < 0 {
 		q = -q
 	}
 	if q > 0 {
-		s := []byte(v[p+1 : p+1+q])
+		s := []byte(v[p : p+q])
 		if pretty {
 			s = jj.Pretty(s)
 		}
 		s = jj.Color(s, nil)
-		return v[:p+1] + string(s) + colorJSON(v[p+1+q:], pretty)
+		return v[:p] + string(s) + colorJSON(v[p+q:], pretty)
 	}
 
 	return v
 }
 
-func (b *Bench) Init(ctx context.Context, conf *berf.Config) error {
+func (b *Bench) Init(ctx context.Context, conf *berf.Config) (*berf.BenchOption, error) {
 	b.invoker = Blow(ctx, conf)
-	return nil
+	return &berf.BenchOption{
+		NoReport: b.invoker.printOption > 0,
+	}, nil
 }
 
 func (b *Bench) Invoke(ctx context.Context, conf *berf.Config) (*berf.Result, error) {
