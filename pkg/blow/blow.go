@@ -158,20 +158,26 @@ func IsBlowEnv() bool {
 		return true
 	}
 
-	if len(fla9.Args()) == 1 {
-		if _, err := rest.FixURI(fla9.Args()[0]); err == nil {
-			return true
-		}
+	if parseUrlFromArgs() != "" {
+		return true
 	}
 
 	return false
 }
 
+func parseUrlFromArgs() string {
+	if args := excludeHttpieLikeArgs(fla9.Args()); len(args) > 0 {
+		urlAddr, _ := rest.FixURI(args[0])
+		return urlAddr
+	}
+
+	return ""
+}
+
 func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 	urlAddr := *pURL
-
-	if len(fla9.Args()) > 0 {
-		urlAddr, _ = rest.FixURI(fla9.Args()[0])
+	if urlAddr == "" {
+		urlAddr = parseUrlFromArgs()
 	}
 
 	stream := strings.HasSuffix(*pBody, ":stream")

@@ -20,6 +20,8 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/bingoohuang/gg/pkg/fla9"
+
 	"github.com/thoas/go-funk"
 
 	"github.com/bingoohuang/gg/pkg/ss"
@@ -47,6 +49,8 @@ type Invoker struct {
 	printOption uint8
 	isTLS       bool
 	printLock   sync.Locker
+	pieArg      HttpieArg
+	pieBody     *HttpieArgBody
 }
 
 func NewInvoker(ctx context.Context, opt *Opt) (*Invoker, error) {
@@ -127,6 +131,8 @@ func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) 
 		return nil, err
 	}
 
+	r.pieArg = parseHttpieLikeArgs(fla9.Args())
+
 	var h fasthttp.RequestHeader
 
 	host := ""
@@ -139,6 +145,7 @@ func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) 
 			contentType = v
 		}
 	}
+
 	h.SetContentType(adjustContentType(opt, contentType))
 	h.SetHost(ss.If(host != "", host, u.Host))
 
@@ -147,8 +154,27 @@ func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) 
 		return !strings.EqualFold(k, "Host") && !strings.EqualFold(k, "Content-Type")
 	})
 
-	h.SetMethod(adjustMethod(opt))
+	method := adjustMethod(opt)
+	h.SetMethod(method)
+	r.pieBody = r.pieArg.Build(method)
+
+	query := u.Query()
+	for _, v := range r.pieArg.query {
+		query.Add(v.V1, v.V2)
+	}
+
+	if method == "GET" {
+		for k, v := range r.pieArg.param {
+			query.Add(k, v)
+		}
+	}
+
+	u.RawQuery = query.Encode()
 	h.SetRequestURI(u.RequestURI())
+
+	for k, v := range r.pieArg.header {
+		h.Set(k, v)
+	}
 	for _, hdr := range opt.headers {
 		h.Set(ss.Split2(hdr, ss.WithSeps(":")))
 	}
@@ -427,12 +453,22 @@ func (r *Invoker) setBody(req *fasthttp.Request) (internal.Closers, error) {
 	}
 
 	bodyBytes := r.opt.bodyBytes
+	if len(bodyBytes) == 0 && r.pieBody.BodyString != "" {
+		internal.SetHeader(req, "Content-Type", r.pieBody.ContentType)
+		bodyBytes = []byte(r.pieBody.BodyString)
+	}
 
-	if r.opt.enableGzip {
-		if d, err := gz.Gzip(bodyBytes); err == nil && len(d) < len(bodyBytes) {
-			bodyBytes = d
-			req.Header.Set("Content-Encoding", "gzip")
+	if len(bodyBytes) > 0 {
+		if r.opt.enableGzip {
+			if d, err := gz.Gzip(bodyBytes); err == nil && len(d) < len(bodyBytes) {
+				bodyBytes = d
+				req.Header.Set("Content-Encoding", "gzip")
+			}
 		}
+	} else if r.pieBody.Body != nil {
+		internal.SetHeader(req, "Content-Type", r.pieBody.ContentType)
+		req.SetBodyStream(r.pieBody.Body, -1)
+		return nil, nil
 	}
 
 	req.SetBodyRaw(bodyBytes)

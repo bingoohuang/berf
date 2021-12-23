@@ -4,8 +4,9 @@ berf framework for local methods.
 
 ## Features
 
-1. `berf :5003/api/demo -n20 -pA` to print all details instead of realtime statistics on terminal, 2021-12-22.
-2. Add a TPS-0 comparing series to the TPS plots, 2021-12-02.
+1. support httpie like args `berf :10014/query q="show databases" -n1`, 2021-12-23
+2. `berf :5003/api/demo -n20 -pA` to print all details instead of realtime statistics on terminal, 2021-12-22.
+3. Add a TPS-0 comparing series to the TPS plots, 2021-12-02.
 
 ## Demo
 

@@ -124,10 +124,12 @@ func (p *Printer) PrintLoop(snapshot func() *SnapshotReport, doneChan <-chan str
 		out.Write(buf.Bytes())
 	}
 
-	buf.Reset()
-	var summary SummaryReport
-	writeBulk(buf, p.buildSummary(r, true, &summary))
-	out.Write(buf.Bytes())
+	if requests != 1 {
+		buf.Reset()
+		var summary SummaryReport
+		writeBulk(buf, p.buildSummary(r, true, &summary))
+		out.Write(buf.Bytes())
+	}
 }
 
 func tick(interval time.Duration, echo func(), doneChan <-chan struct{}) {
