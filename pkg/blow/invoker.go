@@ -154,7 +154,7 @@ func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) 
 		return !strings.EqualFold(k, "Host") && !strings.EqualFold(k, "Content-Type")
 	})
 
-	method := adjustMethod(opt)
+	method := detectMethod(opt, r.pieArg)
 	h.SetMethod(method)
 	r.pieBody = r.pieArg.Build(method)
 
@@ -487,12 +487,12 @@ func adjustContentType(opt *Opt, contentType string) string {
 	return `plain/text; charset=utf-8`
 }
 
-func adjustMethod(opt *Opt) string {
+func detectMethod(opt *Opt, arg HttpieArg) string {
 	if opt.method != "" {
 		return opt.method
 	}
 
-	if opt.upload != "" || len(opt.bodyBytes) > 0 || opt.bodyFile != "" {
+	if opt.MaybePost() || arg.MaybePost() {
 		return "POST"
 	}
 

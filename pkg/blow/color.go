@@ -324,6 +324,10 @@ func (a *HttpieArg) Build(method string) *HttpieArgBody {
 	return b
 }
 
+func (a *HttpieArg) MaybePost() bool {
+	return len(a.jsonmap) > 0 || len(a.files) > 0
+}
+
 func createParamBody(params map[string]string) string {
 	b := make(url.Values)
 	for k, v := range params {

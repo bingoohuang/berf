@@ -137,6 +137,10 @@ type Opt struct {
 	statusName  string
 }
 
+func (opt *Opt) MaybePost() bool {
+	return opt.upload != "" || len(opt.bodyBytes) > 0 || opt.bodyFile != ""
+}
+
 func TryStartAsBlow() bool {
 	if !IsBlowEnv() {
 		return false
