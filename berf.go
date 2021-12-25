@@ -133,7 +133,7 @@ func StartBench(ctx context.Context, fn Benchable, fns ...ConfigFn) {
 	osx.ExitIfErr(err)
 
 	c.Desc = c.Description(fn.Name(ctx, c))
-	if !c.IsDryPlots() {
+	if !c.IsDryPlots() && c.N != 1 {
 		fmt.Println("Berf" + c.Desc)
 	}
 

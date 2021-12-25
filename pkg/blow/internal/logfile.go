@@ -36,8 +36,8 @@ func (f *LogFile) MarkPos() {
 	f.Unlock()
 }
 
-func CreateLogFile(verbose int) *LogFile {
-	if verbose < 2 {
+func CreateLogFile(verbose int, printOption uint8) *LogFile {
+	if verbose < 2 || printOption > 0 {
 		return nil
 	}
 
@@ -45,9 +45,7 @@ func CreateLogFile(verbose int) *LogFile {
 	osx.ExitIfErr(err)
 
 	fmt.Printf("Log details to: %s\n", f.Name())
-	return &LogFile{
-		File: f,
-	}
+	return &LogFile{File: f}
 }
 
 func (f *LogFile) GetLastLog() string {

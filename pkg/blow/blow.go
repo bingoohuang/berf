@@ -32,7 +32,7 @@ var (
 	pNetwork    = fla9.String("network", "", "Network simulation, local: simulates local network, lan: local, wan: wide, bad: bad network, or BPS:latency like 20M:20ms")
 	pHeaders    = fla9.Strings("header,H", nil, "Custom HTTP headers, K:V, e.g. Content-Type")
 	pProfiles   = fla9.Strings("profile,P", nil, "Profile file, append :new to create a demo profile, or :tag to run only specified profile")
-	pOpts       = fla9.Strings("opt", nil, "Options. gzip: Enabled content gzip, k: not verify the server's cert chain and host name, no-keepalive/no-ka: disable keepalive")
+	pOpts       = fla9.Strings("opt", nil, "Options. gzip: Enabled content gzip, k: not verify the server's cert chain and host name, no-keepalive/no-ka: disable keepalive, form: use form instead of json")
 	pBasicAuth  = fla9.String("basic", "", "basic auth username:password")
 	pCertKey    = fla9.String("cert", "", "Path to the client's TLS Cert and private key file, eg. ca.pem,ca.key")
 	pTimeout    = fla9.String("timeout", "", "Timeout for each http request, e.g. 5s for do:5s,dial:5s,write:5s,read:5s")
@@ -51,17 +51,23 @@ const (
 )
 
 func parsePrintOption(s string) (printOption uint8) {
-	for r, v := range map[rune]uint8{
-		'A': printReqHeader | printReqBody | printRespHeader | printRespBody,
-		'H': printReqHeader,
-		'B': printReqBody,
-		'h': printRespHeader,
-		'b': printRespBody,
-		'c': printRespStatusCode,
+	for r, v := range map[string]uint8{
+		"A": printReqHeader | printReqBody | printRespHeader | printRespBody,
+		"H": printReqHeader,
+		"B": printReqBody,
+		"h": printRespHeader,
+		"b": printRespBody,
+		"c": printRespStatusCode,
 	} {
-		if strings.ContainsRune(s, r) {
+		if strings.Contains(s, r) {
 			printOption |= v
+			s = strings.ReplaceAll(s, r, "")
 		}
+	}
+
+	if s = strings.TrimSpace(s); s != "" {
+		log.Printf("unknown print options, %s", s)
+		os.Exit(1)
 	}
 
 	if printOption&printRespHeader == printRespHeader {
@@ -86,7 +92,7 @@ func (b *Bench) Name(context.Context, *berf.Config) string {
 
 func (b *Bench) Final(_ context.Context, conf *berf.Config) error {
 	opt := b.invoker.opt
-	if conf.N == 1 && opt.logf != nil {
+	if conf.N == 1 && opt.logf != nil && opt.printOption == 0 {
 		if v := opt.logf.GetLastLog(); v != "" {
 			v = colorJSON(v, *pPretty)
 			os.Stdout.WriteString(v)
@@ -98,7 +104,7 @@ func (b *Bench) Final(_ context.Context, conf *berf.Config) error {
 func (b *Bench) Init(ctx context.Context, conf *berf.Config) (*berf.BenchOption, error) {
 	b.invoker = Blow(ctx, conf)
 	return &berf.BenchOption{
-		NoReport: b.invoker.printOption > 0,
+		NoReport: b.invoker.opt.printOption > 0,
 	}, nil
 }
 
@@ -135,6 +141,9 @@ type Opt struct {
 	verbose     int
 	profiles    []*internal.Profile
 	statusName  string
+	form        bool
+
+	printOption uint8
 }
 
 func (opt *Opt) MaybePost() bool {
@@ -223,12 +232,13 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 
 		enableGzip:  opts.HasAny("g", "gzip"),
 		noKeepalive: opts.HasAny("no-keepalive", "no-ka"),
+		form:        opts.HasAny("form"),
 		verbose:     conf.Verbose,
 		statusName:  *pStatusName,
+		printOption: parsePrintOption(*pPrint),
 	}
 
-	opt.logf = internal.CreateLogFile(opt.verbose)
-
+	opt.logf = internal.CreateLogFile(opt.verbose, opt.printOption)
 	opt.profiles = internal.ParseProfileArg(*pProfiles)
 	invoker, err := NewInvoker(ctx, opt)
 	osx.ExitIfErr(err)

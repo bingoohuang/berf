@@ -43,19 +43,18 @@ type Invoker struct {
 	upload          string
 	uploadChan      chan string
 
-	httpInvoke  func(req *fasthttp.Request, rsp *fasthttp.Response) error
-	readBytes   int64
-	writeBytes  int64
-	printOption uint8
-	isTLS       bool
-	printLock   sync.Locker
-	pieArg      HttpieArg
-	pieBody     *HttpieArgBody
+	httpInvoke func(req *fasthttp.Request, rsp *fasthttp.Response) error
+	readBytes  int64
+	writeBytes int64
+	isTLS      bool
+	printLock  sync.Locker
+	pieArg     HttpieArg
+	pieBody    *HttpieArgBody
 }
 
 func NewInvoker(ctx context.Context, opt *Opt) (*Invoker, error) {
-	r := &Invoker{opt: opt, printOption: parsePrintOption(*pPrint)}
-	r.printLock = NewConditionalLock(r.printOption > 0)
+	r := &Invoker{opt: opt}
+	r.printLock = NewConditionalLock(r.opt.printOption > 0)
 
 	header, err := r.buildRequestClient(opt)
 	if err != nil {
@@ -156,7 +155,7 @@ func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) 
 
 	method := detectMethod(opt, r.pieArg)
 	h.SetMethod(method)
-	r.pieBody = r.pieArg.Build(method)
+	r.pieBody = r.pieArg.Build(method, opt.form)
 
 	query := u.Query()
 	for _, v := range r.pieArg.query {
@@ -260,7 +259,7 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 		rr.Counting = append(rr.Counting, rsp.LocalAddr().String()+"->"+rsp.RemoteAddr().String())
 	}
 
-	if r.opt.logf == nil && r.printOption == 0 {
+	if r.opt.logf == nil && r.opt.printOption == 0 {
 		return rsp.BodyWriteTo(ioutil.Discard)
 	}
 
@@ -307,7 +306,7 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 }
 
 func (r *Invoker) printReq(b *bytes.Buffer) {
-	if r.printOption == 0 {
+	if r.opt.printOption == 0 {
 		return
 	}
 
@@ -323,13 +322,13 @@ func (r *Invoker) printReq(b *bytes.Buffer) {
 	}
 
 	printNum := 0
-	if r.printOption&printReqHeader == printReqHeader {
+	if r.opt.printOption&printReqHeader == printReqHeader {
 		fmt.Println(ColorfulHeader(string(dumpHeader)))
 		printNum++
 	}
-	if r.printOption&printReqBody == printReqBody {
+	if r.opt.printOption&printReqBody == printReqBody {
 		if string(dumpBody) != "\r\n" {
-			fmt.Println(string(dumpBody))
+			printBody(dumpBody, printNum)
 			printNum++
 		}
 	}
@@ -340,7 +339,7 @@ func (r *Invoker) printReq(b *bytes.Buffer) {
 }
 
 func (r *Invoker) printResp(b *bytes.Buffer, rsp *fasthttp.Response) {
-	if r.printOption == 0 {
+	if r.opt.printOption == 0 {
 		return
 	}
 
@@ -356,33 +355,37 @@ func (r *Invoker) printResp(b *bytes.Buffer, rsp *fasthttp.Response) {
 	}
 
 	printNum := 0
-	if r.printOption&printRespStatusCode == printRespStatusCode {
+	if r.opt.printOption&printRespStatusCode == printRespStatusCode {
 		fmt.Println(Color(strconv.Itoa(rsp.StatusCode()), Magenta))
 		printNum++
 	}
-	if r.printOption&printRespHeader == printRespHeader {
+	if r.opt.printOption&printRespHeader == printRespHeader {
 		fmt.Println(ColorfulHeader(string(dumpHeader)))
 		printNum++
 	}
-	if r.printOption&printRespBody == printRespBody {
+	if r.opt.printOption&printRespBody == printRespBody {
 		if string(dumpBody) != "\r\n" {
 			if r.opt.statusName != "" {
 				dumpBody = []byte(parseStatus(rsp, r.opt.statusName))
 			}
-			body := formatResponseBody(dumpBody, *pPretty, berf.IsStdoutTerminal)
-
-			if printNum > 0 && strings.IndexFunc(body, func(r rune) bool { return !unicode.IsSpace(r) }) == 0 {
-				fmt.Println()
-			}
-
-			body = strings.TrimRightFunc(body, func(r rune) bool { return unicode.IsSpace(r) })
-			fmt.Println(body)
+			printBody(dumpBody, printNum)
 			printNum++
 		}
 	}
-	if printNum > 0 && r.printOption != printRespStatusCode {
+	if printNum > 0 && r.opt.printOption != printRespStatusCode {
 		fmt.Println()
 	}
+}
+
+func printBody(dumpBody []byte, printNum int) {
+	body := formatResponseBody(dumpBody, *pPretty, berf.IsStdoutTerminal)
+
+	if printNum > 0 && strings.IndexFunc(body, func(r rune) bool { return !unicode.IsSpace(r) }) == 0 {
+		fmt.Println()
+	}
+
+	body = strings.TrimRightFunc(body, func(r rune) bool { return unicode.IsSpace(r) })
+	fmt.Println(body)
 }
 
 func (r *Invoker) runProfiles(req *fasthttp.Request, rsp *fasthttp.Response) (*berf.Result, error) {

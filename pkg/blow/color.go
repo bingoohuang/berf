@@ -151,6 +151,10 @@ type HttpieArg struct {
 	files   map[string]string      // post multipart
 }
 
+func (a *HttpieArg) MaybePost() bool {
+	return len(a.jsonmap) > 0 || len(a.files) > 0 || len(a.param) > 0
+}
+
 type HttpieArgBody struct {
 	Multipart   bool
 	ContentType string
@@ -256,7 +260,7 @@ func readFile(s string) (data []byte, fn string, e error) {
 	return content, s, nil
 }
 
-func (a *HttpieArg) Build(method string) *HttpieArgBody {
+func (a *HttpieArg) Build(method string, form bool) *HttpieArgBody {
 	b := &HttpieArgBody{}
 
 	switch method {
@@ -296,7 +300,7 @@ func (a *HttpieArg) Build(method string) *HttpieArgBody {
 		return b
 	}
 
-	if len(a.jsonmap) > 0 {
+	if len(a.jsonmap) > 0 || len(a.param) > 0 {
 		m := make(map[string]interface{})
 		for k, v := range a.param {
 			m[k] = v
@@ -305,33 +309,33 @@ func (a *HttpieArg) Build(method string) *HttpieArgBody {
 			m[k] = v
 		}
 
-		buf := bytes.NewBuffer(nil)
-		enc := json.NewEncoder(buf)
-		if err := enc.Encode(m); err != nil {
-			log.Fatalf("failed to json encoding, err: %v", err)
+		if form {
+			b.BodyString = createParamBody(m)
+			b.ContentType = "application/x-www-form-urlencoded"
+		} else {
+			buf := bytes.NewBuffer(nil)
+			enc := json.NewEncoder(buf)
+			if err := enc.Encode(m); err != nil {
+				log.Fatalf("failed to json encoding, err: %v", err)
+			}
+			b.BodyString = buf.String()
+			b.ContentType = "application/json; charset=utf-8"
 		}
-		b.BodyString = buf.String()
-		b.ContentType = "application/json; charset=utf-8"
-		return b
-	}
-
-	if len(a.param) > 0 {
-		b.BodyString = createParamBody(a.param)
-		b.ContentType = "application/x-www-form-urlencoded"
 		return b
 	}
 
 	return b
 }
 
-func (a *HttpieArg) MaybePost() bool {
-	return len(a.jsonmap) > 0 || len(a.files) > 0
-}
-
-func createParamBody(params map[string]string) string {
+func createParamBody(params map[string]interface{}) string {
 	b := make(url.Values)
 	for k, v := range params {
-		b.Add(k, v)
+		switch vv := v.(type) {
+		case string:
+			b.Add(k, vv)
+		default:
+			b.Add(k, fmt.Sprintf("%v", v))
+		}
 	}
 
 	return b.Encode()
