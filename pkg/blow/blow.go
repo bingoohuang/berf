@@ -32,14 +32,13 @@ var (
 	pNetwork    = fla9.String("network", "", "Network simulation, local: simulates local network, lan: local, wan: wide, bad: bad network, or BPS:latency like 20M:20ms")
 	pHeaders    = fla9.Strings("header,H", nil, "Custom HTTP headers, K:V, e.g. Content-Type")
 	pProfiles   = fla9.Strings("profile,P", nil, "Profile file, append :new to create a demo profile, or :tag to run only specified profile")
-	pOpts       = fla9.Strings("opt", nil, "Options. gzip: Enabled content gzip, k: not verify the server's cert chain and host name, no-keepalive/no-ka: disable keepalive, form: use form instead of json")
+	pOpts       = fla9.Strings("opt", nil, "Options. gzip: Enabled content gzip, k: not verify the server's cert chain and host name, no-keepalive/no-ka: disable keepalive, form: use form instead of json, pretty: pretty JSON")
 	pBasicAuth  = fla9.String("basic", "", "basic auth username:password")
 	pCertKey    = fla9.String("cert", "", "Path to the client's TLS Cert and private key file, eg. ca.pem,ca.key")
 	pTimeout    = fla9.String("timeout", "", "Timeout for each http request, e.g. 5s for do:5s,dial:5s,write:5s,read:5s")
 	pSocks5     = fla9.String("socks5", "", "Socks5 proxy, ip:port")
-	pPrint      = fla9.String("print,p", "", "A: all H: req headers  B: req body  h: resp headers  b: resp body c: status code")
+	pPrint      = fla9.String("print,p", "", "a: all, R: req all, H: req headers, B: req body, r: resp all, h: resp headers b: resp body c: status code")
 	pStatusName = fla9.String("status", "", "Status name in json, like resultCode")
-	pPretty     = fla9.Bool("pretty", false, "Pretty JSON output")
 )
 
 const (
@@ -53,6 +52,9 @@ const (
 func parsePrintOption(s string) (printOption uint8) {
 	for r, v := range map[string]uint8{
 		"A": printReqHeader | printReqBody | printRespHeader | printRespBody,
+		"a": printReqHeader | printReqBody | printRespHeader | printRespBody,
+		"R": printReqHeader | printReqBody,
+		"r": printRespHeader | printRespBody,
 		"H": printReqHeader,
 		"B": printReqBody,
 		"h": printRespHeader,
@@ -94,7 +96,7 @@ func (b *Bench) Final(_ context.Context, conf *berf.Config) error {
 	opt := b.invoker.opt
 	if conf.N == 1 && opt.logf != nil && opt.printOption == 0 {
 		if v := opt.logf.GetLastLog(); v != "" {
-			v = colorJSON(v, *pPretty)
+			v = colorJSON(v, opt.pretty)
 			os.Stdout.WriteString(v)
 		}
 	}
@@ -138,10 +140,11 @@ type Opt struct {
 	maxConns    int
 	enableGzip  bool
 	noKeepalive bool
+	form        bool
+	pretty      bool
 	verbose     int
 	profiles    []*internal.Profile
 	statusName  string
-	form        bool
 
 	printOption uint8
 }
@@ -233,6 +236,7 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 		enableGzip:  opts.HasAny("g", "gzip"),
 		noKeepalive: opts.HasAny("no-keepalive", "no-ka"),
 		form:        opts.HasAny("form"),
+		pretty:      opts.HasAny("pretty"),
 		verbose:     conf.Verbose,
 		statusName:  *pStatusName,
 		printOption: parsePrintOption(*pPrint),

@@ -328,7 +328,7 @@ func (r *Invoker) printReq(b *bytes.Buffer) {
 	}
 	if r.opt.printOption&printReqBody == printReqBody {
 		if string(dumpBody) != "\r\n" {
-			printBody(dumpBody, printNum)
+			printBody(dumpBody, printNum, r.opt.pretty)
 			printNum++
 		}
 	}
@@ -368,7 +368,7 @@ func (r *Invoker) printResp(b *bytes.Buffer, rsp *fasthttp.Response) {
 			if r.opt.statusName != "" {
 				dumpBody = []byte(parseStatus(rsp, r.opt.statusName))
 			}
-			printBody(dumpBody, printNum)
+			printBody(dumpBody, printNum, r.opt.pretty)
 			printNum++
 		}
 	}
@@ -377,8 +377,8 @@ func (r *Invoker) printResp(b *bytes.Buffer, rsp *fasthttp.Response) {
 	}
 }
 
-func printBody(dumpBody []byte, printNum int) {
-	body := formatResponseBody(dumpBody, *pPretty, berf.IsStdoutTerminal)
+func printBody(dumpBody []byte, printNum int, pretty bool) {
+	body := formatResponseBody(dumpBody, pretty, berf.IsStdoutTerminal)
 
 	if printNum > 0 && strings.IndexFunc(body, func(r rune) bool { return !unicode.IsSpace(r) }) == 0 {
 		fmt.Println()
