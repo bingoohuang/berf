@@ -5,15 +5,13 @@ import (
 	"github.com/bingoohuang/jj"
 )
 
-type Valuer struct {
+var Valuer jj.Substitute = &valuer{Map: make(map[Keep]interface{})}
+
+type valuer struct {
 	Map map[Keep]interface{}
 }
 
-func NewValuer() *Valuer {
-	return &Valuer{Map: make(map[Keep]interface{})}
-}
-
-func (v *Valuer) Register(fn string, f jj.SubstitutionFn) {
+func (v *valuer) Register(fn string, f jj.SubstitutionFn) {
 	jj.DefaultSubstituteFns.Register(fn, f)
 }
 
@@ -22,7 +20,7 @@ type Keep struct {
 	Name string
 }
 
-func (v *Valuer) Value(name, params string) interface{} {
+func (v *valuer) Value(name, params string) interface{} {
 	keep := Keep{}
 	jj.ParseConf(params, &keep)
 
@@ -50,11 +48,10 @@ const (
 )
 
 func Gen(s string, mode StringMode) string {
-	valuer := NewValuer()
-	gen := jj.NewGenContext(valuer)
+	gen := jj.NewGenContext(Valuer)
 	if mode == SureJSON || mode == MayJSON && jj.Valid(s) {
 		return gen.Gen(s)
 	}
 
-	return vars.ToString(vars.ParseExpr(s).Eval(valuer))
+	return vars.ToString(vars.ParseExpr(s).Eval(Valuer))
 }

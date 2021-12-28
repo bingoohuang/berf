@@ -100,7 +100,7 @@ func init() {
 	plugins.Add("net", func() plugins.Input {
 		return &NetIOStats{
 			ps:         system.NewSystemPS(),
-			Interfaces: []string{"eth*", "en0"},
+			Interfaces: []string{"eth*", "en*"},
 		}
 	})
 }

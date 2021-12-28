@@ -53,7 +53,7 @@ install: init
 linux: init
 	GOOS=linux GOARCH=amd64 go install -trimpath -ldflags=${flags}  ./...
 	upx ~/go/bin/linux_amd64/${app}
-	bssh scp ~/go/bin/linux_amd64/${app} r:/usr/local/bin/
+	bssh scp ~/go/bin/linux_amd64/${app} r:/usr/bin/
 
 arm: init
 	GOOS=linux GOARCH=arm64 go install -trimpath -ldflags=${flags}  ./...

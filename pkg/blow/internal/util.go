@@ -54,6 +54,5 @@ func ParseBodyArg(body string, stream bool) (fileName string, bodyBytes []byte) 
 	}
 
 	fileName, bodyBytes = fla9.ParseFileArg(body)
-
 	return ss.If(stream, fileName, ""), bodyBytes
 }

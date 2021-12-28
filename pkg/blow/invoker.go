@@ -13,12 +13,15 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 	"unicode"
+
+	"github.com/bingoohuang/gg/pkg/vars"
 
 	"github.com/bingoohuang/gg/pkg/fla9"
 
@@ -43,13 +46,14 @@ type Invoker struct {
 	upload          string
 	uploadChan      chan string
 
-	httpInvoke func(req *fasthttp.Request, rsp *fasthttp.Response) error
-	readBytes  int64
-	writeBytes int64
-	isTLS      bool
-	printLock  sync.Locker
-	pieArg     HttpieArg
-	pieBody    *HttpieArgBody
+	httpInvoke     func(req *fasthttp.Request, rsp *fasthttp.Response) error
+	readBytes      int64
+	writeBytes     int64
+	isTLS          bool
+	printLock      sync.Locker
+	pieArg         HttpieArg
+	pieBody        *HttpieArgBody
+	requestUriExpr vars.Subs
 }
 
 func NewInvoker(ctx context.Context, opt *Opt) (*Invoker, error) {
@@ -60,6 +64,9 @@ func NewInvoker(ctx context.Context, opt *Opt) (*Invoker, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	requestURI := string(header.RequestURI())
+	r.requestUriExpr = vars.ParseExpr(requestURI)
 	r.httpHeader = header
 
 	if opt.upload != "" {
@@ -201,7 +208,7 @@ func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) 
 	return &h, nil
 }
 
-func (r *Invoker) Run(conf *berf.Config) (*berf.Result, error) {
+func (r *Invoker) Run(*berf.Config) (*berf.Result, error) {
 	req := fasthttp.AcquireRequest()
 	resp := fasthttp.AcquireResponse()
 	defer fasthttp.ReleaseRequest(req)
@@ -216,6 +223,12 @@ func (r *Invoker) Run(conf *berf.Config) (*berf.Result, error) {
 	}
 
 	r.httpHeader.CopyTo(&req.Header)
+	if r.requestUriExpr.CountVars() > 0 {
+		result := r.requestUriExpr.Eval(internal.Valuer)
+		if v, ok := result.(string); ok {
+			req.SetRequestURI(v)
+		}
+	}
 	if r.isTLS {
 		req.URI().SetScheme("https")
 		req.URI().SetHostBytes(req.Header.Host())
@@ -263,10 +276,11 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 		return rsp.BodyWriteTo(ioutil.Discard)
 	}
 
-	bx := &bytes.Buffer{}
+	var bx *bytes.Buffer
 	b1 := &bytes.Buffer{}
 
 	if r.opt.logf != nil {
+		bx = &bytes.Buffer{}
 		defer r.opt.logf.Write(bx)
 	}
 
@@ -281,10 +295,9 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 	r.printLock.Lock()
 	defer r.printLock.Unlock()
 
-	r.printReq(b1)
-	_, _ = b1.WriteTo(bx)
+	r.printReq(b1, bx)
+	b1.Reset()
 
-	_, _ = bx.Write([]byte("\n"))
 	header := rsp.Header.Header()
 	_, _ = b1.Write(header)
 
@@ -299,26 +312,23 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 	}
 
 	_, _ = b1.Write([]byte("\n\n"))
-	r.printResp(b1, rsp)
-	_, _ = b1.WriteTo(bx)
+	r.printResp(b1, bx, rsp)
 
 	return nil
 }
 
-func (r *Invoker) printReq(b *bytes.Buffer) {
-	if r.opt.printOption == 0 {
+var contentLengthReg = regexp.MustCompile(`Content-Length: (\d+)`)
+
+func (r *Invoker) printReq(b, bx *bytes.Buffer) {
+	if r.opt.printOption == 0 && bx == nil {
 		return
 	}
 
-	dump := b.String()
-	var dumpHeader, dumpBody []byte
-	dps := strings.Split(dump, "\n")
-	for i, line := range dps {
-		if len(strings.Trim(line, "\r\n ")) == 0 {
-			dumpHeader = []byte(strings.Join(dps[:i], "\n"))
-			dumpBody = []byte(strings.Join(dps[i:], "\n"))
-			break
-		}
+	dumpHeader, dumpBody := r.dump(b, bx)
+	_, _ = bx.Write([]byte("\n"))
+
+	if r.opt.printOption == 0 {
+		return
 	}
 
 	printNum := 0
@@ -338,20 +348,15 @@ func (r *Invoker) printReq(b *bytes.Buffer) {
 	}
 }
 
-func (r *Invoker) printResp(b *bytes.Buffer, rsp *fasthttp.Response) {
-	if r.opt.printOption == 0 {
+func (r *Invoker) printResp(b, bx *bytes.Buffer, rsp *fasthttp.Response) {
+	if r.opt.printOption == 0 && bx == nil {
 		return
 	}
 
-	dump := b.String()
-	var dumpHeader, dumpBody []byte
-	dps := strings.Split(dump, "\n")
-	for i, line := range dps {
-		if len(strings.Trim(line, "\r\n ")) == 0 {
-			dumpHeader = []byte(strings.Join(dps[:i], "\n"))
-			dumpBody = []byte(strings.Join(dps[i:], "\n"))
-			break
-		}
+	dumpHeader, dumpBody := r.dump(b, bx)
+
+	if r.opt.printOption == 0 {
+		return
 	}
 
 	printNum := 0
@@ -375,6 +380,31 @@ func (r *Invoker) printResp(b *bytes.Buffer, rsp *fasthttp.Response) {
 	if printNum > 0 && r.opt.printOption != printRespStatusCode {
 		fmt.Println()
 	}
+}
+
+func (r *Invoker) dump(b, bx *bytes.Buffer) (dumpHeader, dumpBody []byte) {
+	dump := b.String()
+	dps := strings.Split(dump, "\n")
+	for i, line := range dps {
+		if len(strings.Trim(line, "\r\n ")) == 0 {
+			dumpHeader = []byte(strings.Join(dps[:i], "\n"))
+			dumpBody = []byte("\n" + strings.Join(dps[i:], "\n"))
+			break
+		}
+	}
+
+	bx.Write(dumpHeader)
+
+	contentLength := 0
+	if subs := contentLengthReg.FindStringSubmatch(string(dumpHeader)); len(subs) > 0 {
+		contentLength = ss.ParseInt(subs[1])
+	}
+	if contentLength == 0 || contentLength > 1024 {
+		dumpBody = []byte("\n\n--- streamed or too long, ignored ---\n")
+	}
+
+	bx.Write(dumpBody)
+	return dumpHeader, dumpBody
 }
 
 func printBody(dumpBody []byte, printNum int, pretty bool) {
