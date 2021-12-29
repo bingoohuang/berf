@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	barSpinner       = []string{"|", "/", "-", "\\"}
+	barSpinner       = []string{"|", "/", "-", `\`}
 	clearLine        = []byte("\r\033[K")
 	IsStdoutTerminal = isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd())
 )
@@ -350,7 +350,7 @@ func (p *Printer) buildErrors(r *SnapshotReport) [][]string {
 	var errorsBulks [][]string
 	for k, v := range r.Errors {
 		vs := colorize(strconv.FormatInt(v, 10), FgRedColor)
-		errorsBulks = append(errorsBulks, []string{vs, "\"" + k + "\""})
+		errorsBulks = append(errorsBulks, []string{vs, `"` + k + `"`})
 	}
 	if errorsBulks != nil {
 		sort.Slice(errorsBulks, func(i, j int) bool { return errorsBulks[i][1] < errorsBulks[j][1] })
