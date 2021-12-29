@@ -57,7 +57,7 @@ let views = {{.ViewsMap}};
 `
 )
 
-//go:embed views_sync.js
+//go:embed res/views_sync.js
 var viewSyncJs string
 
 func (c *Views) genViewTemplate(viewChartsMap map[string]string) string {
@@ -231,7 +231,7 @@ func (c *Charts) initHardwareCollectors() {
 	}
 }
 
-//go:embed echarts.min.js jquery.min.js
+//go:embed res/echarts.min.js res/jquery.min.js
 var assetsFS embed.FS
 
 func (c *Charts) Handler(ctx *fasthttp.RequestCtx) {
@@ -245,7 +245,8 @@ func (c *Charts) Handler(ctx *fasthttp.RequestCtx) {
 		views := ctx.QueryArgs().Peek("views")
 		c.renderCharts(ctx, string(size), string(views))
 	case strings.HasPrefix(path, assetsPath):
-		if f, err := assetsFS.Open(path[len(assetsPath):]); err != nil {
+		name := "res/" + path[len(assetsPath):]
+		if f, err := assetsFS.Open(name); err != nil {
 			ctx.Error(err.Error(), 404)
 		} else {
 			ctx.SetBodyStream(f, -1)
