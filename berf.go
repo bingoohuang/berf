@@ -129,14 +129,12 @@ func StartBench(ctx context.Context, fn Benchable, fns ...ConfigFn) {
 	benchOption, err := fn.Init(ctx, c)
 	osx.ExitIfErr(err)
 
-	requester, err := c.NewRequester(ctx, fn)
-	osx.ExitIfErr(err)
-
 	c.Desc = c.Description(fn.Name(ctx, c))
 	if !c.IsDryPlots() && c.N != 1 {
 		fmt.Println("Berf" + c.Desc)
 	}
 
+	requester := c.NewRequester(ctx, fn)
 	report := NewStreamReport(requester)
 	wg := &sync.WaitGroup{}
 	c.serveCharts(report, wg)

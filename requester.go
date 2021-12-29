@@ -39,7 +39,7 @@ type Requester struct {
 	wg         sync.WaitGroup
 
 	cancelFunc func()
-	think      *thinktime.ThinkTime
+	thinkFn    func(thinkNow bool) (thinkTime time.Duration)
 
 	// Qps is the rate limit in queries per second.
 	QPS float64
@@ -51,13 +51,10 @@ type Requester struct {
 	concurrent int64
 }
 
-func (c *Config) NewRequester(ctx context.Context, fn Benchable) (*Requester, error) {
+func (c *Config) NewRequester(ctx context.Context, fn Benchable) *Requester {
 	maxResult := c.Goroutines * 100
-	think, err := thinktime.ParseThinkTime(c.ThinkTime)
-	osx.ExitIfErr(err)
-
 	ctx, cancelFunc := context.WithCancel(ctx)
-	r := &Requester{
+	return &Requester{
 		goroutines: c.Goroutines,
 		n:          c.N,
 		duration:   c.Duration,
@@ -67,11 +64,19 @@ func (c *Config) NewRequester(ctx context.Context, fn Benchable) (*Requester, er
 		ctx:        ctx,
 		cancelFunc: cancelFunc,
 		benchable:  fn,
-		think:      think,
+		thinkFn:    c.createThinkFn(),
 		config:     c,
 	}
+}
 
-	return r, nil
+func (c *Config) createThinkFn() func(thinkNow bool) (thinkTime time.Duration) {
+	think, err := thinktime.ParseThinkTime(c.ThinkTime)
+	osx.ExitIfErr(err)
+	if think != nil {
+		return think.Think
+	}
+
+	return func(thinkNow bool) (thinkTime time.Duration) { return 0 }
 }
 
 func (r *Requester) closeRecord() {
@@ -106,9 +111,8 @@ func (r *Requester) doRequest(ctx context.Context, rr *ReportRecord) (err error)
 }
 
 func (r *Requester) run() {
-	// handle ctrl-c
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM) // handle ctrl-c
 	defer signal.Stop(sigs)
 
 	go func() {
@@ -224,21 +228,14 @@ func (r *Requester) loopWork(ctx context.Context, semaphore *int64, throttle fun
 		rr.Reset()
 		r.runOne(ctx, rr)
 		r.recordChan <- rr
-		r.thinking()
+		r.thinkFn(true)
 	}
 }
 
 func (r *Requester) runOne(ctx context.Context, rr *ReportRecord) *ReportRecord {
-	err := r.doRequest(ctx, rr)
-	if err != nil {
+	if err := r.doRequest(ctx, rr); err != nil {
 		rr.error = err.Error()
 	}
 
 	return rr
-}
-
-func (r *Requester) thinking() {
-	if r.think != nil {
-		r.think.Think(true)
-	}
 }
