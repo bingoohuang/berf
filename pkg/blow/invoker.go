@@ -276,12 +276,13 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 		return rsp.BodyWriteTo(ioutil.Discard)
 	}
 
-	var bx *bytes.Buffer
+	bx := io.Discard
 	b1 := &bytes.Buffer{}
 
 	if r.opt.logf != nil {
-		bx = &bytes.Buffer{}
-		defer r.opt.logf.Write(bx)
+		bb := &bytes.Buffer{}
+		bx = bb
+		defer r.opt.logf.Write(bb)
 	}
 
 	conn := rsp.LocalAddr().String() + "->" + rsp.RemoteAddr().String()
@@ -319,7 +320,7 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 
 var contentLengthReg = regexp.MustCompile(`Content-Length: (\d+)`)
 
-func (r *Invoker) printReq(b, bx *bytes.Buffer) {
+func (r *Invoker) printReq(b *bytes.Buffer, bx io.Writer) {
 	if r.opt.printOption == 0 && bx == nil {
 		return
 	}
@@ -348,7 +349,7 @@ func (r *Invoker) printReq(b, bx *bytes.Buffer) {
 	}
 }
 
-func (r *Invoker) printResp(b, bx *bytes.Buffer, rsp *fasthttp.Response) {
+func (r *Invoker) printResp(b *bytes.Buffer, bx io.Writer, rsp *fasthttp.Response) {
 	if r.opt.printOption == 0 && bx == nil {
 		return
 	}
@@ -382,7 +383,7 @@ func (r *Invoker) printResp(b, bx *bytes.Buffer, rsp *fasthttp.Response) {
 	}
 }
 
-func (r *Invoker) dump(b, bx *bytes.Buffer) (dumpHeader, dumpBody []byte) {
+func (r *Invoker) dump(b *bytes.Buffer, bx io.Writer) (dumpHeader, dumpBody []byte) {
 	dump := b.String()
 	dps := strings.Split(dump, "\n")
 	for i, line := range dps {
@@ -394,7 +395,6 @@ func (r *Invoker) dump(b, bx *bytes.Buffer) (dumpHeader, dumpBody []byte) {
 	}
 
 	bx.Write(dumpHeader)
-
 	contentLength := 0
 	if subs := contentLengthReg.FindStringSubmatch(string(dumpHeader)); len(subs) > 0 {
 		contentLength = ss.ParseInt(subs[1])
@@ -414,7 +414,7 @@ func printBody(dumpBody []byte, printNum int, pretty bool) {
 		fmt.Println()
 	}
 
-	body = strings.TrimRightFunc(body, func(r rune) bool { return unicode.IsSpace(r) })
+	body = strings.TrimFunc(body, func(r rune) bool { return unicode.IsSpace(r) })
 	fmt.Println(body)
 }
 
