@@ -290,7 +290,8 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 		conn, time.Now().Format(time.RFC3339Nano), rr.Cost))
 
 	bw := bufio.NewWriter(b1)
-	_ = req.Write(bw)
+	_ = req.Header.Write(bw)
+	_ = req.BodyWriteTo(bw)
 	_ = bw.Flush()
 
 	r.printLock.Lock()
