@@ -297,7 +297,9 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 	r.printLock.Lock()
 	defer r.printLock.Unlock()
 
-	r.printReq(b1, bx)
+	h := req.Header
+	ignoreBody := h.IsGet() || h.IsHead()
+	r.printReq(b1, bx, ignoreBody)
 	b1.Reset()
 
 	header := rsp.Header.Header()
@@ -321,12 +323,12 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 
 var contentLengthReg = regexp.MustCompile(`Content-Length: (\d+)`)
 
-func (r *Invoker) printReq(b *bytes.Buffer, bx io.Writer) {
+func (r *Invoker) printReq(b *bytes.Buffer, bx io.Writer, ignoreBody bool) {
 	if r.opt.printOption == 0 && bx == nil {
 		return
 	}
 
-	dumpHeader, dumpBody := r.dump(b, bx)
+	dumpHeader, dumpBody := r.dump(b, bx, ignoreBody)
 	_, _ = bx.Write([]byte("\n"))
 
 	if r.opt.printOption == 0 {
@@ -355,7 +357,7 @@ func (r *Invoker) printResp(b *bytes.Buffer, bx io.Writer, rsp *fasthttp.Respons
 		return
 	}
 
-	dumpHeader, dumpBody := r.dump(b, bx)
+	dumpHeader, dumpBody := r.dump(b, bx, false)
 
 	if r.opt.printOption == 0 {
 		return
@@ -384,7 +386,7 @@ func (r *Invoker) printResp(b *bytes.Buffer, bx io.Writer, rsp *fasthttp.Respons
 	}
 }
 
-func (r *Invoker) dump(b *bytes.Buffer, bx io.Writer) (dumpHeader, dumpBody []byte) {
+func (r *Invoker) dump(b *bytes.Buffer, bx io.Writer, ignoreBody bool) (dumpHeader, dumpBody []byte) {
 	dump := b.String()
 	dps := strings.Split(dump, "\n")
 	for i, line := range dps {
@@ -396,11 +398,11 @@ func (r *Invoker) dump(b *bytes.Buffer, bx io.Writer) (dumpHeader, dumpBody []by
 	}
 
 	bx.Write(dumpHeader)
-	contentLength := 0
+	contentLength := -1
 	if subs := contentLengthReg.FindStringSubmatch(string(dumpHeader)); len(subs) > 0 {
 		contentLength = ss.ParseInt(subs[1])
 	}
-	if contentLength == 0 || contentLength > 1024 {
+	if !ignoreBody && (contentLength == 0 || contentLength > 1024) {
 		dumpBody = []byte("\n\n--- streamed or too long, ignored ---\n")
 	}
 
