@@ -44,15 +44,14 @@ func SetHeader(r *fasthttp.Request, header, value string) {
 	}
 }
 
-func ParseBodyArg(body string, stream bool) (fileName string, bodyBytes []byte) {
+func ParseBodyArg(body string, stream bool) (streamFileName string, bodyBytes []byte) {
 	if strings.HasPrefix(body, "@") {
-		fileName = (body)[1:]
-		if !filex.Exists(fileName) {
+		streamFileName = (body)[1:]
+		if !filex.Exists(streamFileName) {
 			return "", []byte(body)
 		}
-
 	}
 
-	fileName, bodyBytes = fla9.ParseFileArg(body)
-	return ss.If(stream, fileName, ""), bodyBytes
+	streamFileName, bodyBytes = fla9.ParseFileArg(body)
+	return ss.If(stream, streamFileName, ""), bodyBytes
 }

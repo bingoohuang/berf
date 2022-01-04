@@ -110,16 +110,16 @@ func (b *Bench) Init(ctx context.Context, conf *berf.Config) (*berf.BenchOption,
 	}, nil
 }
 
-func (b *Bench) Invoke(ctx context.Context, conf *berf.Config) (*berf.Result, error) {
+func (b *Bench) Invoke(_ context.Context, conf *berf.Config) (*berf.Result, error) {
 	return b.invoker.Run(conf)
 }
 
 type Opt struct {
-	url       string
-	method    string
-	headers   []string
-	bodyBytes []byte
-	bodyFile  string
+	url            string
+	method         string
+	headers        []string
+	bodyBytes      []byte
+	bodyStreamFile string
 
 	certPath string
 	keyPath  string
@@ -150,7 +150,7 @@ type Opt struct {
 }
 
 func (opt *Opt) MaybePost() bool {
-	return opt.upload != "" || len(opt.bodyBytes) > 0 || opt.bodyFile != ""
+	return opt.upload != "" || len(opt.bodyBytes) > 0 || opt.bodyStreamFile != ""
 }
 
 func TryStartAsBlow() bool {
@@ -197,10 +197,8 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 	}
 
 	stream := strings.HasSuffix(*pBody, ":stream")
-	if stream {
-		*pBody = strings.TrimSuffix(*pBody, ":stream")
-	}
-	bodyFile, bodyBytes := internal.ParseBodyArg(*pBody, stream)
+	*pBody = strings.TrimSuffix(*pBody, ":stream")
+	bodyStreamFile, bodyBytes := internal.ParseBodyArg(*pBody, stream)
 	cert, key := ss.Split2(*pCertKey)
 
 	opts := util.NewFeatures(*pOpts...)
@@ -211,12 +209,12 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 	}
 
 	opt := &Opt{
-		url:       urlAddr,
-		method:    *pMethod,
-		headers:   *pHeaders,
-		bodyBytes: bodyBytes,
-		bodyFile:  bodyFile,
-		upload:    *pUpload,
+		url:            urlAddr,
+		method:         *pMethod,
+		headers:        *pHeaders,
+		bodyBytes:      bodyBytes,
+		bodyStreamFile: bodyStreamFile,
+		upload:         *pUpload,
 
 		certPath: cert,
 		keyPath:  key,

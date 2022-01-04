@@ -465,8 +465,8 @@ func parseStatus(resp *fasthttp.Response, statusName string) string {
 }
 
 func (r *Invoker) setBody(req *fasthttp.Request) (internal.Closers, error) {
-	if r.opt.bodyFile != "" {
-		file, err := os.Open(r.opt.bodyFile)
+	if r.opt.bodyStreamFile != "" {
+		file, err := os.Open(r.opt.bodyStreamFile)
 		if err != nil {
 			return nil, err
 		}
