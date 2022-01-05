@@ -411,12 +411,11 @@ func (r *Invoker) dump(b *bytes.Buffer, bx io.Writer, ignoreBody bool) (dumpHead
 }
 
 func printBody(dumpBody []byte, printNum int, pretty bool) {
-	body := formatResponseBody(dumpBody, pretty, berf.IsStdoutTerminal)
-
-	if printNum > 0 && strings.IndexFunc(body, func(r rune) bool { return !unicode.IsSpace(r) }) == 0 {
+	if printNum > 0 {
 		fmt.Println()
 	}
 
+	body := formatResponseBody(dumpBody, pretty, berf.IsStdoutTerminal)
 	body = strings.TrimFunc(body, func(r rune) bool { return unicode.IsSpace(r) })
 	fmt.Println(body)
 }
