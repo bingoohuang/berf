@@ -201,12 +201,12 @@ func parseHttpieLikeArgs(args []string) (pieArg HttpieArg) {
 	// Raw JSON fields field:=json	Useful when sending JSON and one or more fields need to be a Boolean, Number, nested Object, or an Array, e.g., meals:='["ham","spam"]' or pies:=[1,2,3] (note the quotes)
 	// File upload fields field@/dir/file, field@file;type=mime	Only available with --form, -f and --multipart. For example screenshot@~/Pictures/img.png, or 'cv@cv.txt;type=text/markdown'. With --form, the presence of a file field results in a --multipart request
 	for _, arg := range args {
-		submatch := keyReq.FindStringSubmatch(arg)
-		if len(submatch) == 0 {
+		subs := keyReq.FindStringSubmatch(arg)
+		if len(subs) == 0 {
 			continue
 		}
 
-		switch k, op, v := submatch[1], submatch[2], submatch[3]; op {
+		switch k, op, v := subs[1], subs[2], subs[3]; op {
 		case ":=": // Json raws
 			if v, fn, err := readFile(v); err != nil {
 				log.Fatal("Read File", fn, err)
@@ -220,10 +220,9 @@ func parseHttpieLikeArgs(args []string) (pieArg HttpieArg) {
 				pieArg.SetJsonMap(k, json.RawMessage(v))
 			}
 		case "==": // Queries
-			pieArg.AddQuery(k, v)
+			pieArg.AddQuery(k, tryReadFile(v))
 		case "=": // Params
-			v = tryReadFile(v)
-			pieArg.SetParam(k, v)
+			pieArg.SetParam(k, tryReadFile(v))
 		case ":": // Headers
 			pieArg.SetHeader(k, v)
 		case "@": // files
