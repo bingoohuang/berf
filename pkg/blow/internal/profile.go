@@ -115,6 +115,7 @@ func (p *Profile) createHeader() error {
 		delete(p.Header, "Basic")
 	}
 
+	p.requestHeader.Set("Accept", "application/json")
 	for k, v := range p.Header {
 		p.requestHeader.Set(k, v)
 	}

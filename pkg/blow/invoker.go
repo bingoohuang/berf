@@ -8,8 +8,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/bingoohuang/gg/pkg/man"
 	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/url"
 	"os"
@@ -178,6 +180,7 @@ func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) 
 	u.RawQuery = query.Encode()
 	h.SetRequestURI(u.RequestURI())
 
+	h.Set("Accept", "application/json")
 	for k, v := range r.pieArg.header {
 		h.Set(k, v)
 	}
@@ -321,8 +324,6 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 	return nil
 }
 
-var contentLengthReg = regexp.MustCompile(`Content-Length: (\d+)`)
-
 func (r *Invoker) printReq(b *bytes.Buffer, bx io.Writer, ignoreBody bool) {
 	if r.opt.printOption == 0 && bx == nil {
 		return
@@ -386,6 +387,8 @@ func (r *Invoker) printResp(b *bytes.Buffer, bx io.Writer, rsp *fasthttp.Respons
 	}
 }
 
+var cLengthReg = regexp.MustCompile(`Content-Length: (\d+)`)
+
 func (r *Invoker) dump(b *bytes.Buffer, bx io.Writer, ignoreBody bool) (dumpHeader, dumpBody []byte) {
 	dump := b.String()
 	dps := strings.Split(dump, "\n")
@@ -398,11 +401,21 @@ func (r *Invoker) dump(b *bytes.Buffer, bx io.Writer, ignoreBody bool) (dumpHead
 	}
 
 	bx.Write(dumpHeader)
-	contentLength := -1
-	if subs := contentLengthReg.FindStringSubmatch(string(dumpHeader)); len(subs) > 0 {
-		contentLength = ss.ParseInt(subs[1])
+	cl := -1
+	if subs := cLengthReg.FindStringSubmatch(string(dumpHeader)); len(subs) > 0 {
+		cl = ss.ParseInt(subs[1])
 	}
-	if !ignoreBody && (contentLength == 0 || contentLength > 1024) {
+
+	blowMaxBody := 2048
+	if env := os.Getenv("BERF_MAX_BODY"); env != "" {
+		if envValue, err := man.ParseBytes(env); err == nil {
+			blowMaxBody = int(envValue)
+		} else {
+			log.Printf("bad environment value format: %s", env)
+		}
+	}
+
+	if !ignoreBody && (cl == 0 || (blowMaxBody > 0 && cl > blowMaxBody)) {
 		dumpBody = []byte("\n\n--- streamed or too long, ignored ---\n")
 	}
 
