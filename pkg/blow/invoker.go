@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/bingoohuang/gg/pkg/man"
 	"io"
 	"io/ioutil"
 	"log"
@@ -22,6 +21,8 @@ import (
 	"sync/atomic"
 	"time"
 	"unicode"
+
+	"github.com/bingoohuang/gg/pkg/man"
 
 	"github.com/bingoohuang/gg/pkg/vars"
 
@@ -191,11 +192,9 @@ func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) 
 	if opt.basicAuth != "" {
 		h.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(opt.basicAuth)))
 	}
-
 	if r.opt.enableGzip {
 		h.Set("Accept-Encoding", "gzip")
 	}
-
 	if r.opt.noKeepalive {
 		h.Set("Connection", "close")
 	}

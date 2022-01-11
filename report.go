@@ -158,7 +158,7 @@ func (s *StreamReport) Collect(records <-chan *ReportRecord) {
 		r, ok := <-records
 		if !ok {
 			close(s.doneChan)
-			break
+			return
 		}
 		s.lock.Lock()
 		latencyWithinSecTemp.Update(float64(r.cost))

@@ -83,6 +83,7 @@ func (r *Requester) closeRecord() {
 	r.closeOnce.Do(func() {
 		close(r.recordChan)
 	})
+	r.cancelFunc()
 }
 
 func (r *Requester) doRequest(ctx context.Context, rr *ReportRecord) (err error) {
@@ -118,14 +119,10 @@ func (r *Requester) run() {
 	go func() {
 		<-sigs
 		r.closeRecord()
-		r.cancelFunc()
 	}()
 	startTime = time.Now()
 	if r.duration > 0 {
-		time.AfterFunc(r.duration, func() {
-			r.closeRecord()
-			r.cancelFunc()
-		})
+		time.AfterFunc(r.duration, r.closeRecord)
 	}
 
 	throttle := func() {}
@@ -189,14 +186,14 @@ func (r *Requester) generateTokens(ch chan context.Context) {
 	keepTimes(t.C, 3)
 
 	if down := r.config.Incr.Down; down > 0 {
-		for i := max - 1; i >= 0; i-- {
+		for i := max - 1; i >= 0; {
 			<-t.C
-			for j := i; j > i-down && j >= 0; j-- {
-				cancels[j]()
+			for j := i; i > j-down && i >= 0; i-- {
+				cancels[i]()
 			}
 		}
 
-		keepTimes(t.C, 3)
+		keepTimes(t.C, 1)
 	}
 }
 
@@ -218,7 +215,7 @@ func (r *Requester) loopWork(ctx context.Context, semaphore *int64, throttle fun
 
 	for ctx.Err() == nil {
 		if r.n > 0 && atomic.AddInt64(semaphore, -1) < 0 {
-			r.cancelFunc()
+			r.closeRecord()
 			return
 		}
 
