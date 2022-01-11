@@ -3,8 +3,11 @@ package net
 import (
 	"fmt"
 	"net"
+	"os"
 	"sort"
 	"time"
+
+	"github.com/bingoohuang/gg/pkg/ss"
 
 	"github.com/bingoohuang/berf/plugins/internal"
 
@@ -16,10 +19,10 @@ import (
 )
 
 type NetIOStats struct {
+	Interfaces []string
+
 	filter filter.Filter
 	ps     system.PS
-
-	Interfaces []string
 
 	interfacesByName map[string]bool
 	interfacesName   []string
@@ -41,7 +44,7 @@ func (n *NetIOStats) Init() (err error) {
 	}
 	n.interfacesByName = map[string]bool{}
 	for _, iface := range interfaces {
-		if iface.Flags&net.FlagLoopback == net.FlagLoopback || iface.Flags&net.FlagUp == 0 {
+		if iface.Flags&net.FlagLoopback == net.FlagLoopback || iface.Flags&net.FlagUp != net.FlagUp {
 			continue
 		}
 
@@ -96,11 +99,43 @@ func (n *NetIOStats) Gather() ([]interface{}, error) {
 	return n.diff(stat), nil
 }
 
+/*
+root@bjca-PC:~/bingoohuang# ifconfig -a
+enp125s0f0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 192.168.126.41  netmask 255.255.255.0  broadcast 192.168.126.255
+        inet6 fe80::2987:1d0e:899f:e026  prefixlen 64  scopeid 0x20<link>
+        ether 44:67:47:97:2b:6f  txqueuelen 1000  (Ethernet)
+        RX packets 11706357  bytes 3039493482 (2.8 GiB)
+        RX errors 0  dropped 17491  overruns 0  frame 0
+        TX packets 5977242  bytes 2373840921 (2.2 GiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+enp125s0f1: flags=4099<UP,BROADCAST,MULTICAST>  mtu 1500
+        ether 44:67:47:97:2b:70  txqueuelen 1000  (Ethernet)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        inet6 ::1  prefixlen 128  scopeid 0x10<host>
+        loop  txqueuelen 1000  (Local Loopback)
+        RX packets 465500033  bytes 100560591774 (93.6 GiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 465500033  bytes 100560591774 (93.6 GiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+*/
+
 func init() {
 	plugins.Add("net", func() plugins.Input {
+		ifaces := []string{"eth*", "en*"}
+		if s := os.Getenv("BERF_NET"); s != "" {
+			ifaces = ss.Split(s)
+		}
 		return &NetIOStats{
+			Interfaces: ifaces,
 			ps:         system.NewSystemPS(),
-			Interfaces: []string{"eth*", "en*"},
 		}
 	})
 }

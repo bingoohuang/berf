@@ -3,8 +3,11 @@ package diskio
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
+
+	"github.com/bingoohuang/gg/pkg/ss"
 
 	"github.com/bingoohuang/berf/pkg/filter"
 	"github.com/bingoohuang/berf/pkg/util"
@@ -15,9 +18,9 @@ import (
 )
 
 type DiskIO struct {
-	ps system.PS
-
 	Devices []string
+
+	ps system.PS
 
 	infoCache     map[string]diskInfoCache
 	deviceFilter  filter.Filter
@@ -200,11 +203,39 @@ type ioStat struct {
 	MergedWriteCount uint64
 }
 
+/*
+root@bjca-PC:~/bingoohuang# lsblk -f
+NAME               FSTYPE      LABEL     UUID                                   FSAVAIL FSUSE% MOUNTPOINT
+sda
+├─sda1             vfat        EFI       B29D-D8B4                                 299M     0% /boot/efi
+├─sda2             ext4        Boot      ab774015-5261-44d5-94b0-b8d124693652      1.2G    12% /boot
+├─sda3             ext4        Roota     7c3eb2ff-ae7b-4b6c-bc62-3075a6248371    129.4G     7% /
+├─sda4             ext4        _dde_data e585ad0c-4c32-449e-baee-21ff25e24151    861.5G     2% /data
+├─sda5             ext4        Backup    68de0a20-364b-49a7-8d24-26885af87275         0   100% /recovery
+└─sda6             swap        SWAP      a8be7006-f049-4ccf-a112-b502bd4580ec                  [SWAP]
+sdb
+├─sdb1             vfat                  4939-432F
+├─sdb2             xfs                   26b1f940-ea98-4cd8-9341-6048516fdb4a
+└─sdb3             LVM2_member           gz5CWb-9daZ-xDpp-p6jQ-DSl7-XUlu-SifASi
+sdc
+├─sdc1             vfat                  6813-2B66
+├─sdc2             ext4                  26de7823-c690-41cd-9fce-601002e8e253
+└─sdc3             LVM2_member           VBcgeb-JwHk-zTZJ-5pAx-eZ17-Qk0c-xnuAjT
+  ├─openeuler-swap swap                  fcd0cc39-e927-48b1-91a9-cf69657e28e6
+  ├─openeuler-home ext4                  2aa00937-7212-4e35-9ede-8c4567a94811
+  └─openeuler-root ext4                  7c800ccc-afbf-46d5-8b4d-b5a66fd2cc1d
+sdd
+*/
+
 func init() {
 	plugins.Add("diskio", func() plugins.Input {
+		devices := []string{"sda", "sdb", "vd*"}
+		if s := os.Getenv("BERF_DISK"); s != "" {
+			devices = ss.Split(s)
+		}
 		return &DiskIO{
+			Devices: devices,
 			ps:      system.NewSystemPS(),
-			Devices: []string{"sda", "sdb", "vd*"},
 		}
 	})
 }
