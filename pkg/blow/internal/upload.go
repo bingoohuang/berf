@@ -76,41 +76,58 @@ func DealUploadFilePath(ctx context.Context, uploadFilepath string, postFileCh c
 var filePathCache sync.Map
 
 type cacheItem struct {
-	data        []byte
-	contentType string
+	data    []byte
+	headers map[string]string
 }
 
 // ReadMultipartFile read file filePath for upload in multipart,
 // return multipart content, form data content type and error.
-func ReadMultipartFile(nocache bool, fieldName, filePath string) (data []byte, contentType string, err error) {
+func ReadMultipartFile(nocache bool, fieldName, filePath string) (data io.Reader, dataSize int, headers map[string]string, err error) {
 	if !nocache {
 		if load, ok := filePathCache.Load(filePath); ok {
 			item := load.(cacheItem)
-			return item.data, item.contentType, nil
+			return bytes.NewReader(item.data), len(item.data), item.headers, nil
 		}
 	}
 
-	var buffer bytes.Buffer
-	writer := multipart.NewWriter(&buffer)
-
-	part, err := writer.CreateFormFile(fieldName, filepath.Base(filePath))
-	if err != nil {
-		return nil, "", err
-	}
-
 	file := OpenFile(filePath)
-	defer file.Close()
 
-	_, _ = io.Copy(part, file)
-	_ = writer.Close()
-
-	item := cacheItem{data: buffer.Bytes(), contentType: writer.FormDataContentType()}
-
-	if !nocache {
-		filePathCache.Store(filePath, item)
+	statSize := int64(0)
+	if stat, err := file.Stat(); err != nil {
+		log.Fatalf("stat file: %s, error: %v", filePath, err)
+	} else {
+		statSize = stat.Size()
 	}
 
-	return item.data, item.contentType, nil
+	if statSize <= 10<<20 /* 10 M*/ {
+		defer file.Close()
+
+		var buffer bytes.Buffer
+		writer := multipart.NewWriter(&buffer)
+
+		part, err := writer.CreateFormFile(fieldName, filepath.Base(filePath))
+		if err != nil {
+			return nil, 0, nil, err
+		}
+		_, _ = io.Copy(part, file)
+		_ = writer.Close()
+
+		item := cacheItem{data: buffer.Bytes(), headers: map[string]string{
+			"Content-Type": writer.FormDataContentType(),
+		}}
+
+		if !nocache {
+			filePathCache.Store(filePath, item)
+		}
+
+		return bytes.NewReader(item.data), len(item.data), item.headers, nil
+	}
+
+	payload := PrepareMultipartPayload(map[string]interface{}{
+		fieldName: &PayloadFile{ReadCloser: file, Name: file.Name(), Size: statSize},
+	})
+
+	return payload.body, int(payload.size), payload.headers, nil
 }
 
 // OpenFile opens file successfully or panic.

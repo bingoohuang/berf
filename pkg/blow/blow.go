@@ -20,10 +20,6 @@ import (
 	"github.com/bingoohuang/gg/pkg/ss"
 )
 
-func init() {
-	fla9.EnvPrefix = "BLOW"
-}
-
 var (
 	pURL        = fla9.String("url", "", "URL")
 	pBody       = fla9.String("body,b", "", "HTTP request body, or @file to read from, or @file:stream to enable chunked encoding for the file")
@@ -97,7 +93,7 @@ func (b *Bench) Final(_ context.Context, conf *berf.Config) error {
 	if conf.N == 1 && opt.logf != nil && opt.printOption == 0 {
 		if v := opt.logf.GetLastLog(); v != "" {
 			v = colorJSON(v, opt.pretty)
-			os.Stdout.WriteString(v)
+			_, _ = os.Stdout.WriteString(v)
 		}
 	}
 	return nil

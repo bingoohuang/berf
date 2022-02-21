@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"io"
+	"log"
 	"net/textproto"
 	"net/url"
 	"os"
@@ -70,12 +71,14 @@ func (p *Profile) CreateReq(isTLS bool, req *fasthttp.Request, enableGzip bool) 
 	for k, v := range p.Form {
 		// 先处理，只上传一个文件的情形
 		if strings.HasPrefix(v, "@") {
-			data, cType, err := ReadMultipartFile(true, k, v[1:])
+			data, dataSize, headers, err := ReadMultipartFile(true, k, v[1:])
 			if err != nil {
-				panic(err)
+				log.Fatalf("ReadMultipartFile error: %v", err)
 			}
-			SetHeader(req, "Content-Type", cType)
-			req.SetBody(data)
+			for k, v := range headers {
+				SetHeader(req, k, v)
+			}
+			req.SetBodyStream(data, dataSize)
 			return nil, nil
 		}
 	}

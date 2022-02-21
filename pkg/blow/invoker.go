@@ -57,6 +57,7 @@ type Invoker struct {
 	pieArg         HttpieArg
 	pieBody        *HttpieArgBody
 	requestUriExpr vars.Subs
+	uploadSize     int64
 }
 
 func NewInvoker(ctx context.Context, opt *Opt) (*Invoker, error) {
@@ -89,6 +90,11 @@ func NewInvoker(ctx context.Context, opt *Opt) (*Invoker, error) {
 	}
 
 	if r.upload != "" {
+		uploadStat, err := os.Stat(r.upload)
+		if err != nil {
+			log.Fatalf("upload %s stat failed: %v", r.upload, err)
+		}
+		r.uploadSize = uploadStat.Size()
 		r.uploadChan = make(chan string, 1)
 		go internal.DealUploadFilePath(ctx, r.upload, r.uploadChan)
 	}
@@ -490,12 +496,14 @@ func (r *Invoker) setBody(req *fasthttp.Request) (internal.Closers, error) {
 
 	if r.upload != "" {
 		file := <-r.uploadChan
-		data, cType, err := internal.ReadMultipartFile(r.noUploadCache, r.uploadFileField, file)
+		data, dataSize, headers, err := internal.ReadMultipartFile(r.noUploadCache, r.uploadFileField, file)
 		if err != nil {
 			panic(err)
 		}
-		internal.SetHeader(req, "Content-Type", cType)
-		req.SetBody(data)
+		for k, v := range headers {
+			internal.SetHeader(req, k, v)
+		}
+		req.SetBodyStream(data, dataSize)
 		return nil, nil
 	}
 
