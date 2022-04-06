@@ -54,3 +54,7 @@ Latency Histogram:
 6. 本地使用命令 `berf berf_202111301122.log.gz` 在浏览器中查看采点曲线，进行分析
 7. 参数
     - `export BERF_TICK=1s` 每 1s 生成一个点，默认 5s 生成一个.
+
+## Similar tools
+
+1. [fortio](https://github.com/fortio/fortio)
