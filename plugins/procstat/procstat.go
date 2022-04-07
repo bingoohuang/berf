@@ -3,6 +3,7 @@ package procstat
 import (
 	"bytes"
 	"fmt"
+	"github.com/bingoohuang/gg/pkg/ss"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -230,9 +231,17 @@ func (p *Procstat) SimpleFindPids(f PIDFinder) ([]PID, error) {
 	var pids []PID
 	var err error
 
-	pid, _ := strconv.Atoi(os.Getenv("BERF_PID"))
-	if pid > 0 {
-		return []PID{PID(pid)}, nil
+	pidEnv := os.Getenv("BERF_PID")
+	if pidEnv != "" {
+		for _, p := range ss.Split(pidEnv, ss.WithSeps(","), ss.WithTrimSpace(true), ss.WithIgnoreEmpty(true)) {
+			if pid, _ := strconv.Atoi(p); pid > 0 {
+				pids = append(pids, PID(pid))
+			}
+		}
+
+		if len(pids) > 0 {
+			return pids, nil
+		}
 	}
 
 	if p.PidFile != "" {
