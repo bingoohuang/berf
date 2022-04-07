@@ -387,10 +387,6 @@ func fixUrl(baseUrl, s string) string {
 		return s
 	}
 
-	v, err := rest.FixURI(s)
-	if err != nil {
-		panic(err)
-	}
-
-	return v
+	v := rest.FixURI(s, rest.WithFatalErr(true))
+	return v.Data.String()
 }

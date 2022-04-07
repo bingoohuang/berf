@@ -179,8 +179,10 @@ func IsBlowEnv() bool {
 
 func parseUrlFromArgs() string {
 	if args := excludeHttpieLikeArgs(fla9.Args()); len(args) > 0 {
-		urlAddr, _ := rest.FixURI(args[0])
-		return urlAddr
+		urlAddr := rest.FixURI(args[0])
+		if urlAddr.OK() {
+			return urlAddr.Data.String()
+		}
 	}
 
 	return ""

@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/bingoohuang/gg/pkg/iox"
 	"github.com/bingoohuang/gg/pkg/rest"
 
 	"github.com/bingoohuang/berf"
@@ -21,13 +22,13 @@ import (
 
 const (
 	Gray = uint8(iota + 90)
-	Red
+	_    // Red
 	Green
-	Yellow
-	Blue
+	_ // Yellow
+	_ // Blue
 	Magenta
 	Cyan
-	White
+	_ // White
 
 	EndColor = "\033[0m"
 )
@@ -174,7 +175,7 @@ func excludeHttpieLikeArgs(args []string) []string {
 
 	for _, arg := range args {
 		if submatch := keyReq.FindStringSubmatch(arg); len(submatch) > 0 {
-			if urlAddr, _ := rest.FixURI(arg); urlAddr == "" {
+			if urlAddr := rest.FixURI(arg); !urlAddr.OK() {
 				continue
 			}
 		}
@@ -252,7 +253,8 @@ func readFile(s string) (data []byte, fn string, e error) {
 	if err != nil {
 		return nil, s, err
 	}
-	content, err := ioutil.ReadAll(f)
+	defer iox.Close(f)
+	content, err := io.ReadAll(f)
 	if err != nil {
 		return nil, s, err
 	}
@@ -282,16 +284,16 @@ func (a *HttpieArg) Build(method string, form bool) *HttpieArgBody {
 					log.Fatal(err)
 				}
 				_, err = io.Copy(fileWriter, fh)
-				fh.Close()
+				iox.Close(fh)
 				if err != nil {
 					log.Fatal(err)
 				}
 			}
 			for k, v := range a.param {
-				bodyWriter.WriteField(k, v)
+				_ = bodyWriter.WriteField(k, v)
 			}
-			bodyWriter.Close()
-			pw.Close()
+			iox.Close(bodyWriter)
+			iox.Close(pw)
 		}()
 		b.Multipart = true
 		b.ContentType = bodyWriter.FormDataContentType()

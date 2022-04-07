@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bingoohuang/berf/pkg/util"
+	"github.com/bingoohuang/gg/pkg/osx"
 
 	"github.com/bingoohuang/berf/plugins"
 )
@@ -323,11 +324,11 @@ func (p *Procstat) singleCgroupPIDs(path string) ([]PID, error) {
 		return nil, fmt.Errorf("not a directory %s", path)
 	}
 	procsPath := filepath.Join(path, "cgroup.procs")
-	out, err := os.ReadFile(procsPath)
-	if err != nil {
-		return nil, err
+	out := osx.ReadFile(procsPath)
+	if out.Err != nil {
+		return nil, out.Err
 	}
-	for _, pidBS := range bytes.Split(out, []byte{'\n'}) {
+	for _, pidBS := range bytes.Split(out.Data, []byte{'\n'}) {
 		if len(pidBS) == 0 {
 			continue
 		}

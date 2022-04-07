@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bingoohuang/gg/pkg/iox"
+
 	"github.com/bingoohuang/gg/pkg/osx"
 
 	"go.uber.org/multierr"
@@ -120,7 +122,7 @@ func NewJsonLogFile(file string) *JSONLogFile {
 	if n, err := f.Seek(0, io.SeekEnd); err != nil {
 		log.Printf("E! fail to seek file %s error: %v", file, err)
 	} else if n == 0 {
-		f.WriteString("[]\n")
+		_, _ = f.WriteString("[]\n")
 	} else {
 		logFile.HasRows = true
 	}
@@ -132,11 +134,10 @@ func (f JSONLogFile) ReadAll() []byte {
 	defer f.Unlock()
 
 	if f.F == nil || f.Closed {
-		data, _ := osx.ReadFile(f.Name)
-		return data
+		return osx.ReadFile(f.Name, osx.WithFatalOnError(true)).Data
 	}
 
-	f.F.Seek(0, io.SeekStart)
+	_, _ = f.F.Seek(0, io.SeekStart)
 	defer f.F.Seek(0, io.SeekEnd)
 
 	data, err := ReadFile(f.F)
@@ -193,7 +194,7 @@ func (f *JSONLogFile) WriteJSON(data []byte) error {
 	f.Lock()
 	defer f.Unlock()
 
-	f.F.Seek(-2, io.SeekEnd) // \n]
+	_, _ = f.F.Seek(-2, io.SeekEnd) // \n]
 	var err0 error
 
 	if !f.HasRows {
@@ -223,10 +224,10 @@ func (f *JSONLogFile) Close() error {
 		compress = true
 	}
 
-	f.F.Close()
+	iox.Close(f.F)
 
 	if compress {
-		gzipFile(f.Name)
+		_ = gzipFile(f.Name)
 	}
 
 	return nil
@@ -248,10 +249,10 @@ func gzipFile(name string) error {
 		return err
 	}
 	w := gzip.NewWriter(f)
-	w.Write(content)
-	if err = w.Close(); err == nil {
-		f.Close()
-		os.Remove(name)
+	_, _ = w.Write(content)
+	if err := w.Close(); err == nil {
+		_ = f.Close()
+		_ = os.Remove(name)
 	}
 
 	return err
