@@ -35,7 +35,6 @@ type Requester struct {
 	duration   time.Duration
 
 	recordChan chan *ReportRecord
-	closeOnce  sync.Once
 	wg         sync.WaitGroup
 
 	cancelFunc func()
@@ -58,7 +57,7 @@ func (c *Config) NewRequester(ctx context.Context, fn Benchable) *Requester {
 		goroutines: c.Goroutines,
 		n:          c.N,
 		duration:   c.Duration,
-		recordChan: make(chan *ReportRecord, ss.Ifi(maxResult > 8192, 8192, int(maxResult))),
+		recordChan: make(chan *ReportRecord, ss.Ifi(maxResult > 8192, 8192, maxResult)),
 		verbose:    c.Verbose,
 		QPS:        c.Qps,
 		ctx:        ctx,
@@ -77,13 +76,6 @@ func (c *Config) createThinkFn() func(thinkNow bool) (thinkTime time.Duration) {
 	}
 
 	return func(thinkNow bool) (thinkTime time.Duration) { return 0 }
-}
-
-func (r *Requester) closeRecord() {
-	r.closeOnce.Do(func() {
-		close(r.recordChan)
-	})
-	r.cancelFunc()
 }
 
 func (r *Requester) doRequest(ctx context.Context, rr *ReportRecord) (err error) {
@@ -118,11 +110,11 @@ func (r *Requester) run() {
 
 	go func() {
 		<-sigs
-		r.closeRecord()
+		r.cancelFunc()
 	}()
 	startTime = time.Now()
 	if r.duration > 0 {
-		time.AfterFunc(r.duration, r.closeRecord)
+		time.AfterFunc(r.duration, r.cancelFunc)
 	}
 
 	throttle := func() {}
@@ -150,7 +142,7 @@ func (r *Requester) run() {
 	}
 
 	r.wg.Wait()
-	r.closeRecord()
+	close(r.recordChan)
 }
 
 func (r *Requester) generateTokens(ch chan context.Context) {
@@ -215,7 +207,6 @@ func (r *Requester) loopWork(ctx context.Context, semaphore *int64, throttle fun
 
 	for ctx.Err() == nil {
 		if r.n > 0 && atomic.AddInt64(semaphore, -1) < 0 {
-			r.closeRecord()
 			return
 		}
 
