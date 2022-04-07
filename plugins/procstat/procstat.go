@@ -230,6 +230,11 @@ func (p *Procstat) SimpleFindPids(f PIDFinder) ([]PID, error) {
 	var pids []PID
 	var err error
 
+	pid, _ := strconv.Atoi(os.Getenv("BERF_PID"))
+	if pid > 0 {
+		return []PID{PID(pid)}, nil
+	}
+
 	if p.PidFile != "" {
 		if p.PidFile == "self" {
 			return []PID{PID(os.Getpid())}, nil
