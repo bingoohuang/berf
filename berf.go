@@ -111,6 +111,9 @@ func (f F) Init(context.Context, *Config) (*BenchOption, error)    { return &Ben
 func (f F) Final(context.Context, *Config) error                   { return nil }
 func (f F) Invoke(ctx context.Context, c *Config) (*Result, error) { return f(ctx, c) }
 
+// Demo tells the underlying benchmark is only a demo.
+var Demo = false
+
 // StartBench starts a benchmark.
 func StartBench(ctx context.Context, fn Benchable, fns ...ConfigFn) {
 	setupPlotsFile()

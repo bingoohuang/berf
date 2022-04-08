@@ -224,7 +224,9 @@ func (c *Charts) initHardwareCollectors() {
 		inputFn := plugins.Inputs[name]
 		input := inputFn()
 		if init, ok := input.(plugins.Initializer); ok {
-			init.Init()
+			if err := init.Init(); err != nil {
+				log.Printf("plugin %s init failed: %v", name, err)
+			}
 		}
 
 		c.hardwares[name] = input
@@ -238,7 +240,7 @@ func (c *Charts) Handler(ctx *fasthttp.RequestCtx) {
 	switch path := string(ctx.Path()); {
 	case path == "/data/":
 		ctx.SetContentType(`application/json; charset=utf-8`)
-		ctx.Write(c.handleData())
+		_, _ = ctx.Write(c.handleData())
 	case path == "/":
 		ctx.SetContentType("text/html")
 		size := ctx.QueryArgs().Peek("size")
@@ -289,7 +291,7 @@ func (c *Charts) renderCharts(w io.Writer, size, viewsArg string) {
 	v := NewViews(size, c.config.IsDryPlots())
 	var fns []func() components.Charter
 
-	if !c.config.IsNop() {
+	if !c.config.IsNop() && !Demo {
 		if views := util2.NewFeatures(viewsArg); len(views) == 0 {
 			fns = append(fns, v.newLatencyView, v.newTPSView, v.newLatencyPercentileView)
 			if !c.config.Incr.IsEmpty() || c.config.IsDryPlots() {

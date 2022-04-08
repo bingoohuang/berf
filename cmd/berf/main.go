@@ -38,6 +38,8 @@ func main() {
 	if blow.TryStartAsBlow() {
 		return
 	}
+
+	berf.Demo = true
 	berf.StartBench(context.Background(), berf.F(demo), berf.WithOkStatus("200"))
 }
 
