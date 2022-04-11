@@ -15,6 +15,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-echarts/go-echarts/v2 v2.2.4
 	github.com/gobwas/glob v0.2.3
+	github.com/jdxyw/generativeart v0.0.0-20220127024657-50049f153090
 	github.com/karrick/godirwalk v1.16.1
 	github.com/mattn/go-isatty v0.0.15-0.20210929170527-d423e9c6c3bf
 	github.com/mattn/go-runewidth v0.0.13
@@ -31,7 +32,9 @@ require (
 	github.com/Pallinder/go-randomdata v1.2.0 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/dgryski/go-metro v0.0.0-20180109044635-280f6062b5bc // indirect
+	github.com/fogleman/gg v1.3.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
+	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/klauspost/compress v1.15.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/pbnjay/pixfont v0.0.0-20200714042608-33b744692567 // indirect
@@ -43,6 +46,7 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
+	golang.org/x/image v0.0.0-20210220032944-ac19c3e999fb // indirect
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect

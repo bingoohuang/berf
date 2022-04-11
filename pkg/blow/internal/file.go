@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/bingoohuang/berf/pkg/blow/internal/art"
+
 	"github.com/bingoohuang/gg/pkg/randx"
 	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/bingoohuang/gg/pkg/uid"
@@ -61,6 +63,19 @@ func (f fileReaders) Start(ctx context.Context) {
 		f.Start(ctx)
 	}
 }
+
+type artReader struct{}
+
+func (a artReader) Read() UploadChanValue {
+	return UploadChanValue{
+		Type:        DirectBytes,
+		Data:        art.Random(".png"),
+		ContentType: "image/png",
+		Path:        uid.New().String() + ".png",
+	}
+}
+
+func (a artReader) Start(context.Context) {}
 
 type randPngReader struct{}
 
@@ -191,6 +206,8 @@ func CreateFileReader(upload string) FileReader {
 	uploadFiles := ss.Split(upload)
 	for _, file := range uploadFiles {
 		switch file {
+		case "rand.art":
+			rr.readers = append(rr.readers, &artReader{})
 		case "rand.png":
 			rr.readers = append(rr.readers, &randPngReader{})
 		case "rand.jpg":
