@@ -93,12 +93,17 @@ func (r *Requester) doRequest(ctx context.Context, rr *ReportRecord) (err error)
 func (r *Requester) run() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM) // handle ctrl-c
-	defer signal.Stop(sigs)
+
+	deferFun := func() {
+		r.ctxCancelFunc()
+	}
+	defer deferFun()
 
 	go func() {
 		<-sigs
-		r.ctxCancelFunc()
+		deferFun()
 	}()
+
 	startTime = time.Now()
 	if r.duration > 0 {
 		time.AfterFunc(r.duration, r.ctxCancelFunc)
@@ -130,7 +135,6 @@ func (r *Requester) run() {
 
 	r.wg.Wait()
 	close(r.recordChan)
-	r.ctxCancelFunc()
 }
 
 func (r *Requester) generateTokens(ch chan context.Context) {
