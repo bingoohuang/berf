@@ -3,72 +3,27 @@ package internal
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"mime/multipart"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
-	"github.com/karrick/godirwalk"
-	"github.com/mitchellh/go-homedir"
+	"github.com/bingoohuang/gg/pkg/iox"
 )
 
-func DealUploadFilePath(ctx context.Context, uploadFilepath string, postFileCh chan string) {
-	if uploadFilepath == "" {
-		return
-	}
-
-	uploadFilepath, _ = homedir.Expand(uploadFilepath)
-	fs, err := os.Stat(uploadFilepath)
-	if err != nil && os.IsNotExist(err) {
-		log.Fatalf("%s dos not exist", uploadFilepath)
-	}
-	if err != nil {
-		log.Fatalf("stat file %s error  %v", uploadFilepath, err)
-	}
-
+func DealUploadFilePath(ctx context.Context, uploadReader FileReader, postFileCh chan UploadChanValue) {
 	defer close(postFileCh)
 
-	if !fs.IsDir() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				postFileCh <- uploadFilepath
-			}
-		}
-	}
-
-	errStop := fmt.Errorf("canceled")
-	fn := func(osPathname string, directoryEntry *godirwalk.Dirent) error {
-		if v, e := directoryEntry.IsDirOrSymlinkToDir(); v || e != nil {
-			return e
-		}
-
-		if strings.HasPrefix(directoryEntry.Name(), ".") {
-			return nil
-		}
-
-		postFileCh <- osPathname
-		select {
-		case <-ctx.Done():
-			return errStop
-		default:
-			postFileCh <- osPathname
-		}
-
-		return nil
-	}
-	options := godirwalk.Options{Unsorted: true, Callback: fn}
+	uploadReader.Start(ctx)
 
 	for {
-		if err := godirwalk.Walk(uploadFilepath, &options); err != nil {
-			log.Printf("walk dir: %s error: %v", uploadFilepath, err)
+		select {
+		case <-ctx.Done():
 			return
+		default:
+			postFileCh <- uploadReader.Read()
 		}
 	}
 }
@@ -82,52 +37,65 @@ type cacheItem struct {
 
 // ReadMultipartFile read file filePath for upload in multipart,
 // return multipart content, form data content type and error.
-func ReadMultipartFile(nocache bool, fieldName, filePath string) (data io.Reader, dataSize int, headers map[string]string, err error) {
-	if !nocache {
-		if load, ok := filePathCache.Load(filePath); ok {
+func ReadMultipartFile(cache bool, fieldName string, uv UploadChanValue) (
+	data io.Reader, dataSize int, headers map[string]string, err error,
+) {
+	if cache {
+		if load, ok := filePathCache.Load(uv.GetCachePath()); ok {
 			item := load.(cacheItem)
 			return bytes.NewReader(item.data), len(item.data), item.headers, nil
 		}
 	}
 
-	file := OpenFile(filePath)
-
 	statSize := int64(0)
-	if stat, err := file.Stat(); err != nil {
-		log.Fatalf("stat file: %s, error: %v", filePath, err)
-	} else {
-		statSize = stat.Size()
+
+	if uv.Type == NormalFile {
+		if stat, err := os.Stat(uv.Path); err != nil {
+			log.Fatalf("stat file: %s, error: %v", uv.Path, err)
+		} else {
+			statSize = stat.Size()
+		}
+
+		if statSize > 10<<20 /* 10 M*/ {
+			file, err := os.Open(uv.Path)
+			if err != nil {
+				return nil, 0, nil, err
+			}
+			payload := PrepareMultipartPayload(map[string]interface{}{
+				fieldName: &PayloadFile{ReadCloser: file, Name: uv.Path, Size: statSize},
+			})
+
+			return payload.body, int(payload.size), payload.headers, nil
+		}
 	}
 
-	if statSize <= 10<<20 /* 10 M*/ {
-		defer file.Close()
-
-		var buffer bytes.Buffer
-		writer := multipart.NewWriter(&buffer)
-
-		part, err := writer.CreateFormFile(fieldName, filepath.Base(filePath))
+	var buffer bytes.Buffer
+	writer := multipart.NewWriter(&buffer)
+	part, err := writer.CreateFormFile(fieldName, filepath.Base(uv.Path))
+	if err != nil {
+		return nil, 0, nil, err
+	}
+	if uv.Type == NormalFile {
+		file, err := os.Open(uv.Path)
 		if err != nil {
 			return nil, 0, nil, err
 		}
 		_, _ = io.Copy(part, file)
-		_ = writer.Close()
+		iox.Close(file)
+	} else {
+		part.Write(uv.Data)
+	}
+	iox.Close(writer)
 
-		item := cacheItem{data: buffer.Bytes(), headers: map[string]string{
-			"Content-Type": writer.FormDataContentType(),
-		}}
+	item := cacheItem{data: buffer.Bytes(), headers: map[string]string{
+		"Content-Type": writer.FormDataContentType(),
+	}}
 
-		if !nocache {
-			filePathCache.Store(filePath, item)
-		}
-
-		return bytes.NewReader(item.data), len(item.data), item.headers, nil
+	if cache {
+		filePathCache.Store(uv.GetCachePath(), item)
 	}
 
-	payload := PrepareMultipartPayload(map[string]interface{}{
-		fieldName: &PayloadFile{ReadCloser: file, Name: file.Name(), Size: statSize},
-	})
-
-	return payload.body, int(payload.size), payload.headers, nil
+	return bytes.NewReader(item.data), len(item.data), item.headers, nil
 }
 
 // OpenFile opens file successfully or panic.

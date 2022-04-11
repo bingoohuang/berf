@@ -3,12 +3,13 @@ package procstat
 import (
 	"bytes"
 	"fmt"
-	"github.com/bingoohuang/gg/pkg/ss"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"github.com/bingoohuang/gg/pkg/ss"
 
 	"github.com/bingoohuang/berf/pkg/util"
 	"github.com/bingoohuang/gg/pkg/osx"

@@ -2,6 +2,7 @@ package berf
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math"
 	"os"
@@ -66,9 +67,8 @@ func (p *Printer) updateProgressValue(rs *SnapshotReport) {
 	}
 }
 
-func (p *Printer) PrintLoop(snapshot func() *SnapshotReport, doneChan <-chan struct{}, requests int) {
+func (p *Printer) PrintLoop(snapshot func() *SnapshotReport, doneChan context.Context, requests int) {
 	if p.benchOption.NoReport {
-		<-doneChan
 		return
 	}
 
@@ -110,8 +110,6 @@ func (p *Printer) PrintLoop(snapshot func() *SnapshotReport, doneChan <-chan str
 
 	if interval > 0 && requests != 1 {
 		tick(interval, func() { echo(false) }, doneChan)
-	} else {
-		<-doneChan
 	}
 
 	if requests != 1 {
@@ -132,7 +130,7 @@ func (p *Printer) PrintLoop(snapshot func() *SnapshotReport, doneChan <-chan str
 	}
 }
 
-func tick(interval time.Duration, echo func(), doneChan <-chan struct{}) {
+func tick(interval time.Duration, echo func(), doneChan context.Context) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -140,7 +138,7 @@ func tick(interval time.Duration, echo func(), doneChan <-chan struct{}) {
 		select {
 		case <-ticker.C:
 			echo()
-		case <-doneChan:
+		case <-doneChan.Done():
 			return
 		}
 	}

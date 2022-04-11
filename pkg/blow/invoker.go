@@ -22,6 +22,8 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/bingoohuang/gg/pkg/iox"
+
 	"github.com/bingoohuang/gg/pkg/man"
 
 	"github.com/bingoohuang/gg/pkg/vars"
@@ -44,10 +46,10 @@ import (
 type Invoker struct {
 	opt             *Opt
 	httpHeader      *fasthttp.RequestHeader
-	noUploadCache   bool
+	uploadCache     bool
 	uploadFileField string
 	upload          string
-	uploadChan      chan string
+	uploadChan      chan internal.UploadChanValue
 
 	httpInvoke     func(req *fasthttp.Request, rsp *fasthttp.Response) error
 	readBytes      int64
@@ -57,7 +59,6 @@ type Invoker struct {
 	pieArg         HttpieArg
 	pieBody        *HttpieArgBody
 	requestUriExpr vars.Subs
-	uploadSize     int64
 }
 
 func NewInvoker(ctx context.Context, opt *Opt) (*Invoker, error) {
@@ -74,10 +75,10 @@ func NewInvoker(ctx context.Context, opt *Opt) (*Invoker, error) {
 	r.httpHeader = header
 
 	if opt.upload != "" {
-		const nocacheTag = ":nocache"
-		if strings.HasSuffix(opt.upload, nocacheTag) {
-			r.noUploadCache = true
-			opt.upload = strings.TrimSuffix(opt.upload, nocacheTag)
+		const cacheTag = ":cache"
+		if strings.HasSuffix(opt.upload, cacheTag) {
+			r.uploadCache = true
+			opt.upload = strings.TrimSuffix(opt.upload, cacheTag)
 		}
 
 		if pos := strings.IndexRune(opt.upload, ':'); pos > 0 {
@@ -90,13 +91,9 @@ func NewInvoker(ctx context.Context, opt *Opt) (*Invoker, error) {
 	}
 
 	if r.upload != "" {
-		uploadStat, err := os.Stat(r.upload)
-		if err != nil {
-			log.Fatalf("upload %s stat failed: %v", r.upload, err)
-		}
-		r.uploadSize = uploadStat.Size()
-		r.uploadChan = make(chan string, 1)
-		go internal.DealUploadFilePath(ctx, r.upload, r.uploadChan)
+		uploadReader := internal.CreateFileReader(r.upload)
+		r.uploadChan = make(chan internal.UploadChanValue, 1)
+		go internal.DealUploadFilePath(ctx, uploadReader, r.uploadChan)
 	}
 
 	return r, nil
@@ -247,7 +244,7 @@ func (r *Invoker) Run(*berf.Config) (*berf.Result, error) {
 
 func (r *Invoker) runOne(req *fasthttp.Request, resp *fasthttp.Response) (*berf.Result, error) {
 	closers, err := r.setBody(req)
-	defer closers.Close()
+	defer iox.Close(closers)
 
 	rr := &berf.Result{}
 	if err == nil {
@@ -495,8 +492,7 @@ func (r *Invoker) setBody(req *fasthttp.Request) (internal.Closers, error) {
 	}
 
 	if r.upload != "" {
-		file := <-r.uploadChan
-		data, dataSize, headers, err := internal.ReadMultipartFile(r.noUploadCache, r.uploadFileField, file)
+		data, dataSize, headers, err := internal.ReadMultipartFile(r.uploadCache, r.uploadFileField, <-r.uploadChan)
 		if err != nil {
 			panic(err)
 		}

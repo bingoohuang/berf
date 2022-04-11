@@ -23,7 +23,7 @@ import (
 var (
 	pURL        = fla9.String("url", "", "URL")
 	pBody       = fla9.String("body,b", "", "HTTP request body, or @file to read from, or @file:stream to enable chunked encoding for the file")
-	pUpload     = fla9.String("upload,u", "", "HTTP upload multipart form file or directory, or add prefix file: to set form field name ")
+	pUpload     = fla9.String("upload,u", "", "HTTP upload multipart form file or directory, or add prefix file: to set form field name, extension: rand.png,rand.jpg,rand.json")
 	pMethod     = fla9.String("method,m", "", "HTTP method")
 	pNetwork    = fla9.String("network", "", "Network simulation, local: simulates local network, lan: local, wan: wide, bad: bad network, or BPS:latency like 20M:20ms")
 	pHeaders    = fla9.Strings("header,H", nil, "Custom HTTP headers, K:V, e.g. Content-Type")

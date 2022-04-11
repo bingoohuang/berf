@@ -15,19 +15,6 @@ import (
 	"github.com/bingoohuang/gg/pkg/thinktime"
 )
 
-var sendOnCloseError interface{}
-
-func init() {
-	defer func() {
-		sendOnCloseError = recover()
-	}()
-	func() {
-		cc := make(chan struct{}, 1)
-		close(cc)
-		cc <- struct{}{}
-	}()
-}
-
 type Requester struct {
 	goroutines int
 	n          int
@@ -37,8 +24,8 @@ type Requester struct {
 	recordChan chan *ReportRecord
 	wg         sync.WaitGroup
 
-	cancelFunc func()
-	thinkFn    func(thinkNow bool) (thinkTime time.Duration)
+	ctxCancelFunc func()
+	thinkFn       func(thinkNow bool) (thinkTime time.Duration)
 
 	// Qps is the rate limit in queries per second.
 	QPS float64
@@ -54,17 +41,17 @@ func (c *Config) NewRequester(ctx context.Context, fn Benchable) *Requester {
 	maxResult := c.Goroutines * 100
 	ctx, cancelFunc := context.WithCancel(ctx)
 	return &Requester{
-		goroutines: c.Goroutines,
-		n:          c.N,
-		duration:   c.Duration,
-		recordChan: make(chan *ReportRecord, ss.Ifi(maxResult > 8192, 8192, maxResult)),
-		verbose:    c.Verbose,
-		QPS:        c.Qps,
-		ctx:        ctx,
-		cancelFunc: cancelFunc,
-		benchable:  fn,
-		thinkFn:    c.createThinkFn(),
-		config:     c,
+		goroutines:    c.Goroutines,
+		n:             c.N,
+		duration:      c.Duration,
+		recordChan:    make(chan *ReportRecord, ss.Ifi(maxResult > 8192, 8192, maxResult)),
+		verbose:       c.Verbose,
+		QPS:           c.Qps,
+		ctx:           ctx,
+		ctxCancelFunc: cancelFunc,
+		benchable:     fn,
+		thinkFn:       c.createThinkFn(),
+		config:        c,
 	}
 }
 
@@ -110,11 +97,11 @@ func (r *Requester) run() {
 
 	go func() {
 		<-sigs
-		r.cancelFunc()
+		r.ctxCancelFunc()
 	}()
 	startTime = time.Now()
 	if r.duration > 0 {
-		time.AfterFunc(r.duration, r.cancelFunc)
+		time.AfterFunc(r.duration, r.ctxCancelFunc)
 	}
 
 	throttle := func() {}
@@ -143,6 +130,7 @@ func (r *Requester) run() {
 
 	r.wg.Wait()
 	close(r.recordChan)
+	r.ctxCancelFunc()
 }
 
 func (r *Requester) generateTokens(ch chan context.Context) {
@@ -200,7 +188,7 @@ func (r *Requester) loopWork(ctx context.Context, semaphore *int64, throttle fun
 	defer func() {
 		r.wg.Done()
 		atomic.AddInt64(&r.concurrent, -1)
-		if v := recover(); v != nil && v != sendOnCloseError {
+		if v := recover(); v != nil {
 			panic(v)
 		}
 	}()

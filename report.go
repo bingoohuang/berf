@@ -1,6 +1,7 @@
 package berf
 
 import (
+	"context"
 	"encoding/json"
 	"math"
 	"sync"
@@ -99,17 +100,20 @@ type StreamReport struct {
 	readBytes  int64
 	writeBytes int64
 
-	doneChan  chan struct{}
+	doneCtx   context.Context
+	doneFunc  context.CancelFunc
 	requester *Requester
 }
 
 func NewStreamReport(requester *Requester) *StreamReport {
+	done, doncFunc := context.WithCancel(context.Background())
 	return &StreamReport{
 		latencyQuantile:  quantile.NewTargeted(quantilesTarget),
 		latencyHistogram: histogram.New(8),
 		codes:            make(map[string]int64, 1),
 		errors:           make(map[string]int64, 1),
-		doneChan:         make(chan struct{}, 1),
+		doneCtx:          done,
+		doneFunc:         doncFunc,
 		counts:           hyperloglog.New16(),
 		latencyStats:     &Stats{},
 		rpsStats:         &Stats{},
@@ -148,7 +152,7 @@ func (s *StreamReport) Collect(records <-chan *ReportRecord) {
 					s.noDateWithinSec = true
 				}
 				s.lock.Unlock()
-			case <-s.doneChan:
+			case <-s.doneCtx.Done():
 				return
 			}
 		}
@@ -157,7 +161,7 @@ func (s *StreamReport) Collect(records <-chan *ReportRecord) {
 	for {
 		r, ok := <-records
 		if !ok {
-			close(s.doneChan)
+			s.doneFunc()
 			return
 		}
 		s.lock.Lock()
@@ -262,7 +266,7 @@ func (s *StreamReport) Snapshot() *SnapshotReport {
 	return rs
 }
 
-func (s *StreamReport) Done() <-chan struct{} { return s.doneChan }
+func (s *StreamReport) Done() context.Context { return s.doneCtx }
 
 type ChartsReport struct {
 	RPS                util.Float64

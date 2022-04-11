@@ -71,7 +71,7 @@ func (p *Profile) CreateReq(isTLS bool, req *fasthttp.Request, enableGzip bool) 
 	for k, v := range p.Form {
 		// 先处理，只上传一个文件的情形
 		if strings.HasPrefix(v, "@") {
-			data, dataSize, headers, err := ReadMultipartFile(true, k, v[1:])
+			data, dataSize, headers, err := ReadMultipartFile(false, k, CreateNormalUploadChanValue(v[1:]))
 			if err != nil {
 				log.Fatalf("ReadMultipartFile error: %v", err)
 			}

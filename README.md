@@ -4,10 +4,11 @@ berf framework for local methods.
 
 ## Features
 
-1. support @var in URL like `berf :9335/pingoo/@ksuid -u imgs -d60s -v`, 2021-12-29
-2. support httpie like args `berf :10014/query q="show databases" -n1`, 2021-12-23
-3. `berf :5003/api/demo -n20 -pA` to print all details instead of realtime statistics on terminal, 2021-12-22.
-4. Add a TPS-0 comparing series to the TPS plots, 2021-12-02.
+1. support `-u rand.png,rand.jpg,rand.json` random image and json uploading content.
+2. support @var in URL like `berf :9335/pingoo/@ksuid -u imgs -d60s -v`, 2021-12-29
+3. support httpie like args `berf :10014/query q="show databases" -n1`, 2021-12-23
+4. `berf :5003/api/demo -n20 -pA` to print all details instead of realtime statistics on terminal, 2021-12-22.
+5. Add a TPS-0 comparing series to the TPS plots, 2021-12-02.
 
 ## Demo
 
