@@ -1,11 +1,19 @@
 package internal
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
+	"sync"
+	"sync/atomic"
+
+	"github.com/bingoohuang/berf/pkg/util"
+	"github.com/bingoohuang/gg/pkg/iox"
 
 	"github.com/bingoohuang/berf/pkg/blow/internal/art"
 
@@ -17,6 +25,34 @@ import (
 	"github.com/mitchellh/go-homedir"
 )
 
+var filePathCache sync.Map
+
+type DataItem struct {
+	payload util.UploadPayload
+}
+
+func (d *DataItem) CreateFileField(fileFieldName string, uploadIndex bool) *util.Multipart {
+	if uploadIndex {
+		d.payload.Name = insertIndexToFilename(d.payload.Name)
+	}
+
+	return util.PrepareMultipartPayload(map[string]interface{}{
+		fileFieldName: d.payload,
+	})
+}
+
+var uploadIndexVal uint64
+
+func insertIndexToFilename(name string) string {
+	ext := filepath.Ext(name)
+	if ext == "" {
+		return fmt.Sprintf("%s.%d", name, atomic.AddUint64(&uploadIndexVal, 1))
+	}
+
+	name = strings.TrimSuffix(name, ext)
+	return fmt.Sprintf("%s.%d%s", name, atomic.AddUint64(&uploadIndexVal, 1), ext)
+}
+
 type UploadChanValueType int
 
 const (
@@ -27,7 +63,7 @@ const (
 type UploadChanValue struct {
 	Type        UploadChanValueType
 	Path        string
-	Data        []byte
+	Data        func() *DataItem
 	ContentType string
 }
 
@@ -40,7 +76,7 @@ func (v UploadChanValue) GetCachePath() string {
 }
 
 type FileReader interface {
-	Read() UploadChanValue
+	Read(cache bool) *UploadChanValue
 	Start(ctx context.Context)
 }
 
@@ -49,8 +85,8 @@ type fileReaders struct {
 	currentIndex int
 }
 
-func (f *fileReaders) Read() UploadChanValue {
-	value := f.readers[f.currentIndex].Read()
+func (f *fileReaders) Read(cache bool) *UploadChanValue {
+	value := f.readers[f.currentIndex].Read(cache)
 	if f.currentIndex++; f.currentIndex >= len(f.readers) {
 		f.currentIndex = 0
 	}
@@ -64,77 +100,131 @@ func (f fileReaders) Start(ctx context.Context) {
 	}
 }
 
-type artReader struct{}
+func createDataItem(filePath string, isDiskFile bool, data []byte) func() *DataItem {
+	var payload util.UploadPayload
 
-func (a artReader) Read() UploadChanValue {
-	return UploadChanValue{
-		Type:        DirectBytes,
-		Data:        art.Random(".png"),
-		ContentType: "image/png",
-		Path:        uid.New().String() + ".png",
+	if isDiskFile {
+		file, err := os.Open(filePath)
+		if err != nil {
+			log.Fatalf("open file %s failed: %v", filePath, err)
+		}
+		defer iox.Close(file)
+
+		if stat, err := file.Stat(); err != nil {
+			log.Fatalf("stat file: %s, error: %v", filePath, err)
+		} else if stat.Size() <= 10<<20 /* 10 M*/ {
+			var buf bytes.Buffer
+			_, _ = io.Copy(&buf, file)
+
+			payload = util.UploadPayload{Val: buf.Bytes(), Name: filePath, Size: stat.Size()}
+		} else {
+			payload = util.UploadPayload{DiskFile: true, Val: []byte(filePath), Name: filePath, Size: stat.Size()}
+		}
+	} else {
+		payload = util.UploadPayload{Val: data, Name: filePath, Size: int64(len(data))}
 	}
+
+	return func() *DataItem {
+		return &DataItem{payload: payload}
+	}
+}
+
+type artReader struct {
+	uploadFileField string
+}
+
+func (a artReader) Read(cache bool) *UploadChanValue {
+	uv := &UploadChanValue{
+		Type:        DirectBytes,
+		ContentType: "image/png",
+	}
+
+	cachePath := uv.GetCachePath()
+	if cache {
+		if load, ok := filePathCache.Load(cachePath); ok {
+			return load.(*UploadChanValue)
+		}
+	}
+
+	data := art.Random(".png")
+	uv.Path = uid.New().String() + ".png"
+	uv.Data = createDataItem(uv.Path, false, data)
+
+	if cache {
+		filePathCache.Store(cachePath, uv)
+	}
+
+	return uv
 }
 
 func (a artReader) Start(context.Context) {}
 
-type randPngReader struct{}
-
-func (r randPngReader) Read() UploadChanValue {
-	c := randx.ImgConfig{
-		Width:      640,
-		Height:     320,
-		RandomText: uid.New().String(),
-		FastMode:   false,
-	}
-	data, _ := c.Gen(".png")
-
-	return UploadChanValue{
-		Type:        DirectBytes,
-		Data:        data,
-		ContentType: "image/png",
-		Path:        c.RandomText + ".png",
-	}
+type randImgReader struct {
+	uploadFileField string
+	ContentType     string
+	Extension       string
 }
 
-func (r randPngReader) Start(context.Context) {}
-
-type randJpgReader struct{}
-
-func (r randJpgReader) Read() UploadChanValue {
-	c := randx.ImgConfig{
-		Width:      640,
-		Height:     320,
-		RandomText: uid.New().String(),
-		FastMode:   false,
-	}
-	data, _ := c.Gen(".jpeg")
-
-	return UploadChanValue{
+func (r randImgReader) Read(cache bool) *UploadChanValue {
+	uv := &UploadChanValue{
 		Type:        DirectBytes,
-		Data:        data,
-		ContentType: "image/jpeg",
-		Path:        c.RandomText + ".jpeg",
+		ContentType: r.ContentType,
 	}
+
+	cachePath := uv.GetCachePath()
+	if cache {
+		if load, ok := filePathCache.Load(cachePath); ok {
+			return load.(*UploadChanValue)
+		}
+	}
+
+	c := randx.ImgConfig{Width: 640, Height: 320, RandomText: uid.New().String(), FastMode: false}
+	data, _ := c.Gen(r.Extension)
+	uv.Path = c.RandomText + r.Extension
+	uv.Data = createDataItem(uv.Path, false, data)
+
+	if cache {
+		filePathCache.Store(cachePath, uv)
+	}
+
+	return uv
 }
 
-func (r randJpgReader) Start(context.Context) {}
+func (r randImgReader) Start(context.Context) {}
 
-type randJsonReader struct{}
+type randJsonReader struct {
+	uploadFileField string
+}
 
-func (r randJsonReader) Read() UploadChanValue {
-	return UploadChanValue{
+func (r randJsonReader) Read(cache bool) *UploadChanValue {
+	uv := &UploadChanValue{
 		Type:        DirectBytes,
-		Data:        jj.Rand(),
 		ContentType: "application/json; charset=utf-8",
-		Path:        uid.New().String() + ".json",
 	}
+	cachePath := uv.GetCachePath()
+	if cache {
+		if load, ok := filePathCache.Load(cachePath); ok {
+			return load.(*UploadChanValue)
+		}
+	}
+
+	data := jj.Rand()
+	uv.Path = uid.New().String() + ".json"
+	uv.Data = createDataItem(uv.Path, false, data)
+
+	if cache {
+		filePathCache.Store(cachePath, uv)
+	}
+
+	return uv
 }
 
 func (r randJsonReader) Start(context.Context) {}
 
 type dirReader struct {
-	Dir string
-	ch  chan string
+	Dir             string
+	ch              chan string
+	uploadFileField string
 }
 
 func (f *dirReader) Start(ctx context.Context) {
@@ -172,56 +262,72 @@ func (f *dirReader) Start(ctx context.Context) {
 	}()
 }
 
-func (f *dirReader) Read() UploadChanValue {
-	file := <-f.ch
-	return CreateNormalUploadChanValue(file)
-}
-
-func CreateNormalUploadChanValue(file string) UploadChanValue {
-	return UploadChanValue{
-		Type:        NormalFile,
-		Data:        []byte(file),
-		ContentType: "",
-		Path:        file,
+func (f *dirReader) Read(cache bool) *UploadChanValue {
+	fr := &fileReader{
+		File:            <-f.ch,
+		uploadFileField: f.uploadFileField,
 	}
+	return fr.Read(cache)
 }
 
 type fileReader struct {
-	File string
+	File            string
+	uploadFileField string
 }
 
 func (f fileReader) Start(context.Context) {}
 
-func (f fileReader) Read() UploadChanValue {
-	return UploadChanValue{
+func (f fileReader) Read(cache bool) *UploadChanValue {
+	uv := &UploadChanValue{
 		Type:        NormalFile,
 		ContentType: "",
 		Path:        f.File,
 	}
+	if !cache {
+		return uv
+	}
+
+	cachePath := uv.GetCachePath()
+	if load, ok := filePathCache.Load(cachePath); ok {
+		return load.(*UploadChanValue)
+	}
+
+	statSize := int64(0)
+	if stat, err := os.Stat(uv.Path); err != nil {
+		log.Fatalf("stat file: %s, error: %v", uv.Path, err)
+	} else {
+		statSize = stat.Size()
+	}
+
+	if statSize > 10<<20 /* 10 M*/ {
+		uv.Data = createDataItem(uv.Path, true, nil)
+	}
+	filePathCache.Store(cachePath, uv)
+	return uv
 }
 
-func CreateFileReader(upload string) FileReader {
+func CreateFileReader(uploadFileField, upload string) FileReader {
 	var rr fileReaders
 
 	uploadFiles := ss.Split(upload)
 	for _, file := range uploadFiles {
 		switch file {
 		case "rand.art":
-			rr.readers = append(rr.readers, &artReader{})
+			rr.readers = append(rr.readers, &artReader{uploadFileField: uploadFileField})
 		case "rand.png":
-			rr.readers = append(rr.readers, &randPngReader{})
+			rr.readers = append(rr.readers, &randImgReader{uploadFileField: uploadFileField, ContentType: "image/png", Extension: ".png"})
 		case "rand.jpg":
-			rr.readers = append(rr.readers, &randJpgReader{})
+			rr.readers = append(rr.readers, &randImgReader{uploadFileField: uploadFileField, ContentType: "image/jpeg", Extension: ".jpeg"})
 		case "rand.json":
-			rr.readers = append(rr.readers, &randJsonReader{})
+			rr.readers = append(rr.readers, &randJsonReader{uploadFileField: uploadFileField})
 		default:
 			file, _ = homedir.Expand(file)
 			if stat, err := os.Stat(file); err != nil {
 				log.Fatalf("stat upload %s failed: %v", file, err)
 			} else if stat.IsDir() {
-				rr.readers = append(rr.readers, &dirReader{Dir: file})
+				rr.readers = append(rr.readers, &dirReader{Dir: file, uploadFileField: uploadFileField})
 			} else {
-				rr.readers = append(rr.readers, &fileReader{File: file})
+				rr.readers = append(rr.readers, &fileReader{File: file, uploadFileField: uploadFileField})
 			}
 		}
 	}

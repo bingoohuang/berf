@@ -161,8 +161,8 @@ func ReadFile(f *os.File) ([]byte, error) {
 	}
 	size++ // one byte for final read at EOF
 
-	// If a file claims a small size, read at least 512 bytes.
-	// In particular, files in Linux's /proc claim size 0 but
+	// If a file claims a small Size, read at least 512 bytes.
+	// In particular, files in Linux's /proc claim Size 0 but
 	// then do not work right if read in small pieces,
 	// so an initial read of 1 byte would not work correctly.
 	if size < 512 {

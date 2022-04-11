@@ -5,13 +5,14 @@ import (
 	"encoding/base64"
 	"errors"
 	"io"
-	"log"
 	"net/textproto"
 	"net/url"
 	"os"
 	"regexp"
 	"strings"
 	"unicode"
+
+	"github.com/bingoohuang/gg/pkg/iox"
 
 	"github.com/bingoohuang/gg/pkg/gz"
 
@@ -20,7 +21,7 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-func (p *Profile) CreateReq(isTLS bool, req *fasthttp.Request, enableGzip bool) (Closers, error) {
+func (p *Profile) CreateReq(isTLS bool, req *fasthttp.Request, enableGzip, uploadIndex bool) (Closers, error) {
 	p.requestHeader.CopyTo(&req.Header)
 	if isTLS {
 		req.URI().SetScheme("https")
@@ -71,14 +72,14 @@ func (p *Profile) CreateReq(isTLS bool, req *fasthttp.Request, enableGzip bool) 
 	for k, v := range p.Form {
 		// 先处理，只上传一个文件的情形
 		if strings.HasPrefix(v, "@") {
-			data, dataSize, headers, err := ReadMultipartFile(false, k, CreateNormalUploadChanValue(v[1:]))
-			if err != nil {
-				log.Fatalf("ReadMultipartFile error: %v", err)
-			}
-			for k, v := range headers {
+			fr := &fileReader{File: v[1:], uploadFileField: k}
+			uv := fr.Read(false)
+			data := uv.Data()
+			multi := data.CreateFileField(k, uploadIndex)
+			for k, v := range multi.Headers {
 				SetHeader(req, k, v)
 			}
-			req.SetBodyStream(data, dataSize)
+			req.SetBodyStream(multi.NewReader(), int(multi.Size))
 			return nil, nil
 		}
 	}
@@ -224,7 +225,7 @@ func ParseProfileFile(baseUrl string, fileName string) ([]*Profile, error) {
 	if err != nil {
 		panic(err.Error())
 	}
-	defer f.Close()
+	defer iox.Close(f)
 
 	return ParseProfiles(baseUrl, f)
 }
@@ -356,9 +357,9 @@ func processLine(p *Profile, baseUrl, l string) *Profile {
 				p.Form[k] = "@" + v
 			case "=":
 				// Data Fields field=value, field=@file.txt
-				// Request data fields to be serialized as a JSON object (default),
+				// Request Data fields to be serialized as a JSON object (default),
 				// to be form-encoded (with --form, -f),
-				// or to be serialized as multipart/form-data (with --multipart)
+				// or to be serialized as multipart/form-Data (with --multipart)
 				p.Form[k] = v
 			}
 

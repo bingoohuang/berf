@@ -49,7 +49,7 @@ type Invoker struct {
 	uploadCache     bool
 	uploadFileField string
 	upload          string
-	uploadChan      chan internal.UploadChanValue
+	uploadChan      chan *internal.UploadChanValue
 
 	httpInvoke     func(req *fasthttp.Request, rsp *fasthttp.Response) error
 	readBytes      int64
@@ -91,9 +91,9 @@ func NewInvoker(ctx context.Context, opt *Opt) (*Invoker, error) {
 	}
 
 	if r.upload != "" {
-		uploadReader := internal.CreateFileReader(r.upload)
-		r.uploadChan = make(chan internal.UploadChanValue, 1)
-		go internal.DealUploadFilePath(ctx, uploadReader, r.uploadChan)
+		uploadReader := internal.CreateFileReader(r.uploadFileField, r.upload)
+		r.uploadChan = make(chan *internal.UploadChanValue)
+		go internal.DealUploadFilePath(ctx, uploadReader, r.uploadChan, r.uploadCache)
 	}
 
 	return r, nil
@@ -302,7 +302,7 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 	r.printLock.Lock()
 	defer r.printLock.Unlock()
 
-	h := req.Header
+	h := &req.Header
 	ignoreBody := h.IsGet() || h.IsHead()
 	r.printReq(b1, bx, ignoreBody)
 	b1.Reset()
@@ -402,7 +402,7 @@ func (r *Invoker) dump(b *bytes.Buffer, bx io.Writer, ignoreBody bool) (dumpHead
 		}
 	}
 
-	bx.Write(dumpHeader)
+	_, _ = bx.Write(dumpHeader)
 	cl := -1
 	if subs := cLengthReg.FindStringSubmatch(string(dumpHeader)); len(subs) > 0 {
 		cl = ss.ParseInt(subs[1])
@@ -421,7 +421,7 @@ func (r *Invoker) dump(b *bytes.Buffer, bx io.Writer, ignoreBody bool) (dumpHead
 		dumpBody = []byte("\n\n--- streamed or too long, ignored ---\n")
 	}
 
-	bx.Write(dumpBody)
+	_, _ = bx.Write(dumpBody)
 	return dumpHeader, dumpBody
 }
 
@@ -456,8 +456,8 @@ func (r *Invoker) runProfiles(req *fasthttp.Request, rsp *fasthttp.Response) (*b
 }
 
 func (r *Invoker) runOneProfile(p *internal.Profile, req *fasthttp.Request, rsp *fasthttp.Response, rr *berf.Result) error {
-	closers, err := p.CreateReq(r.isTLS, req, r.opt.enableGzip)
-	defer closers.Close()
+	closers, err := p.CreateReq(r.isTLS, req, r.opt.enableGzip, r.opt.uploadIndex)
+	defer iox.Close(closers)
 
 	if err != nil {
 		return err
@@ -492,14 +492,13 @@ func (r *Invoker) setBody(req *fasthttp.Request) (internal.Closers, error) {
 	}
 
 	if r.upload != "" {
-		data, dataSize, headers, err := internal.ReadMultipartFile(r.uploadCache, r.uploadFileField, <-r.uploadChan)
-		if err != nil {
-			panic(err)
-		}
-		for k, v := range headers {
+		uv := <-r.uploadChan
+		data := uv.Data()
+		multi := data.CreateFileField(r.uploadFileField, r.opt.uploadIndex)
+		for k, v := range multi.Headers {
 			internal.SetHeader(req, k, v)
 		}
-		req.SetBodyStream(data, dataSize)
+		req.SetBodyStream(multi.NewReader(), int(multi.Size))
 		return nil, nil
 	}
 
