@@ -24,13 +24,14 @@ type Requester struct {
 	recordChan chan *ReportRecord
 	wg         sync.WaitGroup
 
-	ctxCancelFunc func()
-	thinkFn       func(thinkNow bool) (thinkTime time.Duration)
+	thinkFn func(thinkNow bool) (thinkTime time.Duration)
 
 	// Qps is the rate limit in queries per second.
 	QPS float64
 
-	ctx       context.Context
+	ctx           context.Context
+	ctxCancelFunc func()
+
 	benchable Benchable
 	config    *Config
 
@@ -94,14 +95,9 @@ func (r *Requester) run() {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM) // handle ctrl-c
 
-	deferFun := func() {
-		r.ctxCancelFunc()
-	}
-	defer deferFun()
-
 	go func() {
 		<-sigs
-		deferFun()
+		r.ctxCancelFunc()
 	}()
 
 	startTime = time.Now()
@@ -109,11 +105,18 @@ func (r *Requester) run() {
 		time.AfterFunc(r.duration, r.ctxCancelFunc)
 	}
 
-	throttle := func() {}
+	throttle := func() bool { return r.ctx.Err() == nil }
 	if r.QPS > 0 {
 		t := time.NewTicker(time.Duration(1e6/(r.QPS)) * time.Microsecond)
 		defer t.Stop()
-		throttle = func() { <-t.C }
+		throttle = func() bool {
+			select {
+			case <-t.C:
+				return true
+			case <-r.ctx.Done():
+				return false
+			}
+		}
 	}
 
 	semaphore := int64(r.n)
@@ -187,22 +190,20 @@ func keepTimes(c <-chan time.Time, times int) {
 	}
 }
 
-func (r *Requester) loopWork(ctx context.Context, semaphore *int64, throttle func()) {
+func (r *Requester) loopWork(ctx context.Context, semaphore *int64, throttle func() bool) {
 	atomic.AddInt64(&r.concurrent, 1)
 	defer func() {
 		r.wg.Done()
 		atomic.AddInt64(&r.concurrent, -1)
-		if v := recover(); v != nil {
-			panic(v)
-		}
 	}()
 
-	for ctx.Err() == nil {
+	for {
 		if r.n > 0 && atomic.AddInt64(semaphore, -1) < 0 {
 			return
 		}
-
-		throttle()
+		if !throttle() {
+			return
+		}
 
 		rr := recordPool.Get().(*ReportRecord)
 		rr.Reset()

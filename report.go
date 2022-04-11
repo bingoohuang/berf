@@ -1,7 +1,6 @@
 package berf
 
 import (
-	"context"
 	"encoding/json"
 	"math"
 	"sync"
@@ -100,20 +99,17 @@ type StreamReport struct {
 	readBytes  int64
 	writeBytes int64
 
-	doneCtx   context.Context
-	doneFunc  context.CancelFunc
+	doneChan  chan struct{}
 	requester *Requester
 }
 
 func NewStreamReport(requester *Requester) *StreamReport {
-	done, doncFunc := context.WithCancel(context.Background())
 	return &StreamReport{
 		latencyQuantile:  quantile.NewTargeted(quantilesTarget),
 		latencyHistogram: histogram.New(8),
 		codes:            make(map[string]int64, 1),
 		errors:           make(map[string]int64, 1),
-		doneCtx:          done,
-		doneFunc:         doncFunc,
+		doneChan:         make(chan struct{}, 1),
 		counts:           hyperloglog.New16(),
 		latencyStats:     &Stats{},
 		rpsStats:         &Stats{},
@@ -128,7 +124,7 @@ func (s *StreamReport) insert(v float64) {
 	s.latencyStats.Update(v)
 }
 
-func (s *StreamReport) Collect(records <-chan *ReportRecord) {
+func (s *StreamReport) Collect(recordChan <-chan *ReportRecord) {
 	latencyWithinSecTemp := &Stats{}
 	go func() {
 		ticker := time.NewTicker(time.Second)
@@ -152,16 +148,16 @@ func (s *StreamReport) Collect(records <-chan *ReportRecord) {
 					s.noDateWithinSec = true
 				}
 				s.lock.Unlock()
-			case <-s.doneCtx.Done():
+			case <-s.doneChan:
 				return
 			}
 		}
 	}()
 
 	for {
-		r, ok := <-records
+		r, ok := <-recordChan
 		if !ok {
-			s.doneFunc()
+			close(s.doneChan)
 			return
 		}
 		s.lock.Lock()
@@ -266,7 +262,7 @@ func (s *StreamReport) Snapshot() *SnapshotReport {
 	return rs
 }
 
-func (s *StreamReport) Done() context.Context { return s.doneCtx }
+func (s *StreamReport) Done() <-chan struct{} { return s.doneChan }
 
 type ChartsReport struct {
 	RPS                util.Float64
