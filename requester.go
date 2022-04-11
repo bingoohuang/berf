@@ -137,6 +137,8 @@ func (r *Requester) run() {
 	}
 
 	r.wg.Wait()
+
+	r.ctxCancelFunc()
 	close(r.recordChan)
 }
 
