@@ -129,6 +129,20 @@ func NewJsonLogFile(file string) *JSONLogFile {
 	return logFile
 }
 
+// LogErr1 logs an error.
+func LogErr1(err error) {
+	if err != nil {
+		log.Printf("failed %v", err)
+	}
+}
+
+func LogErr2[T any](t T, err error) T {
+	if err != nil {
+		log.Printf("failed %v", err)
+	}
+	return t
+}
+
 func (f JSONLogFile) ReadAll() []byte {
 	f.Lock()
 	defer f.Unlock()
@@ -138,7 +152,7 @@ func (f JSONLogFile) ReadAll() []byte {
 	}
 
 	_, _ = f.F.Seek(0, io.SeekStart)
-	defer f.F.Seek(0, io.SeekEnd)
+	defer LogErr2(f.F.Seek(0, io.SeekEnd))
 
 	data, err := ReadFile(f.F)
 	if err != nil {
@@ -265,24 +279,29 @@ func NewFeatures(features ...string) Features {
 }
 
 // Features defines a feature map.
-type Features map[string]bool
+type Features map[string]string
 
 // Setup sets up a feature map by features string, which separates feature names by comma.
 func (f *Features) Setup(featuresArr []string) {
 	for _, features := range featuresArr {
-		for _, feature := range strings.Split(strings.ToLower(features), ",") {
-			if v := strings.TrimSpace(feature); v != "" {
-				(*f)[v] = true
-			}
+		for k, v := range ss.SplitToMap(features, ":=", ",") {
+			(*f)[strings.ToLower(k)] = v
 		}
 	}
 }
 
 func (f *Features) IsNop() bool { return f.Has("nop") }
 
+// Get gets the feature map contains a features.
+func (f *Features) Get(feature string) string {
+	s, _ := (*f)[strings.ToLower(feature)]
+	return s
+}
+
 // Has tells the feature map contains a features.
 func (f *Features) Has(feature string) bool {
-	return (*f)[feature] || (*f)[strings.ToLower(feature)]
+	_, ok := (*f)[strings.ToLower(feature)]
+	return ok
 }
 
 // HasAny tells the feature map contains any of the features.

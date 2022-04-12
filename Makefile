@@ -38,7 +38,7 @@ lint:
 
 fmt:
 	# go install mvdan.cc/gofumpt
-	gofumpt -w .
+	gofumpt -l -w .
 	gofmt -s -w .
 	go mod tidy
 	go fmt ./...

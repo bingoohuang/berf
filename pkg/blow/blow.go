@@ -28,7 +28,7 @@ var (
 	pNetwork    = fla9.String("network", "", "Network simulation, local: simulates local network, lan: local, wan: wide, bad: bad network, or BPS:latency like 20M:20ms")
 	pHeaders    = fla9.Strings("header,H", nil, "Custom HTTP headers, K:V, e.g. Content-Type")
 	pProfiles   = fla9.Strings("profile,P", nil, "Profile file, append :new to create a demo profile, or :tag to run only specified profile")
-	pOpts       = fla9.Strings("opt", nil, "Options. gzip: Enabled content gzip, k: not verify the server's cert chain and host name, no-keepalive/no-ka: disable keepalive, form: use form instead of json, pretty: pretty JSON, uploadIndex: insert upload index to filename")
+	pOpts       = fla9.Strings("opt", nil, "Options. gzip: Enabled content gzip, k: not verify the server's cert chain and host name, no-keepalive/no-ka: disable keepalive, form: use form instead of json, pretty: pretty JSON, uploadIndex: insert upload index to filename, saveRandDir: save rand generated request files to dir")
 	pBasicAuth  = fla9.String("basic", "", "basic auth username:password")
 	pCertKey    = fla9.String("cert", "", "Path to the client's TLS Cert and private key file, eg. ca.pem,ca.key")
 	pTimeout    = fla9.String("timeout", "", "Timeout for each http request, e.g. 5s for do:5s,dial:5s,write:5s,read:5s")
@@ -144,6 +144,7 @@ type Opt struct {
 	statusName  string
 
 	printOption uint8
+	saveRandDir string
 }
 
 func (opt *Opt) MaybePost() bool {
@@ -235,6 +236,7 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 		noKeepalive: opts.HasAny("no-keepalive", "no-ka"),
 		form:        opts.HasAny("form"),
 		pretty:      opts.HasAny("pretty"),
+		saveRandDir: opts.Get("saveRandDir"),
 		verbose:     conf.Verbose,
 		statusName:  *pStatusName,
 		printOption: parsePrintOption(*pPrint),

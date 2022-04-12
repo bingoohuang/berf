@@ -131,9 +131,10 @@ func createDataItem(filePath string, isDiskFile bool, data []byte) func() *DataI
 
 type artReader struct {
 	uploadFileField string
+	saveRandDir     string
 }
 
-func (a artReader) Read(cache bool) *UploadChanValue {
+func (r artReader) Read(cache bool) *UploadChanValue {
 	uv := &UploadChanValue{
 		Type:        DirectBytes,
 		ContentType: "image/png",
@@ -149,6 +150,9 @@ func (a artReader) Read(cache bool) *UploadChanValue {
 	data := art.Random(".png")
 	uv.Path = uid.New().String() + ".png"
 	uv.Data = createDataItem(uv.Path, false, data)
+	if r.saveRandDir != "" {
+		util.LogErr1(os.WriteFile(filepath.Join(r.saveRandDir, uv.Path), data, os.ModePerm))
+	}
 
 	if cache {
 		filePathCache.Store(cachePath, uv)
@@ -157,12 +161,13 @@ func (a artReader) Read(cache bool) *UploadChanValue {
 	return uv
 }
 
-func (a artReader) Start(context.Context) {}
+func (r artReader) Start(context.Context) {}
 
 type randImgReader struct {
 	uploadFileField string
 	ContentType     string
 	Extension       string
+	saveRandDir     string
 }
 
 func (r randImgReader) Read(cache bool) *UploadChanValue {
@@ -182,6 +187,9 @@ func (r randImgReader) Read(cache bool) *UploadChanValue {
 	data, _ := c.Gen(r.Extension)
 	uv.Path = c.RandomText + r.Extension
 	uv.Data = createDataItem(uv.Path, false, data)
+	if r.saveRandDir != "" {
+		util.LogErr1(os.WriteFile(filepath.Join(r.saveRandDir, uv.Path), data, os.ModePerm))
+	}
 
 	if cache {
 		filePathCache.Store(cachePath, uv)
@@ -194,6 +202,7 @@ func (r randImgReader) Start(context.Context) {}
 
 type randJsonReader struct {
 	uploadFileField string
+	saveRandDir     string
 }
 
 func (r randJsonReader) Read(cache bool) *UploadChanValue {
@@ -211,7 +220,9 @@ func (r randJsonReader) Read(cache bool) *UploadChanValue {
 	data := jj.Rand()
 	uv.Path = uid.New().String() + ".json"
 	uv.Data = createDataItem(uv.Path, false, data)
-
+	if r.saveRandDir != "" {
+		util.LogErr1(os.WriteFile(filepath.Join(r.saveRandDir, uv.Path), data, os.ModePerm))
+	}
 	if cache {
 		filePathCache.Store(cachePath, uv)
 	}
@@ -306,20 +317,30 @@ func (f fileReader) Read(cache bool) *UploadChanValue {
 	return uv
 }
 
-func CreateFileReader(uploadFileField, upload string) FileReader {
+func CreateFileReader(uploadFileField, upload, saveRandDir string) FileReader {
 	var rr fileReaders
+
+	if saveRandDir != "" {
+		if saveDir, err := os.Stat(saveRandDir); err != nil {
+			log.Printf("stat saveRandDir %s, failed: %v", saveDir, err)
+			saveRandDir = ""
+		} else if !saveDir.IsDir() {
+			log.Printf("saveRandDir %s is not a directory", saveDir)
+			saveRandDir = ""
+		}
+	}
 
 	uploadFiles := ss.Split(upload)
 	for _, file := range uploadFiles {
 		switch file {
 		case "rand.art":
-			rr.readers = append(rr.readers, &artReader{uploadFileField: uploadFileField})
+			rr.readers = append(rr.readers, &artReader{uploadFileField: uploadFileField, saveRandDir: saveRandDir})
 		case "rand.png":
-			rr.readers = append(rr.readers, &randImgReader{uploadFileField: uploadFileField, ContentType: "image/png", Extension: ".png"})
+			rr.readers = append(rr.readers, &randImgReader{uploadFileField: uploadFileField, ContentType: "image/png", Extension: ".png", saveRandDir: saveRandDir})
 		case "rand.jpg":
-			rr.readers = append(rr.readers, &randImgReader{uploadFileField: uploadFileField, ContentType: "image/jpeg", Extension: ".jpeg"})
+			rr.readers = append(rr.readers, &randImgReader{uploadFileField: uploadFileField, ContentType: "image/jpeg", Extension: ".jpeg", saveRandDir: saveRandDir})
 		case "rand.json":
-			rr.readers = append(rr.readers, &randJsonReader{uploadFileField: uploadFileField})
+			rr.readers = append(rr.readers, &randJsonReader{uploadFileField: uploadFileField, saveRandDir: saveRandDir})
 		default:
 			file, _ = homedir.Expand(file)
 			if stat, err := os.Stat(file); err != nil {
