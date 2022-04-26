@@ -96,8 +96,14 @@ func (r *Requester) run() {
 	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM) // handle ctrl-c
 
 	go func() {
-		<-sigs
-		r.ctxCancelFunc()
+		for i := 0; ; i++ {
+			<-sigs
+			if i == 0 {
+				r.ctxCancelFunc()
+			} else {
+				os.Exit(-1)
+			}
+		}
 	}()
 
 	startTime = time.Now()
