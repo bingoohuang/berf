@@ -131,7 +131,7 @@ func colorJSON(v string, pretty bool) string {
 		if pretty {
 			s = jj.Pretty(s)
 		}
-		s = jj.Color(s, nil)
+		s = jj.Color(s, nil, nil)
 		return v[:p] + string(s) + colorJSON(v[p+q:], pretty)
 	}
 
