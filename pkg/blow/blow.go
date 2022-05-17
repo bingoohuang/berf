@@ -172,11 +172,7 @@ func IsBlowEnv() bool {
 		return true
 	}
 
-	if parseUrlFromArgs() != "" {
-		return true
-	}
-
-	return false
+	return parseUrlFromArgs() != ""
 }
 
 func parseUrlFromArgs() string {

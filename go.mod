@@ -10,8 +10,8 @@ require (
 	github.com/AdhityaRamadhanus/fasthttpcors v0.0.0-20170121111917-d4c07198763a
 	github.com/axiomhq/hyperloglog v0.0.0-20220105174342-98591331716a
 	github.com/beorn7/perks v1.0.1
-	github.com/bingoohuang/gg v0.0.0-20220411025401-10e1fd6c6d33
-	github.com/bingoohuang/jj v0.0.0-20220409132014-41186cabb65d
+	github.com/bingoohuang/gg v0.0.0-20220517011151-5dbef606a12e
+	github.com/bingoohuang/jj v0.0.0-20220513123231-e3092785c925
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-echarts/go-echarts/v2 v2.2.4
 	github.com/gobwas/glob v0.2.3

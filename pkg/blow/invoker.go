@@ -508,6 +508,8 @@ func (r *Invoker) setBody(req *fasthttp.Request) (internal.Closers, error) {
 		bodyBytes = []byte(r.pieBody.BodyString)
 	}
 
+	bodyBytes = []byte(internal.Gen(string(bodyBytes), internal.MayJSON))
+
 	if len(bodyBytes) > 0 {
 		if r.opt.enableGzip {
 			if d, err := gz.Gzip(bodyBytes); err == nil && len(d) < len(bodyBytes) {
