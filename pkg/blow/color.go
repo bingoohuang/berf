@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/bingoohuang/berf"
@@ -23,7 +24,19 @@ const (
 	EndColor = "\033[0m"
 )
 
+var hasStdoutDevice = func() bool {
+	fi, err := os.Stdout.Stat()
+	if err != nil {
+		return false
+	}
+	return fi.Mode()&os.ModeDevice == os.ModeDevice
+}()
+
 func Color(str string, color uint8) string {
+	if !hasStdoutDevice {
+		return str
+	}
+
 	return fmt.Sprintf("%s%s%s", ColorStart(color), str, EndColor)
 }
 
@@ -32,6 +45,10 @@ func ColorStart(color uint8) string {
 }
 
 func ColorfulHeader(str string) string {
+	if !hasStdoutDevice {
+		return str
+	}
+
 	lines := strings.Split(str, "\n")
 	firstLineProcessed := false
 	for i, line := range lines {
@@ -121,7 +138,10 @@ func colorJSON(v string, pretty bool) string {
 		if pretty {
 			s = jj.Pretty(s)
 		}
-		s = jj.Color(s, nil, nil)
+
+		if hasStdoutDevice {
+			s = jj.Color(s, nil, nil)
+		}
 		return v[:p] + string(s) + colorJSON(v[p+q:], pretty)
 	}
 

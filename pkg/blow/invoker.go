@@ -71,7 +71,9 @@ func NewInvoker(ctx context.Context, opt *Opt) (*Invoker, error) {
 	}
 
 	requestURI := string(header.RequestURI())
-	r.requestUriExpr = vars.ParseExpr(requestURI)
+	if opt.eval {
+		r.requestUriExpr = vars.ParseExpr(requestURI)
+	}
 	r.httpHeader = header
 
 	if opt.upload != "" {
@@ -228,7 +230,7 @@ func (r *Invoker) Run(*berf.Config) (*berf.Result, error) {
 	}
 
 	r.httpHeader.CopyTo(&req.Header)
-	if r.requestUriExpr.CountVars() > 0 {
+	if len(r.requestUriExpr) > 0 && r.requestUriExpr.CountVars() > 0 {
 		result := r.requestUriExpr.Eval(internal.Valuer)
 		if v, ok := result.(string); ok {
 			req.SetRequestURI(v)
@@ -244,6 +246,10 @@ func (r *Invoker) Run(*berf.Config) (*berf.Result, error) {
 
 func (r *Invoker) runOne(req *fasthttp.Request, resp *fasthttp.Response) (*berf.Result, error) {
 	closers, err := r.setBody(req)
+	if err != nil {
+		return nil, err
+	}
+
 	defer iox.Close(closers)
 
 	rr := &berf.Result{}
@@ -508,7 +514,17 @@ func (r *Invoker) setBody(req *fasthttp.Request) (internal.Closers, error) {
 		bodyBytes = []byte(r.pieBody.BodyString)
 	}
 
-	bodyBytes = []byte(internal.Gen(string(bodyBytes), internal.MayJSON))
+	if len(bodyBytes) == 0 && r.opt.bodyLinesChan != nil {
+		line, ok := <-r.opt.bodyLinesChan
+		if !ok { // lines is read over
+			return nil, io.EOF
+		}
+		bodyBytes = []byte(line)
+	}
+
+	if len(bodyBytes) > 0 && r.opt.eval {
+		bodyBytes = []byte(internal.Gen(string(bodyBytes), internal.MayJSON))
+	}
 
 	if len(bodyBytes) > 0 {
 		if r.opt.enableGzip {
@@ -532,7 +548,7 @@ func adjustContentType(opt *Opt, contentType string) string {
 		return contentType
 	}
 
-	if json.Valid(opt.bodyBytes) {
+	if opt.jsonBody || json.Valid(opt.bodyBytes) {
 		return `application/json; charset=utf-8`
 	}
 
@@ -563,17 +579,17 @@ func addMissingPort(addr string, isTLS bool) string {
 	return net.JoinHostPort(addr, ss.If(isTLS, "443", "80"))
 }
 
-func (opt *Opt) buildTLSConfig() (*tls.Config, error) {
+func (o *Opt) buildTLSConfig() (*tls.Config, error) {
 	var certs []tls.Certificate
-	if opt.certPath != "" && opt.keyPath != "" {
-		c, err := tls.LoadX509KeyPair(opt.certPath, opt.keyPath)
+	if o.certPath != "" && o.keyPath != "" {
+		c, err := tls.LoadX509KeyPair(o.certPath, o.keyPath)
 		if err != nil {
 			return nil, err
 		}
 		certs = append(certs, c)
 	}
 	return &tls.Config{
-		InsecureSkipVerify: opt.insecure,
+		InsecureSkipVerify: o.insecure,
 		Certificates:       certs,
 	}, nil
 }

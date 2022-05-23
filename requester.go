@@ -2,6 +2,7 @@ package berf
 
 import (
 	"context"
+	"io"
 	"os"
 	"os/signal"
 	"sync"
@@ -70,14 +71,14 @@ func (r *Requester) doRequest(ctx context.Context, rr *ReportRecord) (err error)
 	var result *Result
 	t1 := time.Now()
 	result, err = r.benchable.Invoke(ctx, r.config)
+	if err != nil {
+		return err
+	}
 
 	if result.Cost > 0 {
 		rr.cost = result.Cost
 	} else {
 		rr.cost = time.Since(t1)
-	}
-	if err != nil {
-		return err
 	}
 
 	rr.code = result.Status
@@ -215,16 +216,20 @@ func (r *Requester) loopWork(ctx context.Context, semaphore *int64, throttle fun
 
 		rr := recordPool.Get().(*ReportRecord)
 		rr.Reset()
-		r.runOne(ctx, rr)
+		if err := r.runOne(ctx, rr); err == io.EOF {
+			return
+		}
+
 		r.recordChan <- rr
 		r.thinkFn(true)
 	}
 }
 
-func (r *Requester) runOne(ctx context.Context, rr *ReportRecord) *ReportRecord {
-	if err := r.doRequest(ctx, rr); err != nil {
+func (r *Requester) runOne(ctx context.Context, rr *ReportRecord) error {
+	err := r.doRequest(ctx, rr)
+	if err != nil && err != io.EOF {
 		rr.error = err.Error()
 	}
 
-	return rr
+	return err
 }

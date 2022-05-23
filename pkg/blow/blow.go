@@ -21,14 +21,23 @@ import (
 )
 
 var (
-	pURL        = fla9.String("url", "", "URL")
-	pBody       = fla9.String("body,b", "", "HTTP request body, or @file to read from, or @file:stream to enable chunked encoding for the file")
-	pUpload     = fla9.String("upload,u", "", "HTTP upload multipart form file or directory, or add prefix file: to set form field name, extension: rand.png,rand.art,rand.jpg,rand.json")
-	pMethod     = fla9.String("method,m", "", "HTTP method")
-	pNetwork    = fla9.String("network", "", "Network simulation, local: simulates local network, lan: local, wan: wide, bad: bad network, or BPS:latency like 20M:20ms")
-	pHeaders    = fla9.Strings("header,H", nil, "Custom HTTP headers, K:V, e.g. Content-Type")
-	pProfiles   = fla9.Strings("profile,P", nil, "Profile file, append :new to create a demo profile, or :tag to run only specified profile")
-	pOpts       = fla9.Strings("opt", nil, "Options. gzip: Enabled content gzip, k: not verify the server's cert chain and host name, no-keepalive/no-ka: disable keepalive, form: use form instead of json, pretty: pretty JSON, uploadIndex: insert upload index to filename, saveRandDir: save rand generated request files to dir")
+	pURL      = fla9.String("url", "", "URL")
+	pBody     = fla9.String("body,b", "", "HTTP request body, or @file to read from, or @file:stream to enable chunked encoding for the file, or @file:line to read line by line")
+	pUpload   = fla9.String("upload,u", "", "HTTP upload multipart form file or directory, or add prefix file: to set form field name, extension: rand.png,rand.art,rand.jpg,rand.json")
+	pMethod   = fla9.String("method,m", "", "HTTP method")
+	pNetwork  = fla9.String("network", "", "Network simulation, local: simulates local network, lan: local, wan: wide, bad: bad network, or BPS:latency like 20M:20ms")
+	pHeaders  = fla9.Strings("header,H", nil, "Custom HTTP headers, K:V, e.g. Content-Type")
+	pProfiles = fla9.Strings("profile,P", nil, "Profile file, append :new to create a demo profile, or :tag to run only specified profile")
+	pOpts     = fla9.Strings("opt", nil, "options, multiple by comma: \n"+
+		"      gzip:               enabled content gzip  \n"+
+		"      k:                  not verify the server's cert chain and host name \n"+
+		"      no-keepalive/no-ka: disable keepalive \n"+
+		"      form:               use form instead of json \n"+
+		"      pretty:             pretty JSON \n"+
+		"      uploadIndex:        insert upload index to filename \n"+
+		"      saveRandDir:        save rand generated request files to dir \n"+
+		"      json:               set Content-Type=application/json; charset=utf-8 \n"+
+		"      eval:               evaluate url and body's variables \n")
 	pBasicAuth  = fla9.String("basic", "", "basic auth username:password")
 	pCertKey    = fla9.String("cert", "", "Path to the client's TLS Cert and private key file, eg. ca.pem,ca.key")
 	pTimeout    = fla9.String("timeout", "", "Timeout for each http request, e.g. 5s for do:5s,dial:5s,write:5s,read:5s")
@@ -139,16 +148,19 @@ type Opt struct {
 	form        bool
 	pretty      bool
 	uploadIndex bool
+	eval        bool
+	jsonBody    bool
 	verbose     int
 	profiles    []*internal.Profile
 	statusName  string
 
-	printOption uint8
-	saveRandDir string
+	printOption   uint8
+	saveRandDir   string
+	bodyLinesChan chan string
 }
 
-func (opt *Opt) MaybePost() bool {
-	return opt.upload != "" || len(opt.bodyBytes) > 0 || opt.bodyStreamFile != ""
+func (o *Opt) MaybePost() bool {
+	return o.upload != "" || len(o.bodyBytes) > 0 || o.bodyStreamFile != "" || o.bodyLinesChan != nil
 }
 
 func TryStartAsBlow() bool {
@@ -193,8 +205,14 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 	}
 
 	stream := strings.HasSuffix(*pBody, ":stream")
-	*pBody = strings.TrimSuffix(*pBody, ":stream")
-	bodyStreamFile, bodyBytes := internal.ParseBodyArg(*pBody, stream)
+	if stream {
+		*pBody = strings.TrimSuffix(*pBody, ":stream")
+	}
+	lineMode := strings.HasSuffix(*pBody, ":line")
+	if lineMode {
+		*pBody = strings.TrimSuffix(*pBody, ":line")
+	}
+	bodyStreamFile, bodyBytes, linesChan := internal.ParseBodyArg(*pBody, stream, lineMode, conf.Goroutines)
 	cert, key := ss.Split2(*pCertKey)
 
 	opts := util.NewFeatures(*pOpts...)
@@ -208,6 +226,7 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 		url:            urlAddr,
 		method:         *pMethod,
 		headers:        *pHeaders,
+		bodyLinesChan:  linesChan,
 		bodyBytes:      bodyBytes,
 		bodyStreamFile: bodyStreamFile,
 		upload:         *pUpload,
@@ -232,6 +251,8 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 		noKeepalive: opts.HasAny("no-keepalive", "no-ka"),
 		form:        opts.HasAny("form"),
 		pretty:      opts.HasAny("pretty"),
+		eval:        opts.HasAny("eval"),
+		jsonBody:    opts.HasAny("json"),
 		saveRandDir: opts.Get("saveRandDir"),
 		verbose:     conf.Verbose,
 		statusName:  *pStatusName,

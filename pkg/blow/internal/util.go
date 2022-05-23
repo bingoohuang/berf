@@ -2,6 +2,7 @@ package internal
 
 import (
 	"io"
+	"log"
 	"strings"
 
 	"github.com/bingoohuang/gg/pkg/ss"
@@ -44,14 +45,24 @@ func SetHeader(r *fasthttp.Request, header, value string) {
 	}
 }
 
-func ParseBodyArg(body string, stream bool) (streamFileName string, bodyBytes []byte) {
+func ParseBodyArg(body string, stream, lineMode bool, goroutines int) (streamFileName string, bodyBytes []byte, lines chan string) {
+	filename := body
 	if strings.HasPrefix(body, "@") {
-		streamFileName = (body)[1:]
-		if !filex.Exists(streamFileName) {
-			return "", []byte(body)
+		filename = (body)[1:]
+		if !filex.Exists(filename) {
+			return "", []byte(body), nil
 		}
 	}
 
+	if lineMode && filex.Exists(filename) {
+		var err error
+		lines, err = filex.LinesChan(filename, goroutines)
+		if err != nil {
+			log.Fatalf("E! create line chan for %s, failed: %v", filename, err)
+		}
+		return "", nil, lines
+	}
+
 	streamFileName, bodyBytes = fla9.ParseFileArg(body)
-	return ss.If(stream, streamFileName, ""), bodyBytes
+	return ss.If(stream, streamFileName, ""), bodyBytes, nil
 }

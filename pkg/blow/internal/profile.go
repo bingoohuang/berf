@@ -273,7 +273,7 @@ var tagRegexp = regexp.MustCompile(`\[.+]`)
 func postProcessProfiles(profiles []*Profile) error {
 	for _, p := range profiles {
 		if len(p.Body) > 0 {
-			p.bodyFileName, p.bodyFileData = ParseBodyArg(p.Body, false)
+			p.bodyFileName, p.bodyFileData, _ = ParseBodyArg(p.Body, false, false, 0)
 
 			if p.Header[ContentTypeName] == "" && jj.Valid(p.Body) {
 				p.Header[ContentTypeName] = ContentTypeJSON
