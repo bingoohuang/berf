@@ -45,7 +45,7 @@ func SetHeader(r *fasthttp.Request, header, value string) {
 	}
 }
 
-func ParseBodyArg(body string, stream, lineMode bool, goroutines int) (streamFileName string, bodyBytes []byte, lines chan string) {
+func ParseBodyArg(body string, stream, lineMode bool) (streamFileName string, bodyBytes []byte, lines chan string) {
 	filename := body
 	if strings.HasPrefix(body, "@") {
 		filename = (body)[1:]
@@ -56,7 +56,7 @@ func ParseBodyArg(body string, stream, lineMode bool, goroutines int) (streamFil
 
 	if lineMode && filex.Exists(filename) {
 		var err error
-		lines, err = filex.LinesChan(filename, goroutines)
+		lines, err = filex.LinesChan(filename, 1000)
 		if err != nil {
 			log.Fatalf("E! create line chan for %s, failed: %v", filename, err)
 		}

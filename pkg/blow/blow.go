@@ -37,7 +37,8 @@ var (
 		"      uploadIndex:        insert upload index to filename \n"+
 		"      saveRandDir:        save rand generated request files to dir \n"+
 		"      json:               set Content-Type=application/json; charset=utf-8 \n"+
-		"      eval:               evaluate url and body's variables \n")
+		"      eval:               evaluate url and body's variables \n"+
+		"      notty:              no tty color \n")
 	pBasicAuth  = fla9.String("basic", "", "basic auth username:password")
 	pCertKey    = fla9.String("cert", "", "Path to the client's TLS Cert and private key file, eg. ca.pem,ca.key")
 	pTimeout    = fla9.String("timeout", "", "Timeout for each http request, e.g. 5s for do:5s,dial:5s,write:5s,read:5s")
@@ -99,6 +100,11 @@ func (b *Bench) Name(context.Context, *berf.Config) string {
 
 func (b *Bench) Final(_ context.Context, conf *berf.Config) error {
 	opt := b.invoker.opt
+
+	if opt.logf != nil {
+		defer opt.logf.Close()
+	}
+
 	if conf.N == 1 && opt.logf != nil && opt.printOption == 0 {
 		if v := opt.logf.GetLastLog(); v != "" {
 			v = colorJSON(v, opt.pretty)
@@ -212,7 +218,7 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 	if lineMode {
 		*pBody = strings.TrimSuffix(*pBody, ":line")
 	}
-	bodyStreamFile, bodyBytes, linesChan := internal.ParseBodyArg(*pBody, stream, lineMode, conf.Goroutines)
+	bodyStreamFile, bodyBytes, linesChan := internal.ParseBodyArg(*pBody, stream, lineMode)
 	cert, key := ss.Split2(*pCertKey)
 
 	opts := util.NewFeatures(*pOpts...)
@@ -257,6 +263,10 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 		verbose:     conf.Verbose,
 		statusName:  *pStatusName,
 		printOption: parsePrintOption(*pPrint),
+	}
+
+	if opts.HasAny("notty") {
+		hasStdoutDevice = false
 	}
 
 	opt.logf = internal.CreateLogFile(opt.verbose, opt.printOption)

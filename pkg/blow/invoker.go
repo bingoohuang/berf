@@ -260,9 +260,7 @@ func (r *Invoker) runOne(req *fasthttp.Request, resp *fasthttp.Response) (*berf.
 	defer iox.Close(closers)
 
 	rr := &berf.Result{}
-	if err == nil {
-		err = r.doRequest(req, resp, rr)
-	}
+	err = r.doRequest(req, resp, rr)
 	r.updateThroughput(rr)
 
 	return rr, err
@@ -317,7 +315,8 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 
 	h := &req.Header
 	ignoreBody := h.IsGet() || h.IsHead()
-	r.printReq(b1, bx, ignoreBody)
+	statusCode := rsp.StatusCode()
+	r.printReq(b1, bx, ignoreBody, statusCode)
 	b1.Reset()
 
 	header := rsp.Header.Header()
@@ -334,18 +333,24 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 	}
 
 	_, _ = b1.Write([]byte("\n\n"))
-	r.printResp(b1, bx, rsp)
+	r.printResp(b1, bx, rsp, statusCode)
 
 	return nil
 }
 
-func (r *Invoker) printReq(b *bytes.Buffer, bx io.Writer, ignoreBody bool) {
+func (r *Invoker) printReq(b *bytes.Buffer, bx io.Writer, ignoreBody bool, statusCode int) {
 	if r.opt.printOption == 0 && bx == nil {
 		return
 	}
 
+	if !logStatus(statusCode) {
+		bx = nil
+	}
+
 	dumpHeader, dumpBody := r.dump(b, bx, ignoreBody)
-	_, _ = bx.Write([]byte("\n"))
+	if bx != nil {
+		_, _ = bx.Write([]byte("\n"))
+	}
 
 	if r.opt.printOption == 0 {
 		return
@@ -368,9 +373,33 @@ func (r *Invoker) printReq(b *bytes.Buffer, bx io.Writer, ignoreBody bool) {
 	}
 }
 
-func (r *Invoker) printResp(b *bytes.Buffer, bx io.Writer, rsp *fasthttp.Response) {
+var logStatus = func() func(int) bool {
+	if env := os.Getenv("BLOW_STATUS"); env != "" {
+		excluded := ss.HasPrefix(env, "-")
+		if excluded {
+			env = env[1:]
+		}
+		status := ss.ParseInt(env)
+		return func(code int) bool {
+			if excluded {
+				return code != status
+			}
+			return code == status
+		}
+	}
+
+	return func(code int) bool {
+		return code < 200 || code >= 300
+	}
+}()
+
+func (r *Invoker) printResp(b *bytes.Buffer, bx io.Writer, rsp *fasthttp.Response, statusCode int) {
 	if r.opt.printOption == 0 && bx == nil {
 		return
+	}
+
+	if !logStatus(statusCode) {
+		bx = nil
 	}
 
 	dumpHeader, dumpBody := r.dump(b, bx, false)
@@ -415,7 +444,9 @@ func (r *Invoker) dump(b *bytes.Buffer, bx io.Writer, ignoreBody bool) (dumpHead
 		}
 	}
 
-	_, _ = bx.Write(dumpHeader)
+	if bx != nil {
+		_, _ = bx.Write(dumpHeader)
+	}
 	cl := -1
 	if subs := cLengthReg.FindStringSubmatch(string(dumpHeader)); len(subs) > 0 {
 		cl = ss.ParseInt(subs[1])
@@ -434,7 +465,9 @@ func (r *Invoker) dump(b *bytes.Buffer, bx io.Writer, ignoreBody bool) (dumpHead
 		dumpBody = []byte("\n\n--- streamed or too long, ignored ---\n")
 	}
 
-	_, _ = bx.Write(dumpBody)
+	if bx != nil {
+		_, _ = bx.Write(dumpBody)
+	}
 	return dumpHeader, dumpBody
 }
 
@@ -486,12 +519,12 @@ func (r *Invoker) runOneProfile(p *internal.Profile, req *fasthttp.Request, rsp 
 	return r.processRsp(req, rsp, rr)
 }
 
-func parseStatus(resp *fasthttp.Response, statusName string) string {
+func parseStatus(rsp *fasthttp.Response, statusName string) string {
 	if statusName == "" {
-		return strconv.Itoa(resp.StatusCode())
+		return strconv.Itoa(rsp.StatusCode())
 	}
 
-	return jj.GetBytes(resp.Body(), statusName).String()
+	return jj.GetBytes(rsp.Body(), statusName).String()
 }
 
 func (r *Invoker) setBody(req *fasthttp.Request) (internal.Closers, error) {
