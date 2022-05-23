@@ -8,10 +8,13 @@ import (
 	"io/ioutil"
 	"log"
 	"mime/multipart"
+	"net"
 	"net/url"
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/bingoohuang/gg/pkg/ss"
 
 	"github.com/bingoohuang/gg/pkg/iox"
 	"github.com/bingoohuang/gg/pkg/rest"
@@ -54,12 +57,12 @@ func excludeHttpieLikeArgs(args []string) []string {
 
 	for _, arg := range args {
 		if submatch := keyReq.FindStringSubmatch(arg); len(submatch) > 0 {
-			if urlAddr := rest.FixURI(arg); !urlAddr.OK() {
-				continue
+			if urlAddr := rest.FixURI(arg); urlAddr.OK() {
+				remains = append(remains, arg)
 			}
+		} else {
+			remains = append(remains, arg)
 		}
-
-		remains = append(remains, arg)
 	}
 
 	return remains
@@ -81,6 +84,10 @@ func parseHttpieLikeArgs(args []string) (pieArg HttpieArg) {
 	// Raw JSON fields field:=json	Useful when sending JSON and one or more fields need to be a Boolean, Number, nested Object, or an Array, e.g., meals:='["ham","spam"]' or pies:=[1,2,3] (note the quotes)
 	// File upload fields field@/dir/file, field@file;type=mime	Only available with --form, -f and --multipart. For example screenshot@~/Pictures/img.png, or 'cv@cv.txt;type=text/markdown'. With --form, the presence of a file field results in a --multipart request
 	for _, arg := range args {
+		if ss.HasPrefix(arg, "http://", "https://") {
+			continue
+		}
+
 		subs := keyReq.FindStringSubmatch(arg)
 		if len(subs) == 0 {
 			continue
@@ -104,7 +111,9 @@ func parseHttpieLikeArgs(args []string) (pieArg HttpieArg) {
 		case "=": // Params
 			pieArg.SetParam(k, tryReadFile(v))
 		case ":": // Headers
-			pieArg.SetHeader(k, v)
+			if ip := net.ParseIP(k); ip == nil {
+				pieArg.SetHeader(k, v)
+			}
 		case "@": // files
 			pieArg.SetPostFile(k, v)
 		}

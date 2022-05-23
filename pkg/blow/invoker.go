@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,6 +20,8 @@ import (
 	"sync/atomic"
 	"time"
 	"unicode"
+
+	"github.com/bingoohuang/gg/pkg/codec/b64"
 
 	"github.com/bingoohuang/gg/pkg/iox"
 
@@ -126,8 +127,6 @@ func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) 
 		MaxConns:     opt.maxConns,
 		ReadTimeout:  opt.readTimeout,
 		WriteTimeout: opt.writeTimeout,
-
-		DisableHeaderNamesNormalizing: true,
 	}
 
 	if opt.socks5Proxy != "" {
@@ -195,7 +194,15 @@ func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) 
 	}
 
 	if opt.basicAuth != "" {
-		h.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(opt.basicAuth)))
+		b := opt.basicAuth
+		// check if it is already set by base64 encoded
+		if c, err := b64.DecodeString(b); err != nil {
+			b, _ = b64.EncodeString(b)
+		} else {
+			b, _ = b64.EncodeString(c)
+		}
+
+		h.Set("Authorization", "Basic "+b)
 	}
 	if r.opt.enableGzip {
 		h.Set("Accept-Encoding", "gzip")

@@ -22,7 +22,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/shirou/gopsutil/v3 v3.22.3
 	github.com/thoas/go-funk v0.9.2
-	github.com/valyala/fasthttp v1.35.0
+	github.com/valyala/fasthttp v1.37.0
 	go.uber.org/multierr v1.8.0
 	golang.org/x/crypto v0.0.0-20220331220935-ae2d96664a29
 	golang.org/x/sys v0.0.0-20220406163625-3f8b81556e12
