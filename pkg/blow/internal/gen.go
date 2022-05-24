@@ -1,14 +1,18 @@
 package internal
 
 import (
+	"regexp"
+	"sync"
+
 	"github.com/bingoohuang/gg/pkg/vars"
 	"github.com/bingoohuang/jj"
 )
 
-var Valuer jj.Substitute = &valuer{Map: make(map[Keep]interface{})}
+var Valuer jj.Substitute = &valuer{Map: make(map[string]interface{})}
 
 type valuer struct {
-	Map map[Keep]interface{}
+	Map map[string]interface{}
+	sync.RWMutex
 }
 
 func (v *valuer) Register(fn string, f jj.SubstitutionFn) {
@@ -20,22 +24,28 @@ type Keep struct {
 	Name string
 }
 
+var cacheSuffix = regexp.MustCompile(`^(.+)_\d+`)
+
 func (v *valuer) Value(name, params string) interface{} {
-	keep := Keep{}
-	jj.ParseConf(params, &keep)
-
-	if keep.Keep == "" {
-		return jj.DefaultGen.Value(name, params)
+	pureName := name
+	subs := cacheSuffix.FindStringSubmatch(name)
+	if len(subs) > 0 {
+		pureName = subs[1]
+		v.RLock()
+		x, ok := v.Map[name]
+		v.RUnlock()
+		if ok {
+			return x
+		}
 	}
 
-	keep.Name = name
+	x := jj.DefaultGen.Value(pureName, params)
 
-	if x, ok := v.Map[keep]; ok {
-		return x
+	if len(subs) > 0 {
+		v.Lock()
+		v.Map[name] = x
+		v.Unlock()
 	}
-
-	x := jj.DefaultGen.Value(name, params)
-	v.Map[keep] = x
 	return x
 }
 
@@ -43,7 +53,6 @@ type StringMode int
 
 const (
 	MayJSON StringMode = iota
-	NotJSON
 	SureJSON
 )
 
