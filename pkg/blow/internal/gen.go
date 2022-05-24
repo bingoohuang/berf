@@ -19,11 +19,6 @@ func (v *valuer) Register(fn string, f jj.SubstitutionFn) {
 	jj.DefaultSubstituteFns.Register(fn, f)
 }
 
-type Keep struct {
-	Keep string
-	Name string
-}
-
 var cacheSuffix = regexp.MustCompile(`^(.+)_\d+`)
 
 func (v *valuer) Value(name, params string) interface{} {
