@@ -193,10 +193,9 @@ func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) 
 		h.Set(ss.Split2(hdr, ss.WithSeps(":")))
 	}
 
-	if opt.basicAuth != "" {
-		b := opt.basicAuth
-		// check if it is already set by base64 encoded
-		if c, err := b64.DecodeString(b); err != nil {
+	if opt.auth != "" {
+		b := opt.auth
+		if c, err := b64.DecodeString(b); err != nil { // check if it is already set by base64 encoded
 			b, _ = b64.EncodeString(b)
 		} else {
 			b, _ = b64.EncodeString(c)

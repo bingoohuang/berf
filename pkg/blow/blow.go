@@ -39,7 +39,7 @@ var (
 		"      json:               set Content-Type=application/json; charset=utf-8 \n"+
 		"      eval:               evaluate url and body's variables \n"+
 		"      notty:              no tty color \n")
-	pBasicAuth  = fla9.String("basic", "", "basic auth username:password")
+	pAuth       = fla9.String("auth", "", "basic auth, eg. scott:tiger or direct base64 encoded like c2NvdHQ6dGlnZXI")
 	pCertKey    = fla9.String("cert", "", "Path to the client's TLS Cert and private key file, eg. ca.pem,ca.key")
 	pTimeout    = fla9.String("timeout", "", "Timeout for each http request, e.g. 5s for do:5s,dial:5s,write:5s,read:5s")
 	pSocks5     = fla9.String("socks5", "", "Socks5 proxy, ip:port")
@@ -145,7 +145,7 @@ type Opt struct {
 	socks5Proxy string
 	upload      string
 
-	basicAuth   string
+	auth        string
 	network     string
 	logf        *internal.LogFile
 	maxConns    int
@@ -248,9 +248,9 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 
 		socks5Proxy: *pSocks5,
 
-		network:   *pNetwork,
-		basicAuth: *pBasicAuth,
-		maxConns:  conf.Goroutines,
+		network:  *pNetwork,
+		auth:     *pAuth,
+		maxConns: conf.Goroutines,
 
 		enableGzip:  opts.HasAny("g", "gzip"),
 		uploadIndex: opts.HasAny("uploadIndex", "ui"),
