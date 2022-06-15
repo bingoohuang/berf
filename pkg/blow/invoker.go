@@ -523,7 +523,8 @@ func parseStatus(rsp *fasthttp.Response, statusName string) string {
 		return strconv.Itoa(rsp.StatusCode())
 	}
 
-	return jj.GetBytes(rsp.Body(), statusName).String()
+	status := jj.GetBytes(rsp.Body(), statusName).String()
+	return ss.Or(status, "NA")
 }
 
 func (r *Invoker) setBody(req *fasthttp.Request) (internal.Closers, error) {
