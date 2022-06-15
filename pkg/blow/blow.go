@@ -27,7 +27,7 @@ var (
 	pMethod   = fla9.String("method,m", "", "HTTP method")
 	pNetwork  = fla9.String("network", "", "Network simulation, local: simulates local network, lan: local, wan: wide, bad: bad network, or BPS:latency like 20M:20ms")
 	pHeaders  = fla9.Strings("header,H", nil, "Custom HTTP headers, K:V, e.g. Content-Type")
-	pProfiles = fla9.Strings("profile,P", nil, "Profile file, append :new to create a demo profile, or :tag to run only specified profile")
+	pProfiles = fla9.Strings("profile,P", nil, "Profile file, append :new to create a demo profile, or :tag to run only specified profile, or range :tag1,tag3-tag5")
 	pOpts     = fla9.Strings("opt", nil, "options, multiple by comma: \n"+
 		"      gzip:               enabled content gzip  \n"+
 		"      k:                  not verify the server's cert chain and host name \n"+
