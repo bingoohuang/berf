@@ -100,14 +100,14 @@ func NewRangeValue(a, b string) TagValue {
 	return r
 }
 
-func ParseProfileArg(profileArg []string) []*Profile {
+func ParseProfileArg(profileArg []string, envName string) []*Profile {
 	var profiles []*Profile
 	hasNew := false
 	var tag *Tag
 	for _, p := range profileArg {
 		if strings.HasSuffix(p, ":new") {
 			name := p[:len(p)-4]
-			osx.ExitIfErr(os.WriteFile(name, []byte(DemoProfile), os.ModePerm))
+			osx.ExitIfErr(os.WriteFile(name, DemoProfile, os.ModePerm))
 			fmt.Printf("profile file %s created\n", name)
 			hasNew = true
 			continue
@@ -122,7 +122,7 @@ func ParseProfileArg(profileArg []string) []*Profile {
 			osx.Exit("profile "+p+" doesn't exist", 1)
 		}
 
-		pp, err := ParseProfileFile("", p)
+		pp, err := ParseProfileFile(p, envName)
 		osx.ExitIfErr(err)
 
 		for _, p1 := range pp {

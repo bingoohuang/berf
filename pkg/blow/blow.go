@@ -28,6 +28,7 @@ var (
 	pNetwork  = fla9.String("network", "", "Network simulation, local: simulates local network, lan: local, wan: wide, bad: bad network, or BPS:latency like 20M:20ms")
 	pHeaders  = fla9.Strings("header,H", nil, "Custom HTTP headers, K:V, e.g. Content-Type")
 	pProfiles = fla9.Strings("profile,P", nil, "Profile file, append :new to create a demo profile, or :tag to run only specified profile, or range :tag1,tag3-tag5")
+	pEnv      = fla9.String("env", "", "Profile env name selected")
 	pOpts     = fla9.Strings("opt", nil, "options, multiple by comma: \n"+
 		"      gzip:               enabled content gzip  \n"+
 		"      k:                  not verify the server's cert chain and host name \n"+
@@ -270,7 +271,7 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 	}
 
 	opt.logf = internal.CreateLogFile(opt.verbose, opt.printOption)
-	opt.profiles = internal.ParseProfileArg(*pProfiles)
+	opt.profiles = internal.ParseProfileArg(*pProfiles, *pEnv)
 	invoker, err := NewInvoker(ctx, opt)
 	osx.ExitIfErr(err)
 	return invoker

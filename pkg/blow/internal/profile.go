@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bufio"
+	_ "embed"
 	"encoding/base64"
 	"errors"
 	"io"
@@ -57,6 +58,8 @@ func (p *Profile) CreateReq(isTLS bool, req *fasthttp.Request, enableGzip, uploa
 				bodyBytes = []byte(Gen(string(bodyBytes), MayJSON))
 			}
 		}
+
+		bodyBytes = []byte(p.EnvVars.Eval(string(bodyBytes)))
 
 		if enableGzip {
 			if v, err := gz.Gzip(bodyBytes); err == nil && len(v) < len(p.bodyFileData) {
@@ -160,79 +163,50 @@ type Profile struct {
 	requestHeader *fasthttp.RequestHeader
 	bodyFileName  string
 	bodyFileData  []byte
+	EnvVars       EnvVars
 }
 
-const DemoProfile = `
-### [tag=1]
-GET http://127.0.0.1:5003/status
+var (
+	envRegexp    = regexp.MustCompile(`(?i)\benv:\s*`)
+	exportRegexp = regexp.MustCompile(`(?i)^\s*export\s+(\w[\w_\d-]+)\s*=\s*(.+?)\s*$`)
+)
 
-### [tag=2]
-POST http://127.0.0.1:5003/dynamic/demo
-{"name": "bingoo"}
+// regexFollows tests where s matches reg and then follows the following string.
+func regexFollows(reg *regexp.Regexp, s, following string) (isEnv, matchFollower bool) {
+	subs := reg.FindAllStringSubmatchIndex(s, -1)
+	if len(subs) == 0 {
+		return false, false
+	}
 
-### [tag=3]
-POST http://127.0.0.1:5003/dynamic/demo
-{"name": "huang"}
+	s1 := s[subs[0][1]:]
+	if !strings.HasSuffix(strings.ToUpper(s1), strings.ToUpper(following)) {
+		return true, false
+	}
 
-### [tag=4]
-POST http://127.0.0.1:5003/dynamic/demo
-{"name": "ding", "age": 10}
+	s1 = s1[len(following):]
+	if s1 == "" {
+		return true, true
+	}
 
-### [tag=5]
-POST http://127.0.0.1:5003/dynamic/demo
-{"name": "ding", "age": 20}
-
-### [tag=6 eval]
-POST http://127.0.0.1:5003/dynamic/demo
-{
-  "uuid": "@uuid",
-  "uid": "@ksuid",
-  "id": "@objectId",
-  "sex": "@random(male,female)",
-  "image": "@random_image(format=png size=320x240)",
-  "base64": "@base64(size=100 raw url)",
-  "name": "@name",
-  "汉字": "@汉字",
-  "姓名": "@姓名",
-  "gender": "@性别",
-  "addr": "@地址",
-  "mobile": "@手机",
-  "chinaID": "@身份证",
-  "issueOrg": "@发证机关",
-  "email": "@邮箱",
-  "bankCardNo": "@银行卡",
-  "id2": "@random(red,green,blue)",
-  "id3": "@random(1,2,3)",
-  "id4": "@regex([abc]{10})",
-  "id5": "@random_int",
-  "id6": "@random_int(100-999)",
-  "id7": "Hello@random_int(100-999)",
-  "ok": "@random_bool",
-  "day1": "@random_time",
-  "day2": "@random_time(yyyy-MM-dd)",
-  "day3": "@random_time(now, yyyy-MM-dd)",
-  "day4": "@random_time(now, yyyy-MM-dd)",
-  "day5": "@random_time(now, yyyy-MM-ddTHH:mm:ss)",
-  "day6": "@random_time(yyyy-MM-dd,1990-01-01,2021-06-06)",
-  "day7": "@random_time(sep=# yyyy-MM-dd#1990-01-01#2021-06-06)",
-  "uid": "@uuid"
+	return true, unicode.IsSpace(rune(s1[0]))
 }
 
-`
+//go:embed demo.http
+var DemoProfile []byte
 
-func ParseProfileFile(baseUrl string, fileName string) ([]*Profile, error) {
+func ParseProfileFile(fileName string, envName string) ([]*Profile, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		panic(err.Error())
 	}
 	defer iox.Close(f)
 
-	return ParseProfiles(baseUrl, f)
+	return ParseProfiles(f, envName)
 }
 
-func ParseProfiles(baseUrl string, r io.Reader) ([]*Profile, error) {
+func ParseProfiles(r io.Reader, envName string) ([]*Profile, error) {
 	buf := bufio.NewReader(r)
-	profiles, err := parseRequests(baseUrl, buf)
+	profiles, err := parseRequests(buf, envName)
 	if err != nil {
 		if errors.Is(err, io.EOF) {
 			return profiles, nil
@@ -244,16 +218,47 @@ func ParseProfiles(baseUrl string, r io.Reader) ([]*Profile, error) {
 	return profiles, nil
 }
 
-func parseRequests(baseUrl string, buf *bufio.Reader) (profiles []*Profile, err error) {
+type EnvVars map[string]string
+
+func (e EnvVars) Eval(s string) string {
+	for _, element := range os.Environ() {
+		parts := strings.Split(element, "=")
+		k := parts[0]
+		v := parts[1]
+		if _, ok := e[k]; ok {
+			v = e[k]
+		}
+		s = strings.ReplaceAll(s, `${`+k+`}`, v)
+	}
+
+	for k, v := range e {
+		s = strings.ReplaceAll(s, `${`+k+`}`, v)
+	}
+	return s
+}
+
+func parseRequests(buf *bufio.Reader, envName string) (profiles []*Profile, err error) {
 	var p *Profile
 	var l string
 
+	envVars := EnvVars{}
+
+	var isEnv, hasFollower bool
 	for err == nil || len(l) > 0 {
 		if len(l) > 0 {
-			p1 := processLine(p, baseUrl, l)
-			if p1 != p {
-				profiles = append(profiles, p1)
-				p = p1
+			if strings.HasPrefix(l, "###") {
+				isEnv, hasFollower = regexFollows(envRegexp, l, envName)
+			} else if isEnv && hasFollower && !strings.HasPrefix(l, "#") {
+				if vars := exportRegexp.FindStringSubmatch(l); len(vars) > 0 {
+					envVars[vars[1]] = vars[2]
+				}
+			}
+
+			if !isEnv {
+				if p1 := processLine(p, l, envVars); p1 != p {
+					profiles = append(profiles, p1)
+					p = p1
+				}
 			}
 		}
 
@@ -307,7 +312,7 @@ var headerReg = regexp.MustCompile(`(^\w+(?:-\w+)*)(==|:=|=|:|@)\s*(.*)$`)
 
 var lastComments []string
 
-func processLine(p *Profile, baseUrl, l string) *Profile {
+func processLine(p *Profile, l string, envVars EnvVars) *Profile {
 	if option, ok := Quoted(l, "[", "]"); ok {
 		if p != nil {
 			jj.ParseConf(option, &p.Option)
@@ -318,13 +323,18 @@ func processLine(p *Profile, baseUrl, l string) *Profile {
 		"GET", "HEAD", "POST", "PUT",
 		"PATCH", "DELETE", "CONNECT", "OPTIONS", "TRACE"); ok {
 		addr := strings.TrimSpace(l[len(m):])
+		addr = envVars.Eval(addr)
+		addr = fixUrl("", addr)
+
 		p1 := &Profile{
-			Method: m, URL: fixUrl(baseUrl, addr),
+			Method:   m,
+			URL:      addr,
 			Comments: lastComments,
 			Header:   map[string]string{},
 			Query:    map[string]string{},
 			Form:     map[string]string{},
 			RawJSON:  map[string]string{},
+			EnvVars:  envVars,
 		}
 		lastComments = nil
 		return p1
@@ -340,7 +350,7 @@ func processLine(p *Profile, baseUrl, l string) *Profile {
 
 	if len(p.Body) == 0 {
 		if subs := headerReg.FindStringSubmatch(l); len(subs) > 0 {
-			k, op, v := subs[1], subs[2], subs[3]
+			k, op, v := envVars.Eval(subs[1]), subs[2], envVars.Eval(subs[3])
 			// refer https://httpie.io/docs#request-items
 			switch op {
 			case "==": //  query string parameter

@@ -57,6 +57,28 @@ Latency Histogram:
 7. 参数
     - `export BERF_TICK=1s` 每 1s 生成一个点，默认 5s 生成一个.
 
+## Profile 支持
+
+1. 生成 Profile 示例： `berf -P demo.http:new`
+2. 编辑新生成的 `demo.http` 文件，如下所示
+   ```http
+   ### 生产环境 env: prod
+   export baseURL=http://127.0.0.1:5004
+   
+   ### [tag=1]
+   GET ${baseURL}/status
+   
+   ### [tag=2]
+   POST ${baseURL}/dynamic/demo
+   
+   {"name": "bingoo"}
+   ```
+4. 使用 Profile 中的 test 环境变量 跑压测 `berf -P demo.http -env test`
+   1. 或者指定 tag 跑压测 `berf -P demo.http:tag1`
+   2. 或者指定多个 tag 跑压测 `berf -P demo.http:tag1,tag2`
+   3. 或者指定 tag 范围 跑压测 `berf -P demo.http:tag1-tag3`
+   4. 混合模式：`berf -P demo.http:tag1-tag3,tag5,tag7-tag9`
+
 ## Similar tools
 
 1. [fortio](https://github.com/fortio/fortio)

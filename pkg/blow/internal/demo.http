@@ -1,0 +1,65 @@
+### 测试环境 env: test
+export baseURL=http://127.0.0.1:5003
+
+### 生产环境 env: prod
+export baseURL=http://127.0.0.1:5004
+
+### [tag=1]
+GET ${baseURL}/status
+
+### [tag=2]
+POST ${baseURL}/dynamic/demo
+
+{"name": "bingoo"}
+
+### [tag=3]
+POST ${baseURL}/dynamic/demo
+
+{"name": "huang"}
+
+### [tag=4]
+POST ${baseURL}/dynamic/demo
+
+{"name": "ding", "age": 10}
+
+### [tag=5]
+POST ${baseURL}/dynamic/demo
+
+{"name": "ding", "age": 20}
+
+### [tag=6 eval]
+POST ${baseURL}/dynamic/demo
+
+{
+  "uuid": "@uuid",
+  "uid": "@ksuid",
+  "id": "@objectId",
+  "sex": "@random(male,female)",
+  "image": "@random_image(format=png size=320x240)",
+  "base64": "@base64(size=100 raw url)",
+  "name": "@name",
+  "汉字": "@汉字",
+  "姓名": "@姓名",
+  "gender": "@性别",
+  "addr": "@地址",
+  "mobile": "@手机",
+  "chinaID": "@身份证",
+  "issueOrg": "@发证机关",
+  "email": "@邮箱",
+  "bankCardNo": "@银行卡",
+  "id2": "@random(red,green,blue)",
+  "id3": "@random(1,2,3)",
+  "id4": "@regex([abc]{10})",
+  "id5": "@random_int",
+  "id6": "@random_int(100-999)",
+  "id7": "Hello@random_int(100-999)",
+  "ok": "@random_bool",
+  "day1": "@random_time",
+  "day2": "@random_time(yyyy-MM-dd)",
+  "day3": "@random_time(now, yyyy-MM-dd)",
+  "day4": "@random_time(now, yyyy-MM-dd)",
+  "day5": "@random_time(now, yyyy-MM-ddTHH:mm:ss)",
+  "day6": "@random_time(yyyy-MM-dd,1990-01-01,2021-06-06)",
+  "day7": "@random_time(sep=# yyyy-MM-dd#1990-01-01#2021-06-06)",
+  "uid": "@uuid"
+}

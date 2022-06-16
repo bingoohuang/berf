@@ -361,7 +361,7 @@ func (r *Invoker) printReq(b *bytes.Buffer, bx io.Writer, ignoreBody bool, statu
 		printNum++
 	}
 	if r.opt.printOption&printReqBody == printReqBody {
-		if string(dumpBody) != "\r\n" {
+		if strings.TrimSpace(string(dumpBody)) != "" {
 			printBody(dumpBody, printNum, r.opt.pretty)
 			printNum++
 		}
@@ -451,7 +451,7 @@ func (r *Invoker) dump(b *bytes.Buffer, bx io.Writer, ignoreBody bool) (dumpHead
 		cl = ss.ParseInt(subs[1])
 	}
 
-	blowMaxBody := 2048
+	blowMaxBody := 4096
 	if env := os.Getenv("BERF_MAX_BODY"); env != "" {
 		if envValue, err := man.ParseBytes(env); err == nil {
 			blowMaxBody = int(envValue)
