@@ -183,6 +183,10 @@ func regexFollows(reg *regexp.Regexp, s, following string) (isEnv, matchFollower
 		return true, false
 	}
 
+	if following == "" {
+		return true, true
+	}
+
 	s1 = s1[len(following):]
 	if s1 == "" {
 		return true, true
