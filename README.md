@@ -61,8 +61,13 @@ Latency Histogram:
 
 1. 生成 Profile 示例： `berf -P demo.http:new`
 2. 编辑新生成的 `demo.http` 文件，如下所示
-   ```http
+
+   ```
    ### 生产环境 env: prod
+   export baseURL=http://1.2.3.4:5004
+   ### 测试环境 env: test
+   export baseURL=http://192.168.0.1:5004
+   ### 本地环境 env: local
    export baseURL=http://127.0.0.1:5004
    
    ### [tag=1]
@@ -73,7 +78,8 @@ Latency Histogram:
    
    {"name": "bingoo"}
    ```
-4. 使用 Profile 中的 test 环境变量 跑压测 `berf -P demo.http -env test`
+
+3. 使用 Profile 中的 test 环境变量 跑压测 `berf -P demo.http -env test`
    1. 或者指定 tag 跑压测 `berf -P demo.http:tag1`
    2. 或者指定多个 tag 跑压测 `berf -P demo.http:tag1,tag2`
    3. 或者指定 tag 范围 跑压测 `berf -P demo.http:tag1-tag3`
