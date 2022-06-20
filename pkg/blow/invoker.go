@@ -340,7 +340,7 @@ func (r *Invoker) printReq(b *bytes.Buffer, bx io.Writer, ignoreBody bool, statu
 		return
 	}
 
-	if !logStatus(statusCode) {
+	if !logStatus(r.opt.berfConfig.N, statusCode) {
 		bx = nil
 	}
 
@@ -370,14 +370,17 @@ func (r *Invoker) printReq(b *bytes.Buffer, bx io.Writer, ignoreBody bool, statu
 	}
 }
 
-var logStatus = func() func(int) bool {
+var logStatus = func() func(n, code int) bool {
 	if env := os.Getenv("BLOW_STATUS"); env != "" {
 		excluded := ss.HasPrefix(env, "-")
 		if excluded {
 			env = env[1:]
 		}
 		status := ss.ParseInt(env)
-		return func(code int) bool {
+		return func(n, code int) bool {
+			if n == 1 {
+				return true
+			}
 			if excluded {
 				return code != status
 			}
@@ -385,7 +388,10 @@ var logStatus = func() func(int) bool {
 		}
 	}
 
-	return func(code int) bool {
+	return func(n, code int) bool {
+		if n == 1 {
+			return true
+		}
 		return code < 200 || code >= 300
 	}
 }()
@@ -395,7 +401,7 @@ func (r *Invoker) printResp(b *bytes.Buffer, bx io.Writer, rsp *fasthttp.Respons
 		return
 	}
 
-	if !logStatus(statusCode) {
+	if !logStatus(r.opt.berfConfig.N, statusCode) {
 		bx = nil
 	}
 

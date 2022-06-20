@@ -164,6 +164,7 @@ type Opt struct {
 	printOption   uint8
 	saveRandDir   string
 	bodyLinesChan chan string
+	berfConfig    *berf.Config
 }
 
 func (o *Opt) MaybePost() bool {
@@ -264,6 +265,7 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 		verbose:     conf.Verbose,
 		statusName:  *pStatusName,
 		printOption: parsePrintOption(*pPrint),
+		berfConfig:  conf,
 	}
 
 	if opts.HasAny("notty") {
