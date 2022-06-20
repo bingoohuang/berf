@@ -83,7 +83,7 @@ Latency Histogram:
    1. 或者指定 tag 跑压测 `berf -P demo.http:tag1`
    2. 或者指定多个 tag 跑压测 `berf -P demo.http:tag1,tag2`
    3. 或者指定 tag 范围 跑压测 `berf -P demo.http:tag1-tag3`
-   4. 混合模式：`berf -P demo.http:tag1-tag3,tag5,tag7-tag9`
+   4. 混合模式 `berf -P demo.http:tag1-tag3,tag5,tag7-tag9`
 
 ## Similar tools
 
