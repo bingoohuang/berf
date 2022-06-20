@@ -120,13 +120,11 @@ func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) 
 
 	r.isTLS = u.Scheme == "https"
 
-	cli := &fasthttp.HostClient{
-		Addr:         addMissingPort(u.Host, u.Scheme == "https"),
-		IsTLS:        r.isTLS,
-		Name:         "blow",
-		MaxConns:     opt.maxConns,
-		ReadTimeout:  opt.readTimeout,
-		WriteTimeout: opt.writeTimeout,
+	cli := &fasthttp.Client{
+		Name:            "blow",
+		MaxConnsPerHost: opt.maxConns,
+		ReadTimeout:     opt.readTimeout,
+		WriteTimeout:    opt.writeTimeout,
 	}
 
 	if opt.socks5Proxy != "" {
