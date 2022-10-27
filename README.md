@@ -88,3 +88,4 @@ Latency Histogram:
 ## Similar tools
 
 1. [fortio](https://github.com/fortio/fortio)
+2. [字节跳动 cloudwego/hertz](https://github.com/cloudwego/hertz)
