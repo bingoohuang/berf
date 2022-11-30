@@ -14,6 +14,14 @@ import (
 	"go.uber.org/multierr"
 )
 
+func If[T any](c bool, a, b T) T {
+	if c {
+		return a
+	}
+
+	return b
+}
+
 func Quoted(s, open, close string) (string, bool) {
 	p1 := strings.Index(s, open)
 	if p1 != 0 {

@@ -29,8 +29,9 @@ func (p *Profile) CreateReq(isTLS bool, req *fasthttp.Request, enableGzip, uploa
 		req.URI().SetHostBytes(req.Header.Host())
 	}
 
-	if enableGzip && p.Header["Accept-Encoding"] != "" {
-		req.Header.Set("Accept-Encoding", "gzip")
+	const acceptEncodingHeader = "Accept-Encoding"
+	if enableGzip && p.Header[acceptEncodingHeader] != "" {
+		req.Header.Set(acceptEncodingHeader, "gzip")
 	}
 
 	if p.bodyFileName != "" {
@@ -52,11 +53,7 @@ func (p *Profile) CreateReq(isTLS bool, req *fasthttp.Request, enableGzip, uploa
 
 	if len(bodyBytes) > 0 {
 		if p.Eval {
-			if p.JsonBody {
-				bodyBytes = []byte(Gen(string(bodyBytes), SureJSON))
-			} else {
-				bodyBytes = []byte(Gen(string(bodyBytes), MayJSON))
-			}
+			bodyBytes = []byte(Gen(string(bodyBytes), If(p.JsonBody, SureJSON, MayJSON)))
 		}
 
 		bodyBytes = []byte(p.EnvVars.Eval(string(bodyBytes)))
@@ -227,8 +224,7 @@ type EnvVars map[string]string
 func (e EnvVars) Eval(s string) string {
 	for _, element := range os.Environ() {
 		parts := strings.Split(element, "=")
-		k := parts[0]
-		v := parts[1]
+		k, v := parts[0], parts[1]
 		if _, ok := e[k]; ok {
 			v = e[k]
 		}
