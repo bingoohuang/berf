@@ -23,10 +23,11 @@ import (
 )
 
 func (p *Profile) CreateReq(isTLS bool, req *fasthttp.Request, enableGzip, uploadIndex bool) (Closers, error) {
-	if !p.Init && p.Eval {
-		p.requestHeader.SetRequestURI(Gen(p.URL, IgnoreJSON))
-	}
 	p.requestHeader.CopyTo(&req.Header)
+	if !p.Init && p.Eval {
+		req.Header.SetRequestURI(Gen(p.URL, IgnoreJSON))
+	}
+
 	if isTLS {
 		req.URI().SetScheme("https")
 		req.URI().SetHostBytes(req.Header.Host())
