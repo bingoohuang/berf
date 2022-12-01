@@ -14,8 +14,8 @@ github.com/bingoohuang/gg v0.0.0-20220825014456-513d8c7ea917 h1:r9bOiFAG8PSREJSY
 github.com/bingoohuang/gg v0.0.0-20220825014456-513d8c7ea917/go.mod h1:YTSnmf7zkGIb5pwDLMW1GaOFbtD3+Jyg6anBytG2wwA=
 github.com/bingoohuang/jiami v0.0.0-20221122064658-cdd6a948124e h1:XGRag6rDTJpp0GtdXTxZNkbiqGtvmE9XNQoa1KA6M3o=
 github.com/bingoohuang/jiami v0.0.0-20221122064658-cdd6a948124e/go.mod h1:gcgk8cUDHPHc/cJyw5Op9cb2Alrv7WbsBzm/8xDCZEk=
-github.com/bingoohuang/jj v0.0.0-20221130121058-b62383807cc2 h1:Zx9JUIWRqXNdz79HGKBsDANxfll+EylU3pPPMyd9lzU=
-github.com/bingoohuang/jj v0.0.0-20221130121058-b62383807cc2/go.mod h1:m2t45CbWXQCZqKE9ARER42gTC9zEM41YfVer9wqLU/k=
+github.com/bingoohuang/jj v0.0.0-20221201004110-53fe89b4920f h1:mwxeCGooN8uYRdvj5PDz8mOcpFHwEzxJ0RF7jrNaIYY=
+github.com/bingoohuang/jj v0.0.0-20221201004110-53fe89b4920f/go.mod h1:m2t45CbWXQCZqKE9ARER42gTC9zEM41YfVer9wqLU/k=
 github.com/buger/jsonparser v1.1.1 h1:2PnMjfWD7wBILjqQbt530v576A/cAbQvEW9gGIpYMUs=
 github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghfAqPWnc=
 github.com/cristalhq/base64 v0.1.2 h1:edsefYyYDiac7Ytdh2xdaiiSSJzcI2f0yIkdGEf1qY0=

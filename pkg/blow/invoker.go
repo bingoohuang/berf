@@ -219,7 +219,7 @@ func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) 
 	return &h, nil
 }
 
-func (r *Invoker) Run(*berf.Config) (*berf.Result, error) {
+func (r *Invoker) Run(_ *berf.Config, initial bool) (*berf.Result, error) {
 	req := fasthttp.AcquireRequest()
 	resp := fasthttp.AcquireResponse()
 	defer fasthttp.ReleaseRequest(req)
@@ -230,7 +230,7 @@ func (r *Invoker) Run(*berf.Config) (*berf.Result, error) {
 	}
 
 	if len(r.opt.profiles) > 0 {
-		return r.runProfiles(req, resp)
+		return r.runProfiles(req, resp, initial)
 	}
 
 	r.httpHeader.CopyTo(&req.Header)
@@ -241,8 +241,9 @@ func (r *Invoker) Run(*berf.Config) (*berf.Result, error) {
 		}
 	}
 	if r.isTLS {
-		req.URI().SetScheme("https")
-		req.URI().SetHostBytes(req.Header.Host())
+		uri := req.URI()
+		uri.SetScheme("https")
+		uri.SetHostBytes(req.Header.Host())
 	}
 
 	return r.runOne(req, resp)
@@ -276,10 +277,10 @@ func (r *Invoker) doRequest(req *fasthttp.Request, rsp *fasthttp.Response, rr *b
 		return err
 	}
 
-	return r.processRsp(req, rsp, rr)
+	return r.processRsp(req, rsp, rr, nil)
 }
 
-func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *berf.Result) error {
+func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *berf.Result, responseJSONValuer func(jsonBody []byte)) error {
 	rr.Status = append(rr.Status, parseStatus(rsp, r.opt.statusName))
 	if r.opt.verbose >= 1 {
 		rr.Counting = append(rr.Counting, rsp.LocalAddr().String()+"->"+rsp.RemoteAddr().String())
@@ -318,15 +319,29 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 
 	header := rsp.Header.Header()
 	_, _ = b1.Write(header)
+	bb1 := b1
+
+	var body *bytes.Buffer
+
+	if responseJSONValuer != nil && bytes.HasPrefix(rsp.Header.Peek("Content-Type"), []byte("application/json")) {
+		body = &bytes.Buffer{}
+		bb1 = body
+	}
 
 	if string(rsp.Header.Peek("Content-Encoding")) == "gzip" {
 		if d, err := rsp.BodyGunzip(); err != nil {
 			return err
 		} else {
-			b1.Write(d)
+			bb1.Write(d)
 		}
-	} else if err := rsp.BodyWriteTo(b1); err != nil {
+	} else if err := rsp.BodyWriteTo(bb1); err != nil {
 		return err
+	}
+
+	if responseJSONValuer != nil && body != nil {
+		i := body.Bytes()
+		responseJSONValuer(i)
+		b1.Write(i)
 	}
 
 	_, _ = b1.Write([]byte("\n\n"))
@@ -455,16 +470,16 @@ func (r *Invoker) dump(b *bytes.Buffer, bx io.Writer, ignoreBody bool) (dumpHead
 		cl = ss.ParseInt(subs[1])
 	}
 
-	blowMaxBody := 4096
-	if env := os.Getenv("BERF_MAX_BODY"); env != "" {
+	maxBody := 4096
+	if env := os.Getenv("MAX_BODY"); env != "" {
 		if envValue, err := man.ParseBytes(env); err == nil {
-			blowMaxBody = int(envValue)
+			maxBody = int(envValue)
 		} else {
 			log.Printf("bad environment value format: %s", env)
 		}
 	}
 
-	if !ignoreBody && (cl == 0 || (blowMaxBody > 0 && cl > blowMaxBody)) {
+	if !ignoreBody && (cl == 0 || (maxBody > 0 && cl > maxBody)) {
 		dumpBody = []byte("\n\n--- streamed or too long, ignored ---\n")
 	}
 
@@ -484,11 +499,25 @@ func printBody(dumpBody []byte, printNum int, pretty bool) {
 	fmt.Println(body)
 }
 
-func (r *Invoker) runProfiles(req *fasthttp.Request, rsp *fasthttp.Response) (*berf.Result, error) {
+func (r *Invoker) runProfiles(req *fasthttp.Request, rsp *fasthttp.Response, initial bool) (*berf.Result, error) {
 	rr := &berf.Result{}
 	defer r.updateThroughput(rr)
 
-	for _, p := range r.opt.profiles {
+	profiles := r.opt.profiles
+	if initial {
+		nonInitial := make([]*internal.Profile, 0, len(profiles))
+		profiles = make([]*internal.Profile, 0, len(profiles))
+		for _, p := range r.opt.profiles {
+			if p.Init {
+				profiles = append(profiles, p)
+			} else {
+				nonInitial = append(nonInitial, p)
+			}
+		}
+		r.opt.profiles = nonInitial
+	}
+
+	for _, p := range profiles {
 		if err := r.runOneProfile(p, req, rsp, rr); err != nil {
 			return rr, err
 		}
@@ -519,7 +548,24 @@ func (r *Invoker) runOneProfile(p *internal.Profile, req *fasthttp.Request, rsp 
 		return err
 	}
 
-	return r.processRsp(req, rsp, rr)
+	var f func(jsonBody []byte)
+
+	if p.Init {
+		expr := p.ResultExpr
+		if len(expr) > 0 {
+			f = func(jsonBody []byte) {
+				for ek, ev := range expr {
+					if jr := jj.GetBytes(jsonBody, ev); jr.Type != jj.Null {
+						internal.Valuer.Register(ek, func(string) interface{} {
+							return jr.String()
+						})
+					}
+				}
+			}
+		}
+	}
+
+	return r.processRsp(req, rsp, rr, f)
 }
 
 func parseStatus(rsp *fasthttp.Response, statusName string) string {

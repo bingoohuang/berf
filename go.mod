@@ -11,7 +11,7 @@ require (
 	github.com/axiomhq/hyperloglog v0.0.0-20220105174342-98591331716a
 	github.com/beorn7/perks v1.0.1
 	github.com/bingoohuang/gg v0.0.0-20220825014456-513d8c7ea917
-	github.com/bingoohuang/jj v0.0.0-20221130121058-b62383807cc2
+	github.com/bingoohuang/jj v0.0.0-20221201004110-53fe89b4920f
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-echarts/go-echarts/v2 v2.2.4
 	github.com/gobwas/glob v0.2.3

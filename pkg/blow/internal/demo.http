@@ -4,6 +4,12 @@ export baseURL=http://127.0.0.1:5003
 ### 生产环境 env: prod
 export baseURL=http://127.0.0.1:5004
 
+### [init result.chinaID=chinaID]
+GET ${baseURL}/api/demo
+
+### [tag=0 eval]
+GET ${baseURL}/echo/@chinaID
+
 ### [tag=1]
 GET ${baseURL}/status
 

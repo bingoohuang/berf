@@ -117,13 +117,14 @@ func (b *Bench) Final(_ context.Context, conf *berf.Config) error {
 
 func (b *Bench) Init(ctx context.Context, conf *berf.Config) (*berf.BenchOption, error) {
 	b.invoker = Blow(ctx, conf)
+	b.invoker.Run(conf, true)
 	return &berf.BenchOption{
 		NoReport: b.invoker.opt.printOption > 0,
 	}, nil
 }
 
 func (b *Bench) Invoke(_ context.Context, conf *berf.Config) (*berf.Result, error) {
-	return b.invoker.Run(conf)
+	return b.invoker.Run(conf, false)
 }
 
 type Opt struct {

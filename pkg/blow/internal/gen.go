@@ -10,12 +10,14 @@ var Valuer = jj.NewCachingSubstituter()
 type StringMode int
 
 const (
-	MayJSON StringMode = iota
+	IgnoreJSON StringMode = iota
+	MayJSON
 	SureJSON
 )
 
+var gen = jj.NewGenContext(Valuer)
+
 func Gen(s string, mode StringMode) string {
-	gen := jj.NewGenContext(Valuer)
 	if mode == SureJSON || mode == MayJSON && jj.Valid(s) {
 		return gen.Gen(s)
 	}

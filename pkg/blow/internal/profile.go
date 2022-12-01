@@ -23,6 +23,9 @@ import (
 )
 
 func (p *Profile) CreateReq(isTLS bool, req *fasthttp.Request, enableGzip, uploadIndex bool) (Closers, error) {
+	if !p.Init && p.Eval {
+		p.requestHeader.SetRequestURI(Gen(p.URL, IgnoreJSON))
+	}
 	p.requestHeader.CopyTo(&req.Header)
 	if isTLS {
 		req.URI().SetScheme("https")
@@ -144,6 +147,14 @@ type Option struct {
 	Tag      string
 	Eval     bool
 	JsonBody bool
+
+	// 作为初始化调用，例如登录
+	Init bool
+
+	// 从结果 JSON 中 使用 jj.Get 提取值, 参见 demo.http 中写法
+	// 例如：result.id=chinaID，表示设置 @id = jj.Get(responseJSON, "chinaID")
+	// 一般配合初始化调用使用，例如从登录结果中提取 accessToken 等
+	ResultExpr map[string]string `prefix:"result."`
 }
 
 type Profile struct {
