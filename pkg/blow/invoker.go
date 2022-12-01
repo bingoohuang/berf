@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/url"
@@ -287,7 +286,7 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 	}
 
 	if r.opt.logf == nil && r.opt.printOption == 0 {
-		return rsp.BodyWriteTo(ioutil.Discard)
+		return rsp.BodyWriteTo(io.Discard)
 	}
 
 	bx := io.Discard
@@ -505,15 +504,16 @@ func (r *Invoker) runProfiles(req *fasthttp.Request, rsp *fasthttp.Response, ini
 
 	profiles := r.opt.profiles
 	if initial {
+		initProfiles := make([]*internal.Profile, 0, len(profiles))
 		nonInitial := make([]*internal.Profile, 0, len(profiles))
-		profiles = make([]*internal.Profile, 0, len(profiles))
 		for _, p := range r.opt.profiles {
 			if p.Init {
-				profiles = append(profiles, p)
+				initProfiles = append(initProfiles, p)
 			} else {
 				nonInitial = append(nonInitial, p)
 			}
 		}
+		profiles = initProfiles
 		r.opt.profiles = nonInitial
 	}
 
@@ -548,12 +548,14 @@ func (r *Invoker) runOneProfile(p *internal.Profile, req *fasthttp.Request, rsp 
 		return err
 	}
 
-	var f func(jsonBody []byte)
+	f := createJSONValuer(p)
+	return r.processRsp(req, rsp, rr, f)
+}
 
+func createJSONValuer(p *internal.Profile) func(jsonBody []byte) {
 	if p.Init {
-		expr := p.ResultExpr
-		if len(expr) > 0 {
-			f = func(jsonBody []byte) {
+		if expr := p.ResultExpr; len(expr) > 0 {
+			return func(jsonBody []byte) {
 				for ek, ev := range expr {
 					if jr := jj.GetBytes(jsonBody, ev); jr.Type != jj.Null {
 						internal.Valuer.Register(ek, func(string) interface{} {
@@ -565,7 +567,7 @@ func (r *Invoker) runOneProfile(p *internal.Profile, req *fasthttp.Request, rsp 
 		}
 	}
 
-	return r.processRsp(req, rsp, rr, f)
+	return nil
 }
 
 func parseStatus(rsp *fasthttp.Response, statusName string) string {

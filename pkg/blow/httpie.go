@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"net"
@@ -185,7 +184,7 @@ func (a *HttpieArg) Build(method string, form bool) *HttpieArgBody {
 		}()
 		b.Multipart = true
 		b.ContentType = bodyWriter.FormDataContentType()
-		b.Body = ioutil.NopCloser(pr)
+		b.Body = io.NopCloser(pr)
 		return b
 	}
 
