@@ -23,6 +23,33 @@ Result: 贵州省黔西南布依族苗族自治州樛苫路3959号桘憴小区13
 Base64RawURL: 6LS15bee55yB6buU6KW_5Y2X5biD5L6d5peP6IuX5peP6Ieq5rK75bee5qib6Iur6LevMzk1OeWPt-ahmOaGtOWwj-WMujEz5Y2V5YWDMTkyNeWupA
 ```
 
+
+```sh
+$ export FEATURE_KEY=9vp_4npwFPl61E3ibzWGuA
+$ export FEATURE_IV=CIeOz71eHEQQ5dJewDaO0w
+$ export FEATURE_INPUT=贵州省黔西南布依族苗族自治州樛苫路3959号桘憴小区13单元1925室
+$ berf-crypto -f alg=sm4 -n1
+Input : 贵州省黔西南布依族苗族自治州樛苫路3959号桘憴小区13单元1925室
+Key   : 9vp_4npwFPl61E3ibzWGuA (base64.RawURLEncoding)
+IV    : CIeOz71eHEQQ5dJewDaO0w (base64.RawURLEncoding)
+Base64RawURL: X-6sWkYfoHdX2N0BAd9g5Sb8BipFAx2SxAysJMvUz5Eubw9eEUlepqltQr7V7FUOEyMiUAhdCMUaixgyQmcZzyeWvrLKRxrJ6Pe5kXgK-O-mPnUm91jV79iY2WjODhBQ
+$ export FEATURE_INPUT=X-6sWkYfoHdX2N0BAd9g5Sb8BipFAx2SxAysJMvUz5Eubw9eEUlepqltQr7V7FUOEyMiUAhdCMUaixgyQmcZzyeWvrLKRxrJ6Pe5kXgK-O-mPnUm91jV79iY2WjODhBQ
+$ berf-crypto -f alg=sm4,decode -n1
+Input : X-6sWkYfoHdX2N0BAd9g5Sb8BipFAx2SxAysJMvUz5Eubw9eEUlepqltQr7V7FUOEyMiUAhdCMUaixgyQmcZzyeWvrLKRxrJ6Pe5kXgK-O-mPnUm91jV79iY2WjODhBQ (base64.RawURLEncoding)
+Key   : 9vp_4npwFPl61E3ibzWGuA (base64.RawURLEncoding)
+IV    : CIeOz71eHEQQ5dJewDaO0w (base64.RawURLEncoding)
+Result: 贵州省黔西南布依族苗族自治州樛苫路3959号桘憴小区13单元1925室
+Base64RawURL: 6LS15bee55yB6buU6KW_5Y2X5biD5L6d5peP6IuX5peP6Ieq5rK75bee5qib6Iur6LevMzk1OeWPt-ahmOaGtOWwj-WMujEz5Y2V5YWDMTkyNeWupA
+$ echo X-6sWkYfoHdX2N0BAd9g5Sb8BipFAx2SxAysJMvUz5Eubw9eEUlepqltQr7V7FUOEyMiUAhdCMUaixgyQmcZzyeWvrLKRxrJ6Pe5kXgK-O-mPnUm91jV79iY2WjODhBQ > /tmp/x6s.txt
+$ export FEATURE_INPUT=@/tmp/x6s.txt                                                                                                                   
+$ berf-crypto -f alg=sm4,decode -n1
+Input : X-6sWkYfoHdX2N0BAd9g5Sb8BipFAx2SxAysJMvUz5Eubw9eEUlepqltQr7V7FUOEyMiUAhdCMUaixgyQmcZzyeWvrLKRxrJ6Pe5kXgK-O-mPnUm91jV79iY2WjODhBQ (base64.RawURLEncoding)
+Key   : 9vp_4npwFPl61E3ibzWGuA (base64.RawURLEncoding)
+IV    : CIeOz71eHEQQ5dJewDaO0w (base64.RawURLEncoding)
+Result: 贵州省黔西南布依族苗族自治州樛苫路3959号桘憴小区13单元1925室
+Base64RawURL: 6LS15bee55yB6buU6KW_5Y2X5biD5L6d5peP6IuX5peP6Ieq5rK75bee5qib6Iur6LevMzk1OeWPt-ahmOaGtOWwj-WMujEz5Y2V5YWDMTkyNeWupA
+```
+
 ```sh
 $ go/bin/berf-crypto -f alg=sm4 -d15s
 Berf benchmarking profiles SM4 (alg=sm4) for 15s using 100 goroutine(s), 4 GoMaxProcs.

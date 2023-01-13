@@ -14,6 +14,7 @@ import (
 
 	"github.com/bingoohuang/gg/pkg/iox"
 	"github.com/bingoohuang/gg/pkg/osx"
+	"github.com/bingoohuang/gg/pkg/osx/env"
 	"github.com/bingoohuang/gg/pkg/ss"
 	"go.uber.org/multierr"
 )
@@ -312,14 +313,52 @@ func (f *Features) GetInt(feature string, defaultValue int) int {
 
 // Get gets the feature map contains a features.
 func (f *Features) Get(feature string) string {
-	s, _ := (*f)[strings.ToLower(feature)]
-	return s
+	s := f.get(feature)
+	return tryReadFile(s)
+}
+
+func tryReadFile(s string) string {
+	if v, _, err := readFile(s); err != nil {
+		// log.Fatalf("Read File %s failed: %v", s, err)
+		return s
+	} else {
+		return string(v)
+	}
+}
+
+func readFile(s string) (data []byte, fn string, e error) {
+	if !strings.HasPrefix(s, "@") {
+		return []byte(s), "", nil
+	}
+
+	s = strings.TrimPrefix(s, "@")
+	f, err := os.Open(s)
+	if err != nil {
+		return nil, s, err
+	}
+	defer iox.Close(f)
+	content, err := io.ReadAll(f)
+	if err != nil {
+		return nil, s, err
+	}
+	return content, s, nil
+}
+
+func (f *Features) get(feature string) string {
+	if s, _ := (*f)[strings.ToLower(feature)]; s != "" {
+		return s
+	}
+
+	return os.Getenv("FEATURE_" + strings.ToUpper(feature))
 }
 
 // Has tells the feature map contains a features.
 func (f *Features) Has(feature string) bool {
-	_, ok := (*f)[strings.ToLower(feature)]
-	return ok
+	if _, ok := (*f)[strings.ToLower(feature)]; ok {
+		return ok
+	}
+
+	return env.Bool("FEATURE_"+strings.ToUpper(feature), false)
 }
 
 // HasAny tells the feature map contains any of the features.
