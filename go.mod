@@ -12,6 +12,7 @@ require (
 	github.com/beorn7/perks v1.0.1
 	github.com/bingoohuang/gg v0.0.0-20220825014456-513d8c7ea917
 	github.com/bingoohuang/jj v0.0.0-20221201004110-53fe89b4920f
+	github.com/deatil/go-cryptobin v1.0.1042
 	github.com/dustin/go-humanize v1.0.0
 	github.com/go-echarts/go-echarts/v2 v2.2.4
 	github.com/gobwas/glob v0.2.3
@@ -43,6 +44,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.4.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect

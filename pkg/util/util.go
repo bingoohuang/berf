@@ -288,6 +288,28 @@ func (f *Features) Setup(featuresArr []string) {
 
 func (f *Features) IsNop() bool { return f.Has("nop") }
 
+// GetOr gets the feature value or default.
+func (f *Features) GetOr(feature, defaultValue string) string {
+	s, _ := (*f)[strings.ToLower(feature)]
+	return ss.Or(s, defaultValue)
+}
+
+// GetInt gets the feature value as int.
+func (f *Features) GetInt(feature string, defaultValue int) int {
+	s, _ := (*f)[strings.ToLower(feature)]
+	if s == "" {
+		return defaultValue
+	}
+
+	val, err := strconv.Atoi(s)
+	if err != nil {
+		log.Printf("%s's value %s is not an int", feature, s)
+		return defaultValue
+	}
+
+	return val
+}
+
 // Get gets the feature map contains a features.
 func (f *Features) Get(feature string) string {
 	s, _ := (*f)[strings.ToLower(feature)]
