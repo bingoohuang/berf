@@ -7,20 +7,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bingoohuang/berf/pkg/blow"
-
-	"github.com/bingoohuang/gg/pkg/sigx"
-
-	"github.com/bingoohuang/gg/pkg/ctl"
-
-	"golang.org/x/crypto/ssh/terminal"
-
-	"github.com/bingoohuang/gg/pkg/osx"
-
 	"github.com/bingoohuang/berf"
+	"github.com/bingoohuang/berf/pkg/blow"
+	"github.com/bingoohuang/gg/pkg/ctl"
 	"github.com/bingoohuang/gg/pkg/fla9"
+	"github.com/bingoohuang/gg/pkg/osx"
 	"github.com/bingoohuang/gg/pkg/randx"
+	"github.com/bingoohuang/gg/pkg/sigx"
 	"github.com/mattn/go-isatty"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 var (

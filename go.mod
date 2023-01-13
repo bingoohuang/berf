@@ -25,7 +25,7 @@ require (
 	github.com/valyala/fasthttp v1.37.0
 	go.uber.org/multierr v1.8.0
 	golang.org/x/crypto v0.3.0
-	golang.org/x/sys v0.2.0
+	golang.org/x/sys v0.4.0
 )
 
 require (
@@ -51,7 +51,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/image v0.0.0-20210220032944-ac19c3e999fb // indirect
-	golang.org/x/net v0.2.0 // indirect
-	golang.org/x/term v0.2.0 // indirect
-	golang.org/x/text v0.4.0 // indirect
+	golang.org/x/net v0.5.0 // indirect
+	golang.org/x/term v0.4.0 // indirect
+	golang.org/x/text v0.6.0 // indirect
 )

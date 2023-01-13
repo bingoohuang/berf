@@ -8,15 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bingoohuang/berf/pkg/util"
-
-	"github.com/bingoohuang/gg/pkg/rest"
-
-	"github.com/bingoohuang/berf/pkg/blow/internal"
-
 	"github.com/bingoohuang/berf"
+	"github.com/bingoohuang/berf/pkg/blow/internal"
+	"github.com/bingoohuang/berf/pkg/util"
 	"github.com/bingoohuang/gg/pkg/fla9"
 	"github.com/bingoohuang/gg/pkg/osx"
+	"github.com/bingoohuang/gg/pkg/rest"
 	"github.com/bingoohuang/gg/pkg/ss"
 )
 

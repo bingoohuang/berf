@@ -13,12 +13,9 @@ import (
 	"time"
 
 	"github.com/bingoohuang/gg/pkg/iox"
-
 	"github.com/bingoohuang/gg/pkg/osx"
-
-	"go.uber.org/multierr"
-
 	"github.com/bingoohuang/gg/pkg/ss"
+	"go.uber.org/multierr"
 )
 
 func ParseEnvDuration(name string, defaultValue time.Duration) time.Duration {

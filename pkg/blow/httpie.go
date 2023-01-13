@@ -13,10 +13,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/bingoohuang/gg/pkg/ss"
-
 	"github.com/bingoohuang/gg/pkg/iox"
 	"github.com/bingoohuang/gg/pkg/rest"
+	"github.com/bingoohuang/gg/pkg/ss"
 )
 
 var keyReq = regexp.MustCompile(`^([\d\w_.\-]+)(==|:=|=|:|@)(.*)`)

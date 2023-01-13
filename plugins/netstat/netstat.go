@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"syscall"
 
-	"github.com/shirou/gopsutil/v3/net"
-
 	"github.com/bingoohuang/berf/plugins"
 	"github.com/bingoohuang/berf/plugins/system"
+	"github.com/shirou/gopsutil/v3/net"
 )
 
 type NetStats struct {

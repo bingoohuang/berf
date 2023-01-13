@@ -83,20 +83,22 @@ const (
 
 // PrepareMultipartPayload prepares the multipart playload of http request.
 // Multipart request has the following structure:
-//  POST /upload HTTP/1.1
-//  Other-Headers: ...
-//  Content-Type: multipart/form-Data; boundary=$boundary
-//  \r\n
-//  --$boundary\r\n    👈 request body starts here
-//  Content-Disposition: form-Data; name="field1"\r\n
-//  Content-Type: text/plain; charset=utf-8\r\n
-//  Content-Length: 4\r\n
-//  \r\n
-//  $content\r\n
-//  --$boundary\r\n
-//  Content-Disposition: form-Data; name="field2"\r\n
-//  ...
-//  --$boundary--\r\n
+//
+//	POST /upload HTTP/1.1
+//	Other-Headers: ...
+//	Content-Type: multipart/form-Data; boundary=$boundary
+//	\r\n
+//	--$boundary\r\n    👈 request body starts here
+//	Content-Disposition: form-Data; name="field1"\r\n
+//	Content-Type: text/plain; charset=utf-8\r\n
+//	Content-Length: 4\r\n
+//	\r\n
+//	$content\r\n
+//	--$boundary\r\n
+//	Content-Disposition: form-Data; name="field2"\r\n
+//	...
+//	--$boundary--\r\n
+//
 // https://stackoverflow.com/questions/39761910/how-can-you-upload-files-as-a-stream-in-go/39781706
 // https://blog.depa.do/post/bufferless-multipart-post-in-go
 func PrepareMultipartPayload(fields map[string]interface{}) *Multipart {

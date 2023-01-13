@@ -5,7 +5,6 @@ import (
 	"runtime"
 
 	"github.com/bingoohuang/berf/pkg/util"
-
 	"github.com/bingoohuang/berf/plugins"
 	"github.com/bingoohuang/berf/plugins/system"
 )

@@ -9,12 +9,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/bingoohuang/gg/pkg/ss"
-
 	"github.com/bingoohuang/berf/pkg/util"
-	"github.com/bingoohuang/gg/pkg/osx"
-
 	"github.com/bingoohuang/berf/plugins"
+	"github.com/bingoohuang/gg/pkg/osx"
+	"github.com/bingoohuang/gg/pkg/ss"
 )
 
 type PID int32

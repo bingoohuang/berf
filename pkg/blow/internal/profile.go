@@ -13,10 +13,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/bingoohuang/gg/pkg/iox"
-
 	"github.com/bingoohuang/gg/pkg/gz"
-
+	"github.com/bingoohuang/gg/pkg/iox"
 	"github.com/bingoohuang/gg/pkg/rest"
 	"github.com/bingoohuang/jj"
 	"github.com/valyala/fasthttp"

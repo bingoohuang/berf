@@ -20,25 +20,17 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/bingoohuang/gg/pkg/codec/b64"
-
-	"github.com/bingoohuang/gg/pkg/iox"
-
-	"github.com/bingoohuang/gg/pkg/man"
-
-	"github.com/bingoohuang/gg/pkg/vars"
-
-	"github.com/bingoohuang/gg/pkg/fla9"
-
-	"github.com/thoas/go-funk"
-
-	"github.com/bingoohuang/gg/pkg/ss"
-
-	"github.com/bingoohuang/berf/pkg/blow/internal"
-
 	"github.com/bingoohuang/berf"
+	"github.com/bingoohuang/berf/pkg/blow/internal"
+	"github.com/bingoohuang/gg/pkg/codec/b64"
+	"github.com/bingoohuang/gg/pkg/fla9"
 	"github.com/bingoohuang/gg/pkg/gz"
+	"github.com/bingoohuang/gg/pkg/iox"
+	"github.com/bingoohuang/gg/pkg/man"
+	"github.com/bingoohuang/gg/pkg/ss"
+	"github.com/bingoohuang/gg/pkg/vars"
 	"github.com/bingoohuang/jj"
+	"github.com/thoas/go-funk"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpproxy"
 )

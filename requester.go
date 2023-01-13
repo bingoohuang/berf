@@ -12,7 +12,6 @@ import (
 
 	"github.com/bingoohuang/gg/pkg/osx"
 	"github.com/bingoohuang/gg/pkg/ss"
-
 	"github.com/bingoohuang/gg/pkg/thinktime"
 )
 

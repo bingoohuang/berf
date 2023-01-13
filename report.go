@@ -7,11 +7,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bingoohuang/berf/pkg/util"
-
 	"github.com/axiomhq/hyperloglog"
 	"github.com/beorn7/perks/histogram"
 	"github.com/beorn7/perks/quantile"
+	"github.com/bingoohuang/berf/pkg/util"
 )
 
 type ReportRecord struct {

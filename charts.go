@@ -3,6 +3,7 @@ package berf
 import (
 	"bytes"
 	"embed"
+	_ "embed"
 	"fmt"
 	"io"
 	"log"
@@ -11,19 +12,13 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/bingoohuang/gg/pkg/osx"
-
-	util2 "github.com/bingoohuang/berf/pkg/util"
-
-	"github.com/bingoohuang/gg/pkg/mapp"
-	"github.com/bingoohuang/jj"
-
-	"github.com/bingoohuang/berf/plugins"
-	"github.com/bingoohuang/gg/pkg/ss"
-
-	_ "embed"
-
 	cors "github.com/AdhityaRamadhanus/fasthttpcors"
+	util2 "github.com/bingoohuang/berf/pkg/util"
+	"github.com/bingoohuang/berf/plugins"
+	"github.com/bingoohuang/gg/pkg/mapp"
+	"github.com/bingoohuang/gg/pkg/osx"
+	"github.com/bingoohuang/gg/pkg/ss"
+	"github.com/bingoohuang/jj"
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/components"
 	"github.com/go-echarts/go-echarts/v2/opts"

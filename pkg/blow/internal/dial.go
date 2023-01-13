@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/bingoohuang/berf/pkg/blow/lossy"
-
 	"github.com/dustin/go-humanize"
 	"github.com/valyala/fasthttp"
 )

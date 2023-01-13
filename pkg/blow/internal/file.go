@@ -12,11 +12,9 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/bingoohuang/berf/pkg/blow/internal/art"
 	"github.com/bingoohuang/berf/pkg/util"
 	"github.com/bingoohuang/gg/pkg/iox"
-
-	"github.com/bingoohuang/berf/pkg/blow/internal/art"
-
 	"github.com/bingoohuang/gg/pkg/randx"
 	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/bingoohuang/gg/pkg/uid"

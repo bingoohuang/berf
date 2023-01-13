@@ -7,15 +7,12 @@ import (
 	"sort"
 	"time"
 
-	"github.com/bingoohuang/gg/pkg/ss"
-
-	"github.com/bingoohuang/berf/plugins/internal"
-
-	"github.com/bingoohuang/berf/pkg/util"
-
 	"github.com/bingoohuang/berf/pkg/filter"
+	"github.com/bingoohuang/berf/pkg/util"
 	"github.com/bingoohuang/berf/plugins"
+	"github.com/bingoohuang/berf/plugins/internal"
 	"github.com/bingoohuang/berf/plugins/system"
+	"github.com/bingoohuang/gg/pkg/ss"
 )
 
 type NetIOStats struct {

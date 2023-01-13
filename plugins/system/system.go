@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/bingoohuang/berf/pkg/util"
-
 	"github.com/bingoohuang/berf/plugins"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/host"
