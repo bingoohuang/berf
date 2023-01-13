@@ -2,17 +2,25 @@
 
 ```sh
 $ berf-crypto -f alg=sm4 -n1
-Plain : VBKtvv6zfw0WgTbqKPyHzt3OefBYOZam1Sl44atFh8xFKunFVdFGIYdV06eR8kX5RKEnG+eAS1Q6JADges7zKQ==
-Key   : 3Z6ezhPRC+LgmIgrdM2/Sg==
-IV    : PCJETWOdUAiH7l0mehvh5Q==
-Result: U83fL7mTPsXUixy06e8mqHPeEk6kDBBNYwYLcxT35L53GqVqNfH4mrd9ftOhQKnVP1C0FlOTQvYoggSs2Qr9SaPPpJhI5dxTh3A03adWy70=
+Input : yliSCincHh56yqTx2tU2v6oxOsRX7lfYsMGBJ936x2R1vW3-uLZ8yBiN1skLgFtjPPTflJZ3ew6d1Pat6ZGTcA (base64.RawURLEncoding)
+Key   : 9vp_4npwFPl61E3ibzWGuA (base64.RawURLEncoding)
+IV    : CIeOz71eHEQQ5dJewDaO0w (base64.RawURLEncoding)
+Base64RawURL: BPr4UvuGEOdAe4oakb6xnqrdW9beoY3Q8yaTBW8sO_1DB-1T4iLFpfKrMvwm_yEfLWDv3SuVT0Kxb36bTygntTBWEPMi7mAnjx0UkCFdzVM
 ```
+
 ```sh
-$ go/bin/berf-crypto -f alg=sm4,plain=VBKtvv6zfw0WgTbqKPyHzt3OefBYOZam1Sl44atFh8xFKunFVdFGIYdV06eR8kX5RKEnG+eAS1Q6JADges7zKQ,key=3Z6ezhPRC+LgmIgrdM2/Sg,iv=PCJETWOdUAiH7l0mehvh5Q -n1
-Plain : VBKtvv6zfw0WgTbqKPyHzt3OefBYOZam1Sl44atFh8xFKunFVdFGIYdV06eR8kX5RKEnG+eAS1Q6JADges7zKQ==
-Key   : 3Z6ezhPRC+LgmIgrdM2/Sg==
-IV    : PCJETWOdUAiH7l0mehvh5Q==
-Result: U83fL7mTPsXUixy06e8mqHPeEk6kDBBNYwYLcxT35L53GqVqNfH4mrd9ftOhQKnVP1C0FlOTQvYoggSs2Qr9SaPPpJhI5dxTh3A03adWy70=
+$ berf-crypto -f alg=sm4,input=贵州省黔西南布依族苗族自治州樛苫路3959号桘憴小区13单元1925室 -n1
+Input : 贵州省黔西南布依族苗族自治州樛苫路3959号桘憴小区13单元1925室
+Key   : KQPif779NCLFzOC9HlLGqg (base64.RawURLEncoding)
+IV    : 1T_G1iqcq2w7frfetLsbFw (base64.RawURLEncoding)
+Base64RawURL: LqRGzuvpl4dDglCmlUYf1CKt3n1xLhsR-SGO2Pt9j8HunVr9qSyc58b02amFjwsmtQHCoByB0X47sP-jAIRiY30EQ-qqPSbUxpes58jE12THx766kF0FBJJ2DqnFFEci
+
+$ berf-crypto -f decode,alg=sm4,input=LqRGzuvpl4dDglCmlUYf1CKt3n1xLhsR-SGO2Pt9j8HunVr9qSyc58b02amFjwsmtQHCoByB0X47sP-jAIRiY30EQ-qqPSbUxpes58jE12THx766kF0FBJJ2DqnFFEci,key=KQPif779NCLFzOC9HlLGqg,iv=1T_G1iqcq2w7frfetLsbFw -n1
+Input : LqRGzuvpl4dDglCmlUYf1CKt3n1xLhsR-SGO2Pt9j8HunVr9qSyc58b02amFjwsmtQHCoByB0X47sP-jAIRiY30EQ-qqPSbUxpes58jE12THx766kF0FBJJ2DqnFFEci (base64.RawURLEncoding)
+Key   : KQPif779NCLFzOC9HlLGqg (base64.RawURLEncoding)
+IV    : 1T_G1iqcq2w7frfetLsbFw (base64.RawURLEncoding)
+Result: 贵州省黔西南布依族苗族自治州樛苫路3959号桘憴小区13单元1925室
+Base64RawURL: 6LS15bee55yB6buU6KW_5Y2X5biD5L6d5peP6IuX5peP6Ieq5rK75bee5qib6Iur6LevMzk1OeWPt-ahmOaGtOWwj-WMujEz5Y2V5YWDMTkyNeWupA
 ```
 
 ```sh

@@ -280,7 +280,7 @@ type Features map[string]string
 // Setup sets up a feature map by features string, which separates feature names by comma.
 func (f *Features) Setup(featuresArr []string) {
 	for _, features := range featuresArr {
-		for k, v := range ss.SplitToMap(features, ":=", ",") {
+		for k, v := range ss.SplitToMap(features, "=", ",") {
 			(*f)[strings.ToLower(k)] = v
 		}
 	}

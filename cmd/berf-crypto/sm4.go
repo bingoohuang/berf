@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/bingoohuang/berf"
@@ -11,41 +12,80 @@ import (
 )
 
 type sm4Bench struct {
-	plain []byte
-	key   []byte
-	iv    []byte
+	input  []byte
+	key    []byte
+	iv     []byte
+	decode bool
 }
 
 func (s *sm4Bench) Init(conf *berf.Config) {
-	plainSize := conf.GetInt("size", 64)
-	s.plain = getConf(conf, "plain", plainSize)
-	s.key = getConf(conf, "key", 16)
-	s.iv = getConf(conf, "iv", 16)
+	inputSize := conf.GetInt("size", 64)
+	var inputType, keyType, ivType ValueType
+	s.input, inputType = getConf(conf, "input", inputSize)
+	s.key, keyType = getConf(conf, "key", 16)
+	s.iv, ivType = getConf(conf, "iv", 16)
+	s.decode = conf.Has("decode")
 
 	if conf.N >= 1 && conf.N <= 10 {
-		fmt.Printf("Plain : %s\n", base64.StdEncoding.EncodeToString(s.plain))
-		fmt.Printf("Key   : %s\n", base64.StdEncoding.EncodeToString(s.key))
-		fmt.Printf("IV    : %s\n", base64.StdEncoding.EncodeToString(s.iv))
+		fmt.Printf("Input : %s\n", inputType.String(s.input))
+		fmt.Printf("Key   : %s\n", keyType.String(s.key))
+		fmt.Printf("IV    : %s\n", ivType.String(s.iv))
 	}
 }
 
-func getConf(conf *berf.Config, key string, size int) []byte {
+type ValueType int
+
+func (t ValueType) String(value []byte) string {
+	switch t {
+	case TypeRawManual:
+		return string(value)
+	default:
+		return base64.RawURLEncoding.EncodeToString(value) + " (base64.RawURLEncoding)"
+	}
+}
+
+const (
+	TypeBase64 ValueType = iota
+	TypeRawManual
+	TypeRawRandom
+)
+
+func getConf(conf *berf.Config, key string, size int) ([]byte, ValueType) {
 	val := conf.Get(key)
 	if val == "" {
-		return randBytes(size)
+		return randBytes(size), TypeRawRandom
 	}
 
-	return b64.DecodeString2Bytes(val)
+	const prefixRaw = "raw:"
+	if strings.HasPrefix(val, prefixRaw) {
+		return []byte(val[len(prefixRaw):]), TypeRawManual
+	}
+
+	const prefixBase64 = "base64:"
+	if strings.HasPrefix(val, prefixBase64) {
+		return b64.DecodeString2Bytes(val[len(prefixBase64):]), TypeBase64
+	}
+
+	data, err := b64.DecodeBytes([]byte(val))
+	if err == nil {
+		return data, TypeBase64
+	}
+
+	return []byte(val), TypeRawManual
 }
 
 func (s *sm4Bench) Invoke(conf *berf.Config) (*berf.Result, error) {
 	start := time.Now()
 
-	result := crypto.FromBytes(s.plain).
+	result := crypto.FromBytes(s.input).
 		SetKey(string(s.key)).
 		SetIv(string(s.iv)).
-		SM4().CBC().PKCS7Padding().
-		Encrypt()
+		SM4().CBC().PKCS7Padding()
+	if s.decode {
+		result = result.Decrypt()
+	} else {
+		result = result.Encrypt()
+	}
 	end := time.Now()
 	data := result.ToBytes()
 
@@ -54,11 +94,15 @@ func (s *sm4Bench) Invoke(conf *berf.Config) (*berf.Result, error) {
 	}
 
 	if conf.N >= 1 && conf.N < 10 {
-		fmt.Printf("Result: %s\n", base64.StdEncoding.EncodeToString(data))
+		if s.decode {
+			fmt.Printf("Result: %s\n", data)
+		}
+
+		fmt.Printf("Base64RawURL: %s\n", base64.RawURLEncoding.EncodeToString(data))
 	}
 
 	return &berf.Result{
-		ReadBytes:  int64(len(s.plain)),
+		ReadBytes:  int64(len(s.input)),
 		WriteBytes: int64(len(data)),
 		Cost:       end.Sub(start),
 	}, nil
