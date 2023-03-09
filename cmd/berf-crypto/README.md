@@ -50,6 +50,79 @@ Result: 贵州省黔西南布依族苗族自治州樛苫路3959号桘憴小区13
 Base64RawURL: 6LS15bee55yB6buU6KW_5Y2X5biD5L6d5peP6IuX5peP6Ieq5rK75bee5qib6Iur6LevMzk1OeWPt-ahmOaGtOWwj-WMujEz5Y2V5YWDMTkyNeWupA
 ```
 
+## 结果1
+
+`sysinfo -format json -show cpu | jj`
+
+```json
+{
+  "OS": "linux",
+  "CPUInfos": [
+    {
+      "PhysicalID": "0",
+      "VendorID": "GenuineIntel",
+      "Family": "6",
+      "ModelName": "Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz",
+      "Cores": 1,
+      "Mhz": 2300
+    },
+    {
+      "PhysicalID": "2",
+      "VendorID": "GenuineIntel",
+      "Family": "6",
+      "ModelName": "Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz",
+      "Cores": 1,
+      "Mhz": 2300
+    },
+    {
+      "PhysicalID": "4",
+      "VendorID": "GenuineIntel",
+      "Family": "6",
+      "ModelName": "Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz",
+      "Cores": 1,
+      "Mhz": 2300
+    },
+    {
+      "PhysicalID": "6",
+      "VendorID": "GenuineIntel",
+      "Family": "6",
+      "ModelName": "Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz",
+      "Cores": 1,
+      "Mhz": 2300
+    }
+  ],
+  "CPU": {
+    "BrandName": "Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz",
+    "VendorID": 1,
+    "VendorString": "GenuineIntel",
+    "PhysicalCores": 1,
+    "ThreadsPerCore": 1,
+    "LogicalCores": 1,
+    "Family": 6,
+    "Model": 85,
+    "Stepping": 7,
+    "CacheLine": 64,
+    "Hz": 2300000000,
+    "BoostFreq": 0,
+    "Cache": {
+      "L1I": 32768,
+      "L1D": 32768,
+      "L2": 1048576,
+      "L3": 23068672
+    },
+    "SGX": {
+      "Available": false,
+      "LaunchControl": false,
+      "SGX1Supported": false,
+      "SGX2Supported": false,
+      "MaxEnclaveSizeNot64": 0,
+      "MaxEnclaveSize64": 0,
+      "EPCSections": null
+    }
+  }
+}
+```
+
 ```sh
 $ go/bin/berf-crypto -f alg=sm4 -d15s
 Berf benchmarking profiles SM4 (alg=sm4) for 15s using 100 goroutine(s), 4 GoMaxProcs.
@@ -85,3 +158,96 @@ Latency Percentile:
   P50  P75  P90  P95   P99    P99.9   P99.99
   0s   1µs  2µs  5µs  340µs  4.049ms  15.53ms
 ```
+
+## 结果2
+
+```json
+{
+  "OS": "linux",
+  "CPUInfos": [
+    {
+      "PhysicalID": "0",
+      "VendorID": "GenuineIntel",
+      "Family": "6",
+      "ModelName": "Intel(R) Xeon(R) Silver 4210 CPU @ 2.20GHz",
+      "Cores": 20,
+      "Mhz": 2201
+    },
+    {
+      "PhysicalID": "1",
+      "VendorID": "GenuineIntel",
+      "Family": "6",
+      "ModelName": "Intel(R) Xeon(R) Silver 4210 CPU @ 2.20GHz",
+      "Cores": 20,
+      "Mhz": 2201
+    }
+  ],
+  "CPU": {
+    "BrandName": "Intel(R) Xeon(R) Silver 4210 CPU @ 2.20GHz",
+    "VendorID": 1,
+    "VendorString": "GenuineIntel",
+    "PhysicalCores": 10,
+    "ThreadsPerCore": 2,
+    "LogicalCores": 20,
+    "Family": 6,
+    "Model": 85,
+    "Stepping": 7,
+    "CacheLine": 64,
+    "Hz": 2200000000,
+    "BoostFreq": 3200000000,
+    "Cache": {
+      "L1I": 32768,
+      "L1D": 32768,
+      "L2": 1048576,
+      "L3": 14417920
+    },
+    "SGX": {
+      "Available": false,
+      "LaunchControl": false,
+      "SGX1Supported": false,
+      "SGX2Supported": false,
+      "MaxEnclaveSizeNot64": 0,
+      "MaxEnclaveSize64": 0,
+      "EPCSections": null
+    }
+  }
+}
+```
+
+```sh
+$ ./berf-crypto -f alg=sm4 -d15s
+Berf benchmarking profiles SM4 (alg=sm4) for 15s using 100 goroutine(s), 40 GoMaxProcs.
+
+Summary:
+  Elapsed                 15.011s
+  Count/RPS    4565623 304135.358
+  ReadWrite  155.717 194.647 Mbps
+
+Statistics     Min       Mean      StdDev      Max
+  Latency      2µs       20µs      121µs     8.627ms
+  RPS       272482.89  303441.64  13174.95  322551.25
+
+Latency Percentile:
+  P50  P75  P90   P95    P99    P99.9   P99.99
+  8µs  9µs  12µs  17µs  392µs  1.892ms  3.398ms
+
+
+$ ./berf-crypto -f alg=aes -d15s
+Berf benchmarking profiles AES (alg=aes) for 15s using 100 goroutine(s), 40 GoMaxProcs.
+
+Summary:
+  Elapsed                 15.012s
+  Count/RPS    4302789 286615.618
+  ReadWrite  137.575 238.464 Mbps
+
+Statistics     Min       Mean     StdDev      Max
+  Latency      0s        25µs      150µs   10.477ms
+  RPS       270453.21  285965.32  6167.23  294686.76
+
+Latency Percentile:
+  P50  P75  P90  P95    P99    P99.9   P99.99
+  3µs  4µs  9µs  18µs  806µs  1.969ms  3.081ms
+  
+```
+
+
