@@ -5,11 +5,11 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
-	"net"
 	"net/url"
 	"os"
 	"regexp"
@@ -27,6 +27,8 @@ import (
 	"github.com/bingoohuang/gg/pkg/gz"
 	"github.com/bingoohuang/gg/pkg/iox"
 	"github.com/bingoohuang/gg/pkg/man"
+	"github.com/bingoohuang/gg/pkg/osx"
+	"github.com/bingoohuang/gg/pkg/osx/env"
 	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/bingoohuang/gg/pkg/vars"
 	"github.com/bingoohuang/jj"
@@ -43,7 +45,7 @@ type Invoker struct {
 	opt        *Opt
 	uploadChan chan *internal.UploadChanValue
 
-	httpInvoke      func(req *fasthttp.Request, rsp *fasthttp.Response) error
+	httpInvoke      func(*fasthttp.Request, *fasthttp.Response) error
 	uploadFileField string
 	upload          string
 	requestUriExpr  vars.Subs
@@ -57,7 +59,7 @@ func NewInvoker(ctx context.Context, opt *Opt) (*Invoker, error) {
 	r := &Invoker{opt: opt}
 	r.printLock = NewConditionalLock(r.opt.printOption > 0)
 
-	header, err := r.buildRequestClient(opt)
+	header, err := r.buildRequestClient(ctx, opt)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +95,7 @@ func NewInvoker(ctx context.Context, opt *Opt) (*Invoker, error) {
 	return r, nil
 }
 
-func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) {
+func (r *Invoker) buildRequestClient(ctx context.Context, opt *Opt) (*fasthttp.RequestHeader, error) {
 	var u *url.URL
 	var err error
 
@@ -107,6 +109,12 @@ func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) 
 
 	if err != nil {
 		return nil, err
+	}
+
+	originSchemeHTTPS := u.Scheme == "https"
+	envTLCP := env.Bool("TLCP", false)
+	if originSchemeHTTPS && envTLCP {
+		u.Scheme = "http"
 	}
 
 	r.isTLS = u.Scheme == "https"
@@ -129,6 +137,10 @@ func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) 
 
 	wrap := internal.NetworkWrap(opt.network)
 	cli.Dial = internal.ThroughputStatDial(wrap, cli.Dial, &r.readBytes, &r.writeBytes)
+	if originSchemeHTTPS && envTLCP {
+		cli.Dial = createTlcpDialer(ctx, cli.Dial, r.opt.certPath, r.opt.tlcpCerts, r.opt.HasPrintOption, r.opt.tlsVerify)
+	}
+
 	if cli.TLSConfig, err = opt.buildTLSConfig(); err != nil {
 		return nil, err
 	}
@@ -210,7 +222,7 @@ func (r *Invoker) buildRequestClient(opt *Opt) (*fasthttp.RequestHeader, error) 
 	return &h, nil
 }
 
-func (r *Invoker) Run(_ *berf.Config, initial bool) (*berf.Result, error) {
+func (r *Invoker) Run(ctx context.Context, _ *berf.Config, initial bool) (*berf.Result, error) {
 	req := fasthttp.AcquireRequest()
 	resp := fasthttp.AcquireResponse()
 	defer fasthttp.ReleaseRequest(req)
@@ -360,11 +372,11 @@ func (r *Invoker) printReq(b *bytes.Buffer, bx io.Writer, ignoreBody bool, statu
 	}
 
 	printNum := 0
-	if r.opt.printOption&printReqHeader == printReqHeader {
+	if r.opt.HasPrintOption(printReqHeader) {
 		fmt.Println(ColorfulHeader(string(dumpHeader)))
 		printNum++
 	}
-	if r.opt.printOption&printReqBody == printReqBody {
+	if r.opt.HasPrintOption(printReqBody) {
 		if strings.TrimSpace(string(dumpBody)) != "" {
 			printBody(dumpBody, printNum, r.opt.pretty)
 			printNum++
@@ -651,18 +663,6 @@ func detectMethod(opt *Opt, arg HttpieArg) string {
 	return "GET"
 }
 
-func addMissingPort(addr string, isTLS bool) string {
-	if addr == "" {
-		return ""
-	}
-
-	if n := strings.Index(addr, ":"); n >= 0 {
-		return addr
-	}
-
-	return net.JoinHostPort(addr, ss.If(isTLS, "443", "80"))
-}
-
 func (o *Opt) buildTLSConfig() (*tls.Config, error) {
 	var certs []tls.Certificate
 	if o.certPath != "" && o.keyPath != "" {
@@ -672,8 +672,17 @@ func (o *Opt) buildTLSConfig() (*tls.Config, error) {
 		}
 		certs = append(certs, c)
 	}
-	return &tls.Config{
-		InsecureSkipVerify: o.insecure,
+
+	t := &tls.Config{
+		InsecureSkipVerify: !o.tlsVerify,
 		Certificates:       certs,
-	}, nil
+	}
+
+	if o.rootCert != "" {
+		pool := x509.NewCertPool()
+		pool.AppendCertsFromPEM(osx.ReadFile(o.rootCert, osx.WithFatalOnError(true)).Data)
+		t.RootCAs = pool
+	}
+
+	return t, nil
 }

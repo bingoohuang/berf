@@ -7,6 +7,7 @@ go 1.20
 replace github.com/shirou/gopsutil/v3 => ../gopsutil
 
 require (
+	gitee.com/Trisia/gotlcp v1.3.1
 	github.com/AdhityaRamadhanus/fasthttpcors v0.0.0-20170121111917-d4c07198763a
 	github.com/axiomhq/hyperloglog v0.0.0-20220105174342-98591331716a
 	github.com/beorn7/perks v1.0.1
@@ -14,6 +15,7 @@ require (
 	github.com/bingoohuang/jj v0.0.0-20221201004110-53fe89b4920f
 	github.com/deatil/go-cryptobin v1.0.1042
 	github.com/dustin/go-humanize v1.0.0
+	github.com/emmansun/gmsm v0.16.0
 	github.com/go-echarts/go-echarts/v2 v2.2.4
 	github.com/gobwas/glob v0.2.3
 	github.com/jdxyw/generativeart v0.0.0-20220127024657-50049f153090
@@ -25,7 +27,7 @@ require (
 	github.com/thoas/go-funk v0.9.2
 	github.com/valyala/fasthttp v1.37.0
 	go.uber.org/multierr v1.8.0
-	golang.org/x/crypto v0.3.0
+	golang.org/x/crypto v0.7.0
 	golang.org/x/sys v0.6.0
 )
 

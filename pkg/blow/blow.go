@@ -28,7 +28,7 @@ var (
 	pEnv      = fla9.String("env", "", "Profile env name selected")
 	pOpts     = fla9.Strings("opt", nil, "options, multiple by comma: \n"+
 		"      gzip:               enabled content gzip  \n"+
-		"      k:                  not verify the server's cert chain and host name \n"+
+		"      tlsVerify:          verify the server's cert chain and host name \n"+
 		"      no-keepalive/no-ka: disable keepalive \n"+
 		"      form:               use form instead of json \n"+
 		"      pretty:             pretty JSON \n"+
@@ -39,6 +39,8 @@ var (
 		"      notty:              no tty color \n")
 	pAuth       = fla9.String("auth", "", "basic auth, eg. scott:tiger or direct base64 encoded like c2NvdHQ6dGlnZXI")
 	pCertKey    = fla9.String("cert", "", "Path to the client's TLS Cert and private key file, eg. ca.pem,ca.key")
+	pRootCert   = fla9.String("root-ca", "", "Ca root certificate file to verify TLS")
+	pTlcpCerts  = fla9.String("tlcp-certs", "", "format: sign.cert.pem,sign.key.pem,enc.cert.pem,enc.key.pem")
 	pTimeout    = fla9.String("timeout", "", "Timeout for each http request, e.g. 5s for do:5s,dial:5s,write:5s,read:5s")
 	pSocks5     = fla9.String("socks5", "", "Socks5 proxy, ip:port")
 	pPrint      = fla9.String("print,p", "", "a: all, R: req all, H: req headers, B: req body, r: resp all, h: resp headers b: resp body c: status code")
@@ -51,6 +53,7 @@ const (
 	printRespHeader
 	printRespBody
 	printRespStatusCode
+	printDebug
 )
 
 func parsePrintOption(s string) (printOption uint8) {
@@ -64,6 +67,7 @@ func parsePrintOption(s string) (printOption uint8) {
 		"h": printRespHeader,
 		"b": printRespBody,
 		"c": printRespStatusCode,
+		"d": printDebug,
 	} {
 		if strings.Contains(s, r) {
 			printOption |= v
@@ -114,14 +118,14 @@ func (b *Bench) Final(_ context.Context, conf *berf.Config) error {
 
 func (b *Bench) Init(ctx context.Context, conf *berf.Config) (*berf.BenchOption, error) {
 	b.invoker = Blow(ctx, conf)
-	b.invoker.Run(conf, true)
+	b.invoker.Run(ctx, conf, true)
 	return &berf.BenchOption{
 		NoReport: b.invoker.opt.printOption > 0,
 	}, nil
 }
 
-func (b *Bench) Invoke(_ context.Context, conf *berf.Config) (*berf.Result, error) {
-	return b.invoker.Run(conf, false)
+func (b *Bench) Invoke(ctx context.Context, conf *berf.Config) (*berf.Result, error) {
+	return b.invoker.Run(ctx, conf, false)
 }
 
 type Opt struct {
@@ -131,6 +135,7 @@ type Opt struct {
 	url           string
 	upload        string
 
+	rootCert string
 	certPath string
 	keyPath  string
 
@@ -144,9 +149,12 @@ type Opt struct {
 	socks5Proxy    string
 	bodyStreamFile string
 
-	headers   []string
-	profiles  []*internal.Profile
+	tlcpCerts string
 	bodyBytes []byte
+
+	profiles []*internal.Profile
+
+	headers []string
 
 	doTimeout    time.Duration
 	verbose      int
@@ -155,7 +163,6 @@ type Opt struct {
 	dialTimeout  time.Duration
 
 	maxConns    int
-	pretty      bool
 	jsonBody    bool
 	eval        bool
 	uploadIndex bool
@@ -165,7 +172,12 @@ type Opt struct {
 	form        bool
 	noKeepalive bool
 
-	insecure bool
+	tlsVerify bool
+	pretty    bool
+}
+
+func (o *Opt) HasPrintOption(feature uint8) bool {
+	return o.printOption&feature == feature
 }
 
 func (o *Opt) MaybePost() bool {
@@ -240,9 +252,11 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 		bodyStreamFile: bodyStreamFile,
 		upload:         *pUpload,
 
-		certPath: cert,
-		keyPath:  key,
-		insecure: opts.HasAny("k", "insecure"),
+		rootCert:  *pRootCert,
+		certPath:  cert,
+		keyPath:   key,
+		tlcpCerts: *pTlcpCerts,
+		tlsVerify: opts.HasAny("tlsVerify"),
 
 		doTimeout:    timeout.Get("do"),
 		readTimeout:  timeout.Get("read", "r"),

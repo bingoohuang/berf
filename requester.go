@@ -16,6 +16,7 @@ import (
 	"github.com/bingoohuang/gg/pkg/thinktime"
 )
 
+// Requester is request structure.
 type Requester struct {
 	ctx context.Context
 
@@ -32,7 +33,7 @@ type Requester struct {
 
 	duration time.Duration
 
-	// Qps is the rate limit in queries per second.
+	// QPS is the rate limit in queries per second.
 	QPS float64
 
 	verbose    int
@@ -51,7 +52,7 @@ func (c *Config) NewRequester(ctx context.Context, fn Benchable) *Requester {
 		duration:      c.Duration,
 		recordChan:    make(chan *ReportRecord, ss.Ifi(maxResult > 8192, 8192, maxResult)),
 		verbose:       c.Verbose,
-		QPS:           c.Qps,
+		QPS:           c.QPS,
 		ctx:           ctx,
 		ctxCancelFunc: cancelFunc,
 		benchable:     fn,

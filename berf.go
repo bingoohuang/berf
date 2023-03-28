@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/bingoohuang/berf/pkg/util"
-	_ "github.com/bingoohuang/berf/plugins/all"
+	_ "github.com/bingoohuang/berf/plugins/all" // import all plugins
 	"github.com/bingoohuang/gg/pkg/filex"
 	"github.com/bingoohuang/gg/pkg/fla9"
 	"github.com/bingoohuang/gg/pkg/netx/freeport"
@@ -28,7 +28,7 @@ var (
 	pGoMaxProcs = fla9.Int(pf+"t", runtime.GOMAXPROCS(0), "Number of GOMAXPROCS")
 	pGoroutines = fla9.Int(pf+"c", 100, "Number of goroutines")
 	pGoIncr     = fla9.String(pf+"ci", "", "Goroutines incremental mode. empty: none; 1: up by step 1 to max every 1m; 1:10s: up to max by step 1 by n every 10s; 1:10s:1 up to max then down to 0 by step1 every 10s.")
-	pQps        = fla9.Float64(pf+"qps", 0, "QPS rate limit")
+	pQPS        = fla9.Float64(pf+"qps", 0, "QPS rate limit")
 	pFeatures   = fla9.String(pf+"f", "", "Customized features, e.g. a,b,c, specifically nop to run no benchmarking job for collect hardware metrics only")
 	pPlotsFile  = fla9.String(pf+"plots", "", "Plots filename, append :dry to show exists plots in dry mode")
 	pVerbose    = fla9.Count(pf+"v", 0, "Verbose level, e.g. -v -vv")
@@ -56,7 +56,7 @@ type Config struct {
 	Duration   time.Duration
 	Verbose    int
 	N          int
-	Qps        float64
+	QPS        float64
 	Goroutines int
 
 	GoMaxProcs int
@@ -119,7 +119,7 @@ func StartBench(ctx context.Context, fn Benchable, fns ...ConfigFn) {
 	c := &Config{
 		N: *pN, Duration: *pDuration, Goroutines: *pGoroutines, GoMaxProcs: *pGoMaxProcs,
 		Incr: util.ParseGoIncr(*pGoIncr), PlotsFile: *pPlotsFile,
-		Qps: *pQps, FeaturesConf: *pFeatures, Verbose: *pVerbose, ThinkTime: *pThinkTime, ChartPort: *pPort,
+		QPS: *pQPS, FeaturesConf: *pFeatures, Verbose: *pVerbose, ThinkTime: *pThinkTime, ChartPort: *pPort,
 	}
 	for _, f := range fns {
 		f(c)
