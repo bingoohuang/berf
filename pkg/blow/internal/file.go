@@ -59,10 +59,10 @@ const (
 )
 
 type UploadChanValue struct {
-	Type        UploadChanValueType
-	Path        string
 	Data        func() *DataItem
+	Path        string
 	ContentType string
+	Type        UploadChanValueType
 }
 
 func (v UploadChanValue) GetCachePath() string {

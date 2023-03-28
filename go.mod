@@ -1,6 +1,6 @@
 module github.com/bingoohuang/berf
 
-go 1.18
+go 1.20
 
 //replace github.com/bingoohuang/gg => /Users/bingoo/GitHub/gg
 

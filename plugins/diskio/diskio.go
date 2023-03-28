@@ -17,16 +17,18 @@ import (
 )
 
 type DiskIO struct {
-	Devices []string
+	lastStatsTime time.Time
 
 	ps system.PS
 
-	infoCache     map[string]diskInfoCache
-	deviceFilter  filter.Filter
-	names         map[string]bool
+	deviceFilter filter.Filter
+
+	infoCache map[string]diskInfoCache
+	names     map[string]bool
+	Devices   []string
+
 	gCurNetStats  []ioStat
 	gPrevNetStats []ioStat
-	lastStatsTime time.Time
 }
 
 func (d *DiskIO) Series() plugins.Series {

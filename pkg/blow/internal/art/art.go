@@ -47,8 +47,8 @@ func ToPngBytes(img image.Image) []byte {
 }
 
 type artMap struct {
-	Name string
 	Fn   func() *image.RGBA
+	Name string
 }
 
 var artMaps = []artMap{

@@ -36,21 +36,21 @@ import (
 )
 
 type Invoker struct {
-	opt             *Opt
-	httpHeader      *fasthttp.RequestHeader
-	uploadCache     bool
+	pieArg     HttpieArg
+	printLock  sync.Locker
+	httpHeader *fasthttp.RequestHeader
+	pieBody    *HttpieArgBody
+	opt        *Opt
+	uploadChan chan *internal.UploadChanValue
+
+	httpInvoke      func(req *fasthttp.Request, rsp *fasthttp.Response) error
 	uploadFileField string
 	upload          string
-	uploadChan      chan *internal.UploadChanValue
-
-	httpInvoke     func(req *fasthttp.Request, rsp *fasthttp.Response) error
-	readBytes      int64
-	writeBytes     int64
-	isTLS          bool
-	printLock      sync.Locker
-	pieArg         HttpieArg
-	pieBody        *HttpieArgBody
-	requestUriExpr vars.Subs
+	requestUriExpr  vars.Subs
+	writeBytes      int64
+	readBytes       int64
+	isTLS           bool
+	uploadCache     bool
 }
 
 func NewInvoker(ctx context.Context, opt *Opt) (*Invoker, error) {

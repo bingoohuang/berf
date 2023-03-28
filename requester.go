@@ -2,6 +2,7 @@ package berf
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"os/signal"
@@ -16,24 +17,27 @@ import (
 )
 
 type Requester struct {
-	goroutines int
-	n          int
-	verbose    int
-	duration   time.Duration
+	ctx context.Context
+
+	benchable     Benchable
+	ctxCancelFunc func()
 
 	recordChan chan *ReportRecord
-	wg         sync.WaitGroup
 
 	thinkFn func(thinkNow bool) (thinkTime time.Duration)
+
+	config *Config
+
+	wg sync.WaitGroup
+
+	duration time.Duration
 
 	// Qps is the rate limit in queries per second.
 	QPS float64
 
-	ctx           context.Context
-	ctxCancelFunc func()
-
-	benchable Benchable
-	config    *Config
+	verbose    int
+	goroutines int
+	n          int
 
 	concurrent int64
 }
@@ -215,7 +219,7 @@ func (r *Requester) loopWork(ctx context.Context, semaphore *int64, throttle fun
 
 		rr := recordPool.Get().(*ReportRecord)
 		rr.Reset()
-		if err := r.runOne(ctx, rr); err == io.EOF {
+		if err := r.runOne(ctx, rr); errors.Is(err, io.EOF) {
 			return
 		}
 
@@ -226,7 +230,7 @@ func (r *Requester) loopWork(ctx context.Context, semaphore *int64, throttle fun
 
 func (r *Requester) runOne(ctx context.Context, rr *ReportRecord) error {
 	err := r.doRequest(ctx, rr)
-	if err != nil && err != io.EOF {
+	if err != nil && !errors.Is(err, io.EOF) {
 		rr.error = err.Error()
 	}
 

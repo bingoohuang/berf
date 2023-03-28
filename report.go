@@ -14,10 +14,10 @@ import (
 )
 
 type ReportRecord struct {
-	cost       time.Duration
-	code       []string
 	error      string
+	code       []string
 	counting   []string
+	cost       time.Duration
 	readBytes  int64
 	writeBytes int64
 }
@@ -81,25 +81,28 @@ func (s *Stats) Reset() {
 }
 
 type StreamReport struct {
-	lock sync.Mutex
+	errors map[string]int64
 
-	latencyStats     *Stats
+	latencyWithinSec *Stats
 	rpsStats         *Stats
 	latencyQuantile  *quantile.Stream
 	latencyHistogram *histogram.Histogram
 	codes            map[string]int64
-	errors           map[string]int64
-	counts           *hyperloglog.Sketch
 
-	latencyWithinSec *Stats
-	rpsWithinSec     float64
-	noDateWithinSec  bool
+	latencyStats *Stats
+	counts       *hyperloglog.Sketch
+
+	requester *Requester
+
+	doneChan chan struct{}
 
 	readBytes  int64
 	writeBytes int64
 
-	doneChan  chan struct{}
-	requester *Requester
+	rpsWithinSec float64
+	lock         sync.Mutex
+
+	noDateWithinSec bool
 }
 
 func NewStreamReport(requester *Requester) *StreamReport {
@@ -200,16 +203,16 @@ type SnapshotHistogram struct {
 }
 
 type SnapshotReport struct {
-	Elapsed                         time.Duration
-	Codes, Errors                   map[string]int64
-	RPS, ElapseInSec                float64
-	ReadThroughput, WriteThroughput float64
-	Count, Counting                 int64
+	Stats            *SnapshotStats
+	Codes, Errors    map[string]int64
+	RpsStats         *SnapshotRpsStats
+	Histograms       []*SnapshotHistogram
+	Percentiles      []*SnapshotPercentile
+	RPS, ElapseInSec float64
+	Count, Counting  int64
 
-	Stats       *SnapshotStats
-	RpsStats    *SnapshotRpsStats
-	Percentiles []*SnapshotPercentile
-	Histograms  []*SnapshotHistogram
+	ReadThroughput, WriteThroughput float64
+	Elapsed                         time.Duration
 }
 
 func (s *StreamReport) Snapshot() *SnapshotReport {
@@ -264,9 +267,9 @@ func (s *StreamReport) Snapshot() *SnapshotReport {
 func (s *StreamReport) Done() <-chan struct{} { return s.doneChan }
 
 type ChartsReport struct {
-	RPS                util.Float64
 	Latency            []util.Float64
 	LatencyPercentiles []util.Float64
+	RPS                util.Float64
 	Concurrent         int64
 }
 
@@ -307,6 +310,6 @@ func createMetrics(rd *ChartsReport, noop bool) []byte {
 }
 
 type Metrics struct {
-	Time   string                 `json:"time"`
 	Values map[string]interface{} `json:"values"`
+	Time   string                 `json:"time"`
 }

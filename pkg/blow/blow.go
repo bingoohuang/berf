@@ -125,44 +125,47 @@ func (b *Bench) Invoke(_ context.Context, conf *berf.Config) (*berf.Result, erro
 }
 
 type Opt struct {
-	url            string
-	method         string
-	headers        []string
-	bodyBytes      []byte
-	bodyStreamFile string
+	berfConfig    *berf.Config
+	logf          *internal.LogFile
+	bodyLinesChan chan string
+	url           string
+	upload        string
 
 	certPath string
 	keyPath  string
 
-	insecure bool
+	method  string
+	network string
+
+	auth        string
+	saveRandDir string
+	statusName  string
+
+	socks5Proxy    string
+	bodyStreamFile string
+
+	headers   []string
+	profiles  []*internal.Profile
+	bodyBytes []byte
 
 	doTimeout    time.Duration
+	verbose      int
 	readTimeout  time.Duration
 	writeTimeout time.Duration
 	dialTimeout  time.Duration
 
-	socks5Proxy string
-	upload      string
-
-	auth        string
-	network     string
-	logf        *internal.LogFile
 	maxConns    int
-	enableGzip  bool
-	noKeepalive bool
-	form        bool
 	pretty      bool
-	uploadIndex bool
-	eval        bool
 	jsonBody    bool
-	verbose     int
-	profiles    []*internal.Profile
-	statusName  string
+	eval        bool
+	uploadIndex bool
+	enableGzip  bool
 
-	printOption   uint8
-	saveRandDir   string
-	bodyLinesChan chan string
-	berfConfig    *berf.Config
+	printOption uint8
+	form        bool
+	noKeepalive bool
+
+	insecure bool
 }
 
 func (o *Opt) MaybePost() bool {
@@ -278,8 +281,8 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 }
 
 type Durations struct {
-	Default time.Duration
 	Map     map[string]time.Duration
+	Default time.Duration
 }
 
 func (d *Durations) Get(keys ...string) time.Duration {

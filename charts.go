@@ -68,10 +68,10 @@ func (c *Views) genViewTemplate(viewChartsMap map[string]string) string {
 	viewsMap += "noop: null}"
 
 	d := struct {
-		Interval    int
 		ViewsMap    string
 		SetInterval string
 		ViewSyncJS  string
+		Interval    int
 	}{
 		Interval:    int(time.Second.Milliseconds()),
 		ViewsMap:    viewsMap,
@@ -201,8 +201,9 @@ type Charts struct {
 	chartsData func() *ChartsReport
 	config     *Config
 
+	hardwares map[string]plugins.Input
+
 	hardwaresNames []string
-	hardwares      map[string]plugins.Input
 }
 
 func NewCharts(chartsData func() *ChartsReport, config *Config) *Charts {

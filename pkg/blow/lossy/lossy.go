@@ -15,14 +15,14 @@ import (
 )
 
 type conn struct {
+	writeDeadline time.Time
 	net.Conn
+	mu                *sync.Mutex
 	minLatency        time.Duration
 	maxLatency        time.Duration
 	packetLossRate    float64
-	writeDeadline     time.Time
-	closed            bool
-	mu                *sync.Mutex
 	timeToWaitPerByte float64
+	closed            bool
 }
 
 // NewConn wraps the given net.Conn with a latency connection.
@@ -92,8 +92,8 @@ func (c *conn) SetWriteDeadline(t time.Time) error {
 }
 
 var rng = struct {
-	sync.Mutex
 	rand *rand.Rand
+	sync.Mutex
 }{
 	rand: rand.New(rand.NewSource(time.Now().UnixNano())),
 }

@@ -18,21 +18,22 @@ import (
 type PID int32
 
 type Procstat struct {
-	PidFinder              string
-	PidFile                string
-	Exe                    string
-	Pattern                string
-	CmdLineTag             bool
-	User                   string
-	SystemdUnit            string
-	IncludeSystemdChildren bool
-	CGroup                 string
-
 	finder PIDFinder
 
+	createProcess func(PID) (Process, error)
+	procs         map[PID]Process
+
 	createPIDFinder func() (PIDFinder, error)
-	procs           map[PID]Process
-	createProcess   func(PID) (Process, error)
+	Pattern         string
+	User            string
+	SystemdUnit     string
+	CGroup          string
+
+	PidFinder              string
+	Exe                    string
+	PidFile                string
+	IncludeSystemdChildren bool
+	CmdLineTag             bool
 }
 
 /*
@@ -62,8 +63,8 @@ PidFile = "/var/run/nginx.pid"
 */
 
 type Pids struct {
-	PIDS []PID
 	Err  error
+	PIDS []PID
 }
 
 func (p *Procstat) Init() error {
@@ -216,10 +217,10 @@ func (p *Procstat) findPids() []Pids {
 	} else {
 		f, err := p.getPIDFinder()
 		if err != nil {
-			return append(pidTags, Pids{nil, err})
+			return append(pidTags, Pids{Err: err})
 		}
 		pids, err := p.SimpleFindPids(f)
-		pidTags = append(pidTags, Pids{pids, err})
+		pidTags = append(pidTags, Pids{PIDS: pids, Err: err})
 	}
 
 	return pidTags
@@ -273,7 +274,7 @@ func (p *Procstat) systemdUnitPIDs() []Pids {
 	var pidTags []Pids
 
 	pids, err := p.simpleSystemdUnitPIDs()
-	pidTags = append(pidTags, Pids{pids, err})
+	pidTags = append(pidTags, Pids{PIDS: pids, Err: err})
 	return pidTags
 }
 
@@ -315,12 +316,12 @@ func (p *Procstat) cgroupPIDs() []Pids {
 	}
 	items, err := filepath.Glob(procsPath)
 	if err != nil {
-		pidTags = append(pidTags, Pids{nil, fmt.Errorf("glob failed '%s'", err)})
+		pidTags = append(pidTags, Pids{Err: fmt.Errorf("glob failed %w", err)})
 		return pidTags
 	}
 	for _, item := range items {
 		pids, err := p.singleCgroupPIDs(item)
-		pidTags = append(pidTags, Pids{pids, err})
+		pidTags = append(pidTags, Pids{PIDS: pids, Err: err})
 	}
 
 	return pidTags

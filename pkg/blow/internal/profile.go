@@ -143,34 +143,34 @@ func (p *Profile) makeQuery(query url.Values) url.Values {
 }
 
 type Option struct {
-	Tag      string
-	Eval     bool
-	JsonBody bool
-
-	// 作为初始化调用，例如登录
-	Init bool
-
 	// 从结果 JSON 中 使用 jj.Get 提取值, 参见 demo.http 中写法
 	// 例如：result.id=chinaID，表示设置 @id = jj.Get(responseJSON, "chinaID")
 	// 一般配合初始化调用使用，例如从登录结果中提取 accessToken 等
 	ResultExpr map[string]string `prefix:"result."`
+	Tag        string
+	Eval       bool
+	JsonBody   bool
+
+	// 作为初始化调用，例如登录
+	Init bool
 }
 
 type Profile struct {
-	Method  string
-	URL     string
-	Query   map[string]string
-	RawJSON map[string]string
-	Form    map[string]string
-	Header  map[string]string
-	Body    string
 	Option
-	Comments []string
 
 	requestHeader *fasthttp.RequestHeader
-	bodyFileName  string
-	bodyFileData  []byte
+	Query         map[string]string
+	RawJSON       map[string]string
+	Form          map[string]string
+	Header        map[string]string
 	EnvVars       EnvVars
+	Body          string
+	URL           string
+	Method        string
+	bodyFileName  string
+	Comments      []string
+
+	bodyFileData []byte
 }
 
 var (

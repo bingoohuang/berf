@@ -39,25 +39,27 @@ var (
 
 // Config defines the bench configuration.
 type Config struct {
-	N          int
-	Goroutines int
-	Duration   time.Duration
-	Incr       util.GoroutineIncr
-
-	GoMaxProcs   int
-	Qps          float64
-	FeaturesConf string
-	Verbose      int
-	ThinkTime    string
-	ChartPort    int
-
 	util.Features
-	CountingName string
-	OkStatus     string
-	PlotsFile    string
-	PlotsHandle  *util.JSONLogFile
+	PlotsHandle *util.JSONLogFile
 
-	Desc string
+	OkStatus string
+
+	Desc         string
+	PlotsFile    string
+	FeaturesConf string
+	CountingName string
+	ThinkTime    string
+	Incr         util.GoroutineIncr
+
+	ChartPort int
+
+	Duration   time.Duration
+	Verbose    int
+	N          int
+	Qps        float64
+	Goroutines int
+
+	GoMaxProcs int
 }
 
 type ConfigFn func(*Config)
@@ -72,10 +74,10 @@ func WithOkStatus(okStatus string) ConfigFn { return func(c *Config) { c.OkStatu
 func WithConfig(v *Config) ConfigFn { return func(c *Config) { *c = *v } }
 
 type Result struct {
-	ReadBytes  int64
-	WriteBytes int64
 	Status     []string
 	Counting   []string
+	ReadBytes  int64
+	WriteBytes int64
 	Cost       time.Duration
 }
 

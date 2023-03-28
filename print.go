@@ -30,17 +30,17 @@ var (
 )
 
 type Printer struct {
+	config      *Config
+	concurrent  *int64
+	benchOption *BenchOption
+	pbNumStr    string
+	pbDurStr    string
 	maxNum      int64
 	curNum      int64
 	maxDuration time.Duration
 	curDuration time.Duration
 	pbInc       int64
-	pbNumStr    string
-	pbDurStr    string
 	verbose     int
-	config      *Config
-	concurrent  *int64
-	benchOption *BenchOption
 }
 
 func (p *Printer) updateProgressValue(rs *SnapshotReport) {
@@ -232,9 +232,9 @@ func formatFloat64(f float64) string {
 }
 
 type Report struct {
-	SummaryReport    `json:"Summary"`
-	StatsReport      `json:"Stats"`
 	PercentileReport `json:"Percentile"`
+	StatsReport      `json:"Stats"`
+	SummaryReport    `json:"Summary"`
 }
 
 func (p *Printer) formatTableReports(w *bytes.Buffer, r *SnapshotReport, isFinal bool) Report {
@@ -360,11 +360,11 @@ func (p *Printer) buildErrors(r *SnapshotReport) [][]string {
 }
 
 type SummaryReport struct {
-	Count       int64
-	Counting    int64
 	Elapsed     string
 	RPS         string
 	ReadsWrites string
+	Count       int64
+	Counting    int64
 }
 
 func (p *Printer) buildSummary(r *SnapshotReport, isFinal bool, sr *SummaryReport) [][]string {

@@ -16,8 +16,8 @@ type TagValue interface {
 }
 
 type Tag struct {
-	Values []TagValue
 	Raw    string
+	Values []TagValue
 }
 
 func (t Tag) String() string { return t.Raw }

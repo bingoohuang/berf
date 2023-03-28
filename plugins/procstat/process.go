@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/process"
 )
 
@@ -18,7 +17,6 @@ type Process interface {
 	NumThreads() (int32, error)
 	Percent(interval time.Duration) (float64, error)
 	MemoryPercent() (float32, error)
-	Times() (*cpu.TimesStat, error)
 	RlimitUsage(bool) ([]process.RlimitStat, error)
 	Username() (string, error)
 	CreateTime() (int64, error)
@@ -33,8 +31,8 @@ type PIDFinder interface {
 }
 
 type Proc struct {
-	hasCPUTimes bool
 	*process.Process
+	hasCPUTimes bool
 }
 
 func NewProc(pid PID) (Process, error) {

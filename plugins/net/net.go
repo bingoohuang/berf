@@ -16,18 +16,18 @@ import (
 )
 
 type NetIOStats struct {
-	Interfaces []string
+	lastStatsTime time.Time
 
 	filter filter.Filter
 	ps     system.PS
 
 	interfacesByName map[string]bool
-	interfacesName   []string
+	Interfaces       []string
+
+	interfacesName []string
 
 	gPrevNetStats netStat
 	gCurNetStats  netStat
-
-	lastStatsTime time.Time
 }
 
 func (n *NetIOStats) Init() (err error) {

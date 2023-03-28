@@ -27,9 +27,9 @@ type Pair struct {
 type HttpieArg struct {
 	header  map[string]string
 	jsonmap map[string]interface{} // post json
-	query   []Pair                 // get query
 	param   map[string]string      // post json/form or get query
 	files   map[string]string      // post multipart
+	query   []Pair                 // get query
 }
 
 func (a *HttpieArg) MaybePost() bool {
@@ -37,11 +37,12 @@ func (a *HttpieArg) MaybePost() bool {
 }
 
 type HttpieArgBody struct {
-	Multipart   bool
+	Body io.ReadCloser
+
 	ContentType string
-	Body        io.ReadCloser
 
 	BodyString string
+	Multipart  bool
 }
 
 func (a *HttpieArg) SetJsonMap(k string, v interface{})    { a.jsonmap[k] = v }

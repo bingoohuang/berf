@@ -1,6 +1,7 @@
 package system
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -132,7 +133,7 @@ func (s *SystemPS) NetConnections(fns ...net.ConnectionStatOptionsFn) ([]net.Con
 
 func (s *SystemPS) DiskIO(names []string) (map[string]disk.IOCountersStat, error) {
 	m, err := disk.IOCounters(names...)
-	if err == internal.ErrorNotImplemented {
+	if errors.Is(err, internal.ErrorNotImplemented) {
 		return nil, nil
 	}
 

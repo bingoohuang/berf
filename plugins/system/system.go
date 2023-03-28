@@ -79,9 +79,9 @@ func CPUBusyPercent() ([]float64, error) {
 }
 
 type lastPercent struct {
-	sync.Mutex
 	lastCPUTimes    []cpu.TimesStat
 	lastPerCPUTimes []cpu.TimesStat
+	sync.Mutex
 }
 
 var lastCPUPercent lastPercent

@@ -79,10 +79,10 @@ func NumberToRate(num uint64, d time.Duration) Float64 {
 type JSONLogFile struct {
 	F *os.File
 	*sync.Mutex
+	Name    string
 	Dry     bool
 	Closed  bool
 	HasRows bool
-	Name    string
 }
 
 const (
