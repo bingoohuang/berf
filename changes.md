@@ -2,41 +2,101 @@
 
 ## 2023年03月28日 国密 TLCP 支持
 
+| #   | 非 HTTPS | 普通 HTTPS | 国密 HTTPS |
+|-----|---------|----------|----------|
+| TPS | 28610   | 18629    | 12913    |
+
 ```shell
-$ export TLCP=true
-$ berf https://10.0.0.18:15443 -d1m
-Berf benchmarking https://10.0.0.18:15443/ for 1m0s using 100 goroutine(s), 6 GoMaxProcs.
+# berf http://192.168.126.18:15080 -d1m -v
+Berf benchmarking http://192.168.126.18:15080/ for 1m0s using 100 goroutine(s), 6 GoMaxProcs.
+@Real-time charts is on http://127.0.0.1:28888
 
 Summary:
-  Elapsed             1m0.026s
-  Count/RPS    375621 6257.597
-    200        375621 6257.597
-  ReadWrite  16.108 9.764 Mbps
-
-Statistics   Min      Mean     StdDev      Max
-  Latency   160µs   15.949ms  12.852ms  563.238ms
-  RPS       1695.6  6253.85   1784.42    9146.11
-
-Latency Percentile:
-  P50         P75      P90       P95       P99       P99.9     P99.99
-  12.634ms  18.24ms  27.602ms  37.636ms  62.337ms  133.806ms  332.125ms
-$
-$ berf http://10.0.0.18:15080 -d1m
-Berf benchmarking http://10.0.0.18:15080/ for 1m0s using 100 goroutine(s), 6 GoMaxProcs.
-
-Summary:
-  Elapsed              1m0.003s
-  Count/RPS   1399237 23319.295
-    200       1399237 23319.295
-  ReadWrite  50.547 30.408 Mbps
+  Elapsed                1m0.021s
+  Count/RPS     1717246 28610.673
+    200         1717246 28610.673
+  ReadWrite    67.750 37.308 Mbps
+  Connections                 100
 
 Statistics    Min      Mean    StdDev     Max
-  Latency    48µs    4.272ms   5.23ms  223.739ms
-  RPS       6051.15  23301.69  8105.9  33234.89
+  Latency    47µs     3.47ms   3.059ms  71.301ms
+  RPS       7593.42  28609.98  4547.22  36912.29
 
 Latency Percentile:
   P50        P75      P90      P95      P99      P99.9     P99.99
-  2.817ms  4.085ms  7.136ms  11.25ms  29.208ms  58.229ms  112.992ms
+  2.664ms  3.385ms  5.514ms  7.717ms  17.208ms  34.879ms  55.648ms
+
+Latency Histogram:
+  3.123ms   1601041  93.23%  ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  5.832ms     90266   5.26%  ■■
+  14.313ms    22280   1.30%  ■
+  27.113ms     2787   0.16%
+  40.881ms      685   0.04%
+  48.552ms      120   0.01%
+  57.139ms       41   0.00%
+  67.094ms       26   0.00%
+```
+
+```shell
+[root@fs03-192-168-126-18 ~]# berf https://192.168.126.18:22443 -d1m -v
+Berf benchmarking https://192.168.126.18:22443/ for 1m0s using 100 goroutine(s), 6 GoMaxProcs.
+@Real-time charts is on http://127.0.0.1:28888
+
+Summary:
+  Elapsed                 1m0.02s
+  Count/RPS     1118132 18629.179
+    200         1118132 18629.179
+  ReadWrite    36.366 28.621 Mbps
+  Connections                 100
+
+Statistics    Min      Mean    StdDev     Max
+  Latency    63µs    5.341ms   5.07ms  137.591ms
+  RPS       3635.83  18622.69  4672.6   27290.8
+
+Latency Percentile:
+  P50      P75      P90      P95       P99      P99.9     P99.99
+  3.89ms  4.97ms  8.622ms  13.606ms  28.897ms  49.535ms  72.875ms
+
+Latency Histogram:
+  3.905ms   794156  71.03%  ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  5.357ms   187034  16.73%  ■■■■■■■■■
+  9.325ms    88313   7.90%  ■■■■
+  18.338ms   37991   3.40%  ■■
+  29.627ms    8457   0.76%
+  40.143ms    1585   0.14%
+  50.077ms     434   0.04%
+  74.298ms     162   0.01%
+```
+
+```sh
+[root@fs03-192-168-126-18 ~]# TLCP=true berf https://192.168.126.18:15443 -d1m -v
+Berf benchmarking https://192.168.126.18:15443/ for 1m0s using 100 goroutine(s), 6 GoMaxProcs.
+@Real-time charts is on http://127.0.0.1:28888
+
+Summary:
+  Elapsed                1m0.006s
+  Count/RPS      774891 12913.553
+    200          774891 12913.553
+  ReadWrite    34.419 19.839 Mbps
+  Connections                 100
+
+Statistics    Min      Mean    StdDev      Max
+  Latency    85µs    7.716ms   6.768ms  526.706ms
+  RPS       4576.45  12910.14  3512.5   18813.13
+
+Latency Percentile:
+  P50        P75      P90       P95       P99      P99.9     P99.99
+  5.519ms  8.471ms  13.801ms  19.202ms  33.546ms  59.524ms  224.998ms
+
+Latency Histogram:
+  6.371ms   687701  88.75%  ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  14.956ms   71040   9.17%  ■■■■
+  28.355ms   11669   1.51%  ■
+  40.632ms    3239   0.42%
+  53.427ms     861   0.11%
+  65.306ms     285   0.04%
+  75.481ms      55   0.01%
+  89.203ms      41   0.01%
 ```
 
 ```sh
@@ -143,8 +203,30 @@ http {
     include       mime.types;
     default_type  application/octet-stream;
     sendfile        on;
-    keepalive_timeout  65;
 
+    keepalive_timeout  120s 120s;
+    keepalive_requests 1000000;
+
+    server {
+        listen  22443 ssl;
+    
+        ssl_certificate server.crt;        # 这里为服务器上server.crt的路径
+        ssl_certificate_key server.key;    # 这里为服务器上server.key的路径
+        #ssl_client_certificate ca.crt;    # 双向认证
+        #ssl_verify_client on;             # 双向认证
+    
+        ssl_session_timeout 5m;
+        ssl_protocols SSLv2 SSLv3 TLSv1.1 TLSv1.2;
+        ssl_ciphers  ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP;
+        ssl_prefer_server_ciphers   on;
+    
+        default_type            text/plain;
+        add_header  "Content-Type" "text/html;charset=utf-8";
+
+        location / {
+            return 200 "SSL";
+        }
+    }
 
     server {
         listen       15080;
