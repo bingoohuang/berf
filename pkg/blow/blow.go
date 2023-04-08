@@ -172,8 +172,9 @@ type Opt struct {
 	form        bool
 	noKeepalive bool
 
-	tlsVerify bool
-	pretty    bool
+	tlsVerify          bool
+	pretty             bool
+	noTLSessionTickets bool
 }
 
 func (o *Opt) HasPrintOption(feature uint8) bool {
@@ -269,18 +270,19 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 		auth:     *pAuth,
 		maxConns: conf.Goroutines,
 
-		enableGzip:  opts.HasAny("g", "gzip"),
-		uploadIndex: opts.HasAny("uploadIndex", "ui"),
-		noKeepalive: opts.HasAny("no-keepalive", "no-ka"),
-		form:        opts.HasAny("form"),
-		pretty:      opts.HasAny("pretty"),
-		eval:        opts.HasAny("eval"),
-		jsonBody:    opts.HasAny("json"),
-		saveRandDir: opts.Get("saveRandDir"),
-		verbose:     conf.Verbose,
-		statusName:  *pStatusName,
-		printOption: parsePrintOption(*pPrint),
-		berfConfig:  conf,
+		enableGzip:         opts.HasAny("g", "gzip"),
+		uploadIndex:        opts.HasAny("uploadIndex", "ui"),
+		noKeepalive:        opts.HasAny("no-keepalive", "no-ka"),
+		noTLSessionTickets: opts.HasAny("no-tls-session-tickets", "no-tst"),
+		form:               opts.HasAny("form"),
+		pretty:             opts.HasAny("pretty"),
+		eval:               opts.HasAny("eval"),
+		jsonBody:           opts.HasAny("json"),
+		saveRandDir:        opts.Get("saveRandDir"),
+		verbose:            conf.Verbose,
+		statusName:         *pStatusName,
+		printOption:        parsePrintOption(*pPrint),
+		berfConfig:         conf,
 	}
 
 	if opts.HasAny("notty") {

@@ -676,6 +676,8 @@ func (o *Opt) buildTLSConfig() (*tls.Config, error) {
 	t := &tls.Config{
 		InsecureSkipVerify: !o.tlsVerify,
 		Certificates:       certs,
+		// 关闭 HTTP 客户端的会话缓存
+		SessionTicketsDisabled: o.noTLSessionTickets,
 	}
 
 	if o.rootCert != "" {

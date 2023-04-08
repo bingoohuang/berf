@@ -22,6 +22,8 @@ func createTlcpDialer(
 	// 使用传输层密码协议(TLCP)，TLCP协议遵循《GB/T 38636-2020 信息安全技术 传输层密码协议》。
 	c := &tlcp.Config{
 		InsecureSkipVerify: !tlsVerify,
+		// 关闭 HTTP 客户端的会话缓存
+		SessionCache: nil,
 	}
 
 	c.EnableDebug = hasPrintOption(printDebug)
