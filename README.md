@@ -89,3 +89,5 @@ Latency Histogram:
 
 1. [fortio](https://github.com/fortio/fortio)
 2. [字节跳动 cloudwego/hertz](https://github.com/cloudwego/hertz)
+3. [Vegeta](https://github.com/tsenart/vegeta) is a versatile HTTP load testing tool built out of a need to drill HTTP services with a constant request rate. It can be used both as a command line utility and a library.
+

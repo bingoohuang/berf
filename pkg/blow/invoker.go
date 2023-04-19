@@ -663,6 +663,11 @@ func detectMethod(opt *Opt, arg HttpieArg) string {
 	return "GET"
 }
 
+type noSessionCache struct{}
+
+func (noSessionCache) Get(string) (*tls.ClientSessionState, bool) { return nil, false }
+func (noSessionCache) Put(string, *tls.ClientSessionState)        { /* no-op */ }
+
 func (o *Opt) buildTLSConfig() (*tls.Config, error) {
 	var certs []tls.Certificate
 	if o.certPath != "" && o.keyPath != "" {
@@ -678,6 +683,12 @@ func (o *Opt) buildTLSConfig() (*tls.Config, error) {
 		Certificates:       certs,
 		// 关闭 HTTP 客户端的会话缓存
 		SessionTicketsDisabled: o.noTLSessionTickets,
+	}
+
+	if cacheSize := env.Int(`TLS_SESSION_CACHE`, 32); cacheSize > 0 {
+		t.ClientSessionCache = tls.NewLRUClientSessionCache(cacheSize)
+	} else {
+		t.ClientSessionCache = &noSessionCache{}
 	}
 
 	if o.rootCert != "" {

@@ -50,6 +50,7 @@ var (
 const (
 	printReqHeader uint8 = 1 << iota
 	printReqBody
+	printRespOption
 	printRespHeader
 	printRespBody
 	printRespStatusCode
@@ -64,6 +65,7 @@ func parsePrintOption(s string) (printOption uint8) {
 		"r": printRespHeader | printRespBody,
 		"H": printReqHeader,
 		"B": printReqBody,
+		"o": printRespOption,
 		"h": printRespHeader,
 		"b": printRespBody,
 		"c": printRespStatusCode,
