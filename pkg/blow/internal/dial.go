@@ -63,7 +63,7 @@ func NetworkWrap(network string) networkWrapper {
 		bandwidth = 20 * 1024 * 1024
 		latency = 200 * time.Millisecond
 	default:
-		parts := strings.SplitN(network, ":", -1)
+		parts := strings.Split(network, ":")
 		if len(parts) >= 1 {
 			bandwidth, _ = humanize.ParseBytes(parts[0])
 		}

@@ -212,16 +212,18 @@ func (p *Procstat) findPids() []Pids {
 
 	if p.SystemdUnit != "" {
 		return p.systemdUnitPIDs()
-	} else if p.CGroup != "" {
-		return p.cgroupPIDs()
-	} else {
-		f, err := p.getPIDFinder()
-		if err != nil {
-			return append(pidTags, Pids{Err: err})
-		}
-		pids, err := p.SimpleFindPids(f)
-		pidTags = append(pidTags, Pids{PIDS: pids, Err: err})
 	}
+
+	if p.CGroup != "" {
+		return p.cgroupPIDs()
+	}
+
+	f, err := p.getPIDFinder()
+	if err != nil {
+		return append(pidTags, Pids{Err: err})
+	}
+	pids, err := p.SimpleFindPids(f)
+	pidTags = append(pidTags, Pids{PIDS: pids, Err: err})
 
 	return pidTags
 }

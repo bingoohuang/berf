@@ -4,12 +4,14 @@ berf framework for local methods.
 
 ## Features
 
-1. support vars substitution like `berf -n1 http://192.168.126.16:2900/person/_doc/@ksuid  -b '{"addr":"@地址","idcard":"@身份证","name":"@姓名","sex":"@性别"}'`
-2. support `-u rand.png,rand.jpg,rand.json` random image and json uploading content.
-3. support @var in URL like `berf :9335/pingoo/@ksuid -u imgs -d60s -v`, 2021-12-29
-4. support httpie like args `berf :10014/query q="show databases" -n1`, 2021-12-23
-5. `berf :5003/api/demo -n20 -pA` to print all details instead of realtime statistics on terminal, 2021-12-22.
-6. Add a TPS-0 comparing series to the TPS plots, 2021-12-02.
+1. LOCAL_IP=ip berf ... 指定网卡 IP 运行 berf
+2. support vars substitution
+   like `berf -n1 http://192.168.126.16:2900/person/_doc/@ksuid  -b '{"addr":"@地址","idcard":"@身份证","name":"@姓名","sex":"@性别"}'`
+3. support `-u rand.png,rand.jpg,rand.json` random image and json uploading content.
+4. support @var in URL like `berf :9335/pingoo/@ksuid -u imgs -d60s -v`, 2021-12-29
+5. support httpie like args `berf :10014/query q="show databases" -n1`, 2021-12-23
+6. `berf :5003/api/demo -n20 -pA` to print all details instead of realtime statistics on terminal, 2021-12-22.
+7. Add a TPS-0 comparing series to the TPS plots, 2021-12-02.
 
 ## Demo
 
@@ -80,14 +82,15 @@ Latency Histogram:
    ```
 
 3. 使用 Profile 中的 test 环境变量 跑压测 `berf -P demo.http -env test`
-   1. 或者指定 tag 跑压测 `berf -P demo.http:tag1`
-   2. 或者指定多个 tag 跑压测 `berf -P demo.http:tag1,tag2`
-   3. 或者指定 tag 范围 跑压测 `berf -P demo.http:tag1-tag3`
-   4. 混合模式 `berf -P demo.http:tag1-tag3,tag5,tag7-tag9`
+    1. 或者指定 tag 跑压测 `berf -P demo.http:tag1`
+    2. 或者指定多个 tag 跑压测 `berf -P demo.http:tag1,tag2`
+    3. 或者指定 tag 范围 跑压测 `berf -P demo.http:tag1-tag3`
+    4. 混合模式 `berf -P demo.http:tag1-tag3,tag5,tag7-tag9`
 
 ## Similar tools
 
 1. [fortio](https://github.com/fortio/fortio)
 2. [字节跳动 cloudwego/hertz](https://github.com/cloudwego/hertz)
-3. [Vegeta](https://github.com/tsenart/vegeta) is a versatile HTTP load testing tool built out of a need to drill HTTP services with a constant request rate. It can be used both as a command line utility and a library.
+3. [Vegeta](https://github.com/tsenart/vegeta) is a versatile HTTP load testing tool built out of a need to drill HTTP
+   services with a constant request rate. It can be used both as a command line utility and a library.
 

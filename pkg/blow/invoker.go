@@ -34,7 +34,6 @@ import (
 	"github.com/bingoohuang/jj"
 	"github.com/thoas/go-funk"
 	"github.com/valyala/fasthttp"
-	"github.com/valyala/fasthttp/fasthttpproxy"
 )
 
 type Invoker struct {
@@ -99,11 +98,12 @@ func (r *Invoker) buildRequestClient(ctx context.Context, opt *Opt) (*fasthttp.R
 	var u *url.URL
 	var err error
 
-	if opt.url != "" {
+	switch {
+	case opt.url != "":
 		u, err = url.Parse(opt.url)
-	} else if len(opt.profiles) > 0 {
+	case len(opt.profiles) > 0:
 		u, err = url.Parse(opt.profiles[0].URL)
-	} else {
+	default:
 		return nil, fmt.Errorf("failed to parse url")
 	}
 
@@ -126,14 +126,7 @@ func (r *Invoker) buildRequestClient(ctx context.Context, opt *Opt) (*fasthttp.R
 		WriteTimeout:    opt.writeTimeout,
 	}
 
-	if opt.socks5Proxy != "" {
-		if !strings.Contains(opt.socks5Proxy, "://") {
-			opt.socks5Proxy = "socks5://" + opt.socks5Proxy
-		}
-		cli.Dial = fasthttpproxy.FasthttpSocksDialer(opt.socks5Proxy)
-	} else {
-		cli.Dial = fasthttpproxy.FasthttpProxyHTTPDialerTimeout(opt.dialTimeout)
-	}
+	cli.Dial = ProxyHTTPDialerTimeout(opt.dialTimeout, dialer)
 
 	wrap := internal.NetworkWrap(opt.network)
 	cli.Dial = internal.ThroughputStatDial(wrap, cli.Dial, &r.readBytes, &r.writeBytes)
@@ -498,7 +491,7 @@ func printBody(dumpBody []byte, printNum int, pretty bool) {
 	}
 
 	body := formatResponseBody(dumpBody, pretty, berf.IsStdoutTerminal)
-	body = strings.TrimFunc(body, func(r rune) bool { return unicode.IsSpace(r) })
+	body = strings.TrimFunc(body, unicode.IsSpace)
 	fmt.Println(body)
 }
 

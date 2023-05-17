@@ -324,7 +324,7 @@ type StatsReport struct {
 
 func (p *Printer) buildStats(r *SnapshotReport, stats *StatsReport) [][]string {
 	st := r.Stats
-	dts := func(d time.Duration) string { return durationToString(d) }
+	dts := durationToString
 	stats.Latency.Min = dts(st.Min)
 	stats.Latency.Mean = dts(st.Mean)
 	stats.Latency.StdDev = dts(st.StdDev)

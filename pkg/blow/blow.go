@@ -42,7 +42,6 @@ var (
 	pRootCert   = fla9.String("root-ca", "", "Ca root certificate file to verify TLS")
 	pTlcpCerts  = fla9.String("tlcp-certs", "", "format: sign.cert.pem,sign.key.pem,enc.cert.pem,enc.key.pem")
 	pTimeout    = fla9.String("timeout", "", "Timeout for each http request, e.g. 5s for do:5s,dial:5s,write:5s,read:5s")
-	pSocks5     = fla9.String("socks5", "", "Socks5 proxy, ip:port")
 	pPrint      = fla9.String("print,p", "", "a: all, R: req all, H: req headers, B: req body, r: resp all, h: resp headers b: resp body c: status code")
 	pStatusName = fla9.String("status", "", "Status name in json, like resultCode")
 )
@@ -148,7 +147,6 @@ type Opt struct {
 	saveRandDir string
 	statusName  string
 
-	socks5Proxy    string
 	bodyStreamFile string
 
 	tlcpCerts string
@@ -265,8 +263,6 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 		readTimeout:  timeout.Get("read", "r"),
 		writeTimeout: timeout.Get("write", "w"),
 		dialTimeout:  timeout.Get("dial", "d"),
-
-		socks5Proxy: *pSocks5,
 
 		network:  *pNetwork,
 		auth:     *pAuth,
