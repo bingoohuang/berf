@@ -24,6 +24,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.13
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/shirou/gopsutil/v3 v3.22.3
+	github.com/stretchr/testify v1.8.1
 	github.com/thoas/go-funk v0.9.2
 	github.com/valyala/fasthttp v1.37.0
 	go.uber.org/multierr v1.8.0
@@ -37,6 +38,7 @@ require (
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/bingoohuang/jiami v0.0.0-20221122064658-cdd6a948124e // indirect
 	github.com/cristalhq/base64 v0.1.2 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-metro v0.0.0-20180109044635-280f6062b5bc // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -45,6 +47,7 @@ require (
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/pbnjay/pixfont v0.0.0-20200714042608-33b744692567 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
@@ -58,4 +61,5 @@ require (
 	golang.org/x/image v0.6.0 // indirect
 	golang.org/x/term v0.6.0 // indirect
 	golang.org/x/text v0.8.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

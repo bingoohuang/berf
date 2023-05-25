@@ -8,9 +8,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/bingoohuang/berf/pkg/blow/internal/art"
 	"github.com/bingoohuang/berf/pkg/util"
@@ -126,6 +128,41 @@ func createDataItem(filePath string, isDiskFile bool, data []byte) func() *DataI
 		return &DataItem{payload: payload}
 	}
 }
+
+func changeUploadName(filePath string) string {
+	uploadFileNameCreatorOnce.Do(func() {
+		f := os.Getenv("UPLOAD_INDEX")
+		if f == "" {
+			uploadFileNameCreator = func() string { return "" }
+			return
+		}
+
+		f = strings.ReplaceAll(f, "%y", "2006")
+		f = strings.ReplaceAll(f, "%M", "01")
+		f = strings.ReplaceAll(f, "%d", "02")
+		f = strings.ReplaceAll(f, "%H", "15")
+		f = strings.ReplaceAll(f, "%m", "04")
+		f = strings.ReplaceAll(f, "%s", "05")
+		var idx atomic.Uint64
+
+		uploadFileNameCreator = func() string {
+			s := time.Now().Format(f)
+			next := idx.Add(1)
+			return strings.ReplaceAll(s, "%i", strconv.FormatUint(next, 10))
+		}
+	})
+
+	dir := filepath.Dir(filePath)
+	base := filepath.Base(filePath)
+	ext := filepath.Ext(base)
+	base = base[:len(base)-len(ext)]
+	return filepath.Join(dir, base+uploadFileNameCreator()+ext)
+}
+
+var (
+	uploadFileNameCreator     func() string
+	uploadFileNameCreatorOnce sync.Once
+)
 
 type artReader struct {
 	uploadFileField string
@@ -302,16 +339,6 @@ func (f fileReader) Read(cache bool) *UploadChanValue {
 		return load.(*UploadChanValue)
 	}
 
-	//statSize := int64(0)
-	//if stat, err := os.Stat(uv.Path); err != nil {
-	//	log.Fatalf("stat file: %s, error: %v", uv.Path, err)
-	//} else {
-	//	statSize = stat.Size()
-	//}
-
-	//if statSize > 10<<20 /* 10 M*/ {
-	//	uv.Data = createDataItem(uv.Path, true, nil)
-	//}
 	filePathCache.Store(cachePath, uv)
 	return uv
 }

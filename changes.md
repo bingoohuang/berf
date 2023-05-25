@@ -1,5 +1,13 @@
 # changes
 
+## 2023年05月25日 文件上传支持文件名添加文件序号
+
+`export UPLOAD_INDEX=.%y%M%d.%H%m%s.%i`
+
+/Users/bingoo/Downloads/20230523194821.27.jpg 就会变成 /Users/bingoo/Downloads/20230523194821.27.20230525.221822.1.jpg
+
+在压测 BeeFS 时，可以起到唯一文件名的作用
+
 ## 2023年03月28日 国密 TLCP 支持
 
 | #   | 非 HTTPS | 普通 HTTPS | 国密 HTTPS |
