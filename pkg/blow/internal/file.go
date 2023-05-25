@@ -291,6 +291,7 @@ func (f fileReader) Read(cache bool) *UploadChanValue {
 		Type:        NormalFile,
 		ContentType: "",
 		Path:        f.File,
+		Data:        createDataItem(f.File, true, nil),
 	}
 	if !cache {
 		return uv
@@ -301,16 +302,16 @@ func (f fileReader) Read(cache bool) *UploadChanValue {
 		return load.(*UploadChanValue)
 	}
 
-	statSize := int64(0)
-	if stat, err := os.Stat(uv.Path); err != nil {
-		log.Fatalf("stat file: %s, error: %v", uv.Path, err)
-	} else {
-		statSize = stat.Size()
-	}
+	//statSize := int64(0)
+	//if stat, err := os.Stat(uv.Path); err != nil {
+	//	log.Fatalf("stat file: %s, error: %v", uv.Path, err)
+	//} else {
+	//	statSize = stat.Size()
+	//}
 
-	if statSize > 10<<20 /* 10 M*/ {
-		uv.Data = createDataItem(uv.Path, true, nil)
-	}
+	//if statSize > 10<<20 /* 10 M*/ {
+	//	uv.Data = createDataItem(uv.Path, true, nil)
+	//}
 	filePathCache.Store(cachePath, uv)
 	return uv
 }
