@@ -116,12 +116,25 @@ func createDataItem(filePath string, isDiskFile bool, data []byte) func() *DataI
 			var buf bytes.Buffer
 			_, _ = io.Copy(&buf, file)
 
-			payload = util.UploadPayload{Val: buf.Bytes(), Name: filePath, Size: stat.Size()}
+			payload = util.UploadPayload{
+				Val:  buf.Bytes(),
+				Name: changeUploadName(filePath),
+				Size: stat.Size(),
+			}
 		} else {
-			payload = util.UploadPayload{DiskFile: true, Val: []byte(filePath), Name: filePath, Size: stat.Size()}
+			payload = util.UploadPayload{
+				DiskFile: true,
+				Val:      []byte(filePath),
+				Name:     changeUploadName(filePath),
+				Size:     stat.Size(),
+			}
 		}
 	} else {
-		payload = util.UploadPayload{Val: data, Name: filePath, Size: int64(len(data))}
+		payload = util.UploadPayload{
+			Val:  data,
+			Name: changeUploadName(filePath),
+			Size: int64(len(data)),
+		}
 	}
 
 	return func() *DataItem {
