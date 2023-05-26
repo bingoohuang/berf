@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -142,38 +143,71 @@ func createDataItem(filePath string, isDiskFile bool, data []byte) func() *DataI
 	}
 }
 
-func changeUploadName(filePath string) string {
-	uploadFileNameCreatorOnce.Do(func() {
-		f := os.Getenv("UPLOAD_INDEX")
-		if f == "" {
-			uploadFileNameCreator = func() string { return "" }
-			return
+func setUploadFileChanger(uploadIndex string) {
+	uploadFileNameCreator = parseUploadFileChanger(uploadIndex)
+}
+
+func parseUploadFileChanger(uploadIndex string) func(filename string) string {
+	f := uploadIndex
+	if f == "" {
+		return func(filename string) string { return "" }
+	}
+
+	var clear bool
+	f, clear = FoldFindReplace(f, "%clear", "")
+	f = FoldReplace(f, "%y", "2006")
+	f = FoldReplace(f, "%M", "01")
+	f = FoldReplace(f, "%d", "02")
+	f = FoldReplace(f, "%H", "15")
+	f = FoldReplace(f, "%m", "04")
+	f = FoldReplace(f, "%s", "05")
+	var idx atomic.Uint64
+
+	return func(filename string) string {
+		s := time.Now().Format(f)
+		next := idx.Add(1)
+		ext := filepath.Ext(filename)
+		s = FoldReplace(s, "%i", strconv.FormatUint(next, 10))
+		s = FoldReplace(s, "%ext", ext)
+
+		if clear {
+			return s
 		}
 
-		f = strings.ReplaceAll(f, "%y", "2006")
-		f = strings.ReplaceAll(f, "%M", "01")
-		f = strings.ReplaceAll(f, "%d", "02")
-		f = strings.ReplaceAll(f, "%H", "15")
-		f = strings.ReplaceAll(f, "%m", "04")
-		f = strings.ReplaceAll(f, "%s", "05")
-		var idx atomic.Uint64
+		dir := filepath.Dir(filename)
+		base := filepath.Base(filename)
+		base = base[:len(base)-len(ext)]
+		return filepath.Join(dir, base+s)
+	}
+}
 
-		uploadFileNameCreator = func() string {
-			s := time.Now().Format(f)
-			next := idx.Add(1)
-			return strings.ReplaceAll(s, "%i", strconv.FormatUint(next, 10))
+func changeUploadName(filePath string) string {
+	uploadFileNameCreatorOnce.Do(func() {
+		if uploadFileNameCreator == nil {
+			setUploadFileChanger(os.Getenv("UPLOAD_INDEX"))
 		}
 	})
 
-	dir := filepath.Dir(filePath)
-	base := filepath.Base(filePath)
-	ext := filepath.Ext(base)
-	base = base[:len(base)-len(ext)]
-	return filepath.Join(dir, base+uploadFileNameCreator()+ext)
+	return uploadFileNameCreator(filePath)
+}
+
+func FoldFindReplace(subject, search, replace string) (string, bool) {
+	searchRegex := regexp.MustCompile("(?i)" + regexp.QuoteMeta(search))
+	found := searchRegex.FindString(subject) != ""
+	if found {
+		return searchRegex.ReplaceAllString(subject, replace), true
+	}
+
+	return subject, false
+}
+
+func FoldReplace(subject, search, replace string) string {
+	searchRegex := regexp.MustCompile("(?i)" + regexp.QuoteMeta(search))
+	return searchRegex.ReplaceAllString(subject, replace)
 }
 
 var (
-	uploadFileNameCreator     func() string
+	uploadFileNameCreator     func(filename string) string
 	uploadFileNameCreatorOnce sync.Once
 )
 

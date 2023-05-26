@@ -183,9 +183,6 @@ func colorize(s string, seq int) string {
 
 func durationToString(d time.Duration) string {
 	d = d.Truncate(time.Microsecond)
-	//if useSeconds {
-	//	return formatFloat64(d.Seconds())
-	//}
 	return d.String()
 }
 
