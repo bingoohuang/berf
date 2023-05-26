@@ -150,7 +150,7 @@ func setUploadFileChanger(uploadIndex string) {
 func parseUploadFileChanger(uploadIndex string) func(filename string) string {
 	f := uploadIndex
 	if f == "" {
-		return func(filename string) string { return "" }
+		return func(filename string) string { return filename }
 	}
 
 	var clear bool
@@ -314,6 +314,27 @@ func (r randJsonReader) Read(cache bool) *UploadChanValue {
 
 func (r randJsonReader) Start(context.Context) {}
 
+type globReader struct {
+	matches         []string
+	uploadFileField string
+	index           atomic.Uint64
+}
+
+func (g *globReader) Read(cache bool) *UploadChanValue {
+	file := g.matches[int(g.index.Load())%len(g.matches)]
+	f := fileReader{
+		File:            file,
+		uploadFileField: g.uploadFileField,
+	}
+	uv := f.Read(cache)
+
+	g.index.Add(1)
+
+	return uv
+}
+
+func (g *globReader) Start(context.Context) {}
+
 type dirReader struct {
 	Dir             string
 	ch              chan string
@@ -417,7 +438,12 @@ func CreateFileReader(uploadFileField, upload, saveRandDir string) FileReader {
 		default:
 			file, _ = homedir.Expand(file)
 			if stat, err := os.Stat(file); err != nil {
-				log.Fatalf("stat upload %s failed: %v", file, err)
+				if matches, err := filepath.Glob(file); err == nil {
+					rr.readers = append(rr.readers, &globReader{matches: matches, uploadFileField: uploadFileField})
+				} else {
+					log.Fatalf("stat upload %s failed: %v", file, err)
+				}
+
 			} else if stat.IsDir() {
 				rr.readers = append(rr.readers, &dirReader{Dir: file, uploadFileField: uploadFileField})
 			} else {

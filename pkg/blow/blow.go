@@ -20,7 +20,7 @@ import (
 var (
 	pURL    = fla9.String("url", "", "URL")
 	pBody   = fla9.String("body,b", "", "HTTP request body, or @file to read from, or @file:stream to enable chunked encoding for the file, or @file:line to read line by line")
-	pUpload = fla9.String("upload,u", "", "HTTP upload multipart form file or directory, \n"+
+	pUpload = fla9.String("upload,u", "", "HTTP upload multipart form file or directory or glob pattern like ./*.jpg, \n"+
 		"      prefix file: to set form field name\n"+
 		"      extension: rand.png,rand.art,rand.jpg,rand.json\n"+
 		"      env export UPLOAD_INDEX=%clear.%y%M%d.%H%m%s.%i%ext to append index to the file base name")
