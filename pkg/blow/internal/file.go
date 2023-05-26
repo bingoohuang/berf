@@ -156,10 +156,10 @@ func parseUploadFileChanger(uploadIndex string) func(filename string) string {
 	var clear bool
 	f, clear = FoldFindReplace(f, "%clear", "")
 	f = FoldReplace(f, "%y", "2006")
-	f = FoldReplace(f, "%M", "01")
+	f = strings.ReplaceAll(f, "%M", "01")
+	f = strings.ReplaceAll(f, "%m", "04")
 	f = FoldReplace(f, "%d", "02")
 	f = FoldReplace(f, "%H", "15")
-	f = FoldReplace(f, "%m", "04")
 	f = FoldReplace(f, "%s", "05")
 	var idx atomic.Uint64
 
