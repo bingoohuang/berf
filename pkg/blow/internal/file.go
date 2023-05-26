@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/samber/lo"
 	"io"
 	"log"
 	"os"
@@ -315,8 +316,8 @@ func (r randJsonReader) Read(cache bool) *UploadChanValue {
 func (r randJsonReader) Start(context.Context) {}
 
 type globReader struct {
-	matches         []string
 	uploadFileField string
+	matches         []string
 	index           atomic.Uint64
 }
 
@@ -439,11 +440,10 @@ func CreateFileReader(uploadFileField, upload, saveRandDir string) FileReader {
 			file, _ = homedir.Expand(file)
 			if stat, err := os.Stat(file); err != nil {
 				if matches, err := filepath.Glob(file); err == nil {
-					rr.readers = append(rr.readers, &globReader{matches: matches, uploadFileField: uploadFileField})
+					rr.readers = append(rr.readers, &globReader{matches: lo.Shuffle(matches), uploadFileField: uploadFileField})
 				} else {
 					log.Fatalf("stat upload %s failed: %v", file, err)
 				}
-
 			} else if stat.IsDir() {
 				rr.readers = append(rr.readers, &dirReader{Dir: file, uploadFileField: uploadFileField})
 			} else {
