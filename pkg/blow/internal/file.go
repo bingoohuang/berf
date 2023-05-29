@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -149,36 +148,39 @@ func setUploadFileChanger(uploadIndex string) {
 }
 
 func parseUploadFileChanger(uploadIndex string) func(filename string) string {
-	f := uploadIndex
-	if f == "" {
+	if uploadIndex == "" {
 		return func(filename string) string { return filename }
 	}
 
-	var clear bool
-	f, clear = FoldFindReplace(f, "%clear", "")
-	f = FoldReplace(f, "%y", "2006")
-	f = strings.ReplaceAll(f, "%M", "01")
-	f = strings.ReplaceAll(f, "%m", "04")
-	f = FoldReplace(f, "%d", "02")
-	f = FoldReplace(f, "%H", "15")
-	f = FoldReplace(f, "%s", "05")
 	var idx atomic.Uint64
 
 	return func(filename string) string {
-		s := time.Now().Format(f)
 		next := idx.Add(1)
 		ext := filepath.Ext(filename)
-		s = FoldReplace(s, "%i", strconv.FormatUint(next, 10))
-		s = FoldReplace(s, "%ext", ext)
+
+		f, clear := FoldFindReplace(uploadIndex, "%clear", "")
+		t := time.Now()
+		f = FoldReplace(f, "%y", fmt.Sprintf("%04d", t.Year()))
+		f = strings.ReplaceAll(f, "%M", fmt.Sprintf("%02d", t.Month()))
+		f = strings.ReplaceAll(f, "%m", fmt.Sprintf("%02d", t.Minute()))
+		f = FoldReplace(f, "%d", fmt.Sprintf("%02d", t.Day()))
+		f = FoldReplace(f, "%H", fmt.Sprintf("%02d", t.Hour()))
+		f = FoldReplace(f, "%s", fmt.Sprintf("%02d", t.Second()))
+
+		f = FindReplaceFunc(f, `%\d*i`, func(repl string) string {
+			format := repl[:len(repl)-1] + "d"
+			return fmt.Sprintf(format, next)
+		})
+		f = FoldReplace(f, "%ext", ext)
 
 		if clear {
-			return s
+			return f
 		}
 
 		dir := filepath.Dir(filename)
 		base := filepath.Base(filename)
 		base = base[:len(base)-len(ext)]
-		return filepath.Join(dir, base+s)
+		return filepath.Join(dir, base+f)
 	}
 }
 
@@ -192,10 +194,18 @@ func changeUploadName(filePath string) string {
 	return uploadFileNameCreator(filePath)
 }
 
+func FindReplaceFunc(subject, search string, repl func(string) string) string {
+	searchRegex := regexp.MustCompile(search)
+	if found := searchRegex.FindString(subject) != ""; found {
+		return searchRegex.ReplaceAllStringFunc(subject, repl)
+	}
+
+	return subject
+}
+
 func FoldFindReplace(subject, search, replace string) (string, bool) {
 	searchRegex := regexp.MustCompile("(?i)" + regexp.QuoteMeta(search))
-	found := searchRegex.FindString(subject) != ""
-	if found {
+	if found := searchRegex.FindString(subject) != ""; found {
 		return searchRegex.ReplaceAllString(subject, replace), true
 	}
 

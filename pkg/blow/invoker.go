@@ -229,6 +229,10 @@ func (r *Invoker) Run(ctx context.Context, _ *berf.Config, initial bool) (*berf.
 		return r.runProfiles(req, resp, initial)
 	}
 
+	if initial {
+		return nil, nil
+	}
+
 	r.httpHeader.CopyTo(&req.Header)
 	if len(r.requestUriExpr) > 0 && r.requestUriExpr.CountVars() > 0 {
 		result := r.requestUriExpr.Eval(internal.Valuer)
