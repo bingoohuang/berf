@@ -11,21 +11,21 @@ require (
 	github.com/AdhityaRamadhanus/fasthttpcors v0.0.0-20170121111917-d4c07198763a
 	github.com/axiomhq/hyperloglog v0.0.0-20220105174342-98591331716a
 	github.com/beorn7/perks v1.0.1
-	github.com/bingoohuang/gg v0.0.0-20220825014456-513d8c7ea917
-	github.com/bingoohuang/jj v0.0.0-20221201004110-53fe89b4920f
+	github.com/bingoohuang/gg v0.0.0-20230510011343-87bfcf343abf
+	github.com/bingoohuang/jj v0.0.0-20230529065232-c03e0df61d8a
 	github.com/deatil/go-cryptobin v1.0.1042
-	github.com/dustin/go-humanize v1.0.0
+	github.com/dustin/go-humanize v1.0.1
 	github.com/emmansun/gmsm v0.16.0
 	github.com/go-echarts/go-echarts/v2 v2.2.4
 	github.com/gobwas/glob v0.2.3
 	github.com/jdxyw/generativeart v0.0.0-20220127024657-50049f153090
 	github.com/karrick/godirwalk v1.16.1
-	github.com/mattn/go-isatty v0.0.15-0.20210929170527-d423e9c6c3bf
+	github.com/mattn/go-isatty v0.0.18
 	github.com/mattn/go-runewidth v0.0.13
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/samber/lo v1.38.1
 	github.com/shirou/gopsutil/v3 v3.22.3
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
 	github.com/thoas/go-funk v0.9.2
 	github.com/valyala/fasthttp v1.37.0
 	go.uber.org/multierr v1.8.0
@@ -37,7 +37,7 @@ require (
 require (
 	github.com/Pallinder/go-randomdata v1.2.0 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
-	github.com/bingoohuang/jiami v0.0.0-20221122064658-cdd6a948124e // indirect
+	github.com/bingoohuang/jiami v0.0.0-20221123002830-d9d1f5f029b4 // indirect
 	github.com/cristalhq/base64 v0.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-metro v0.0.0-20180109044635-280f6062b5bc // indirect

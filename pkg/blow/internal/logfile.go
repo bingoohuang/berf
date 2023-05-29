@@ -46,7 +46,9 @@ func CreateLogFile(verbose int, n int) *LogFile {
 	osx.ExitIfErr(err)
 
 	fileName := f.Name()
-	fmt.Printf("Log details to: %s\n", fileName)
+	if verbose >= 2 {
+		fmt.Printf("Log details to: %s\n", fileName)
+	}
 	return &LogFile{File: f, name: fileName}
 }
 

@@ -44,6 +44,7 @@ var (
 		"      eval:               evaluate url and body's variables \n"+
 		"      notty:              no tty color \n")
 	pAuth       = fla9.String("auth", "", "basic auth, eg. scott:tiger or direct base64 encoded like c2NvdHQ6dGlnZXI")
+	pDir        = fla9.String("dir", "", "download dir, use :temp for temp dir")
 	pCertKey    = fla9.String("cert", "", "Path to the client's TLS Cert and private key file, eg. ca.pem,ca.key")
 	pRootCert   = fla9.String("root-ca", "", "Ca root certificate file to verify TLS")
 	pTlcpCerts  = fla9.String("tlcp-certs", "", "format: sign.cert.pem,sign.key.pem,enc.cert.pem,enc.key.pem")
@@ -151,6 +152,8 @@ type Opt struct {
 	rootCert string
 	certPath string
 	keyPath  string
+
+	downloadDir string
 
 	method  string
 	network string
@@ -265,11 +268,12 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 		bodyStreamFile: bodyStreamFile,
 		upload:         *pUpload,
 
-		rootCert:  *pRootCert,
-		certPath:  cert,
-		keyPath:   key,
-		tlcpCerts: *pTlcpCerts,
-		tlsVerify: opts.HasAny("tlsVerify"),
+		rootCert:    *pRootCert,
+		certPath:    cert,
+		keyPath:     key,
+		tlcpCerts:   *pTlcpCerts,
+		tlsVerify:   opts.HasAny("tlsVerify"),
+		downloadDir: *pDir,
 
 		doTimeout:    timeout.Get("do"),
 		readTimeout:  timeout.Get("read", "r"),
@@ -293,6 +297,10 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 		statusName:         *pStatusName,
 		printOption:        parsePrintOption(*pPrint),
 		berfConfig:         conf,
+	}
+
+	if opt.downloadDir == ":temp" {
+		opt.downloadDir = os.TempDir()
 	}
 
 	if opts.HasAny("notty") {

@@ -10,8 +10,10 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mime"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -359,7 +361,7 @@ func (r *Invoker) printReq(b *bytes.Buffer, bx io.Writer, ignoreBody bool, statu
 		bx = nil
 	}
 
-	dumpHeader, dumpBody := r.dump(b, bx, ignoreBody)
+	dumpHeader, dumpBody := r.dump(b, bx, ignoreBody, nil)
 	if bx != nil {
 		_, _ = bx.Write([]byte("\n"))
 	}
@@ -420,7 +422,7 @@ func (r *Invoker) printResp(b *bytes.Buffer, bx io.Writer, rsp *fasthttp.Respons
 		bx = nil
 	}
 
-	dumpHeader, dumpBody := r.dump(b, bx, false)
+	dumpHeader, dumpBody := r.dump(b, bx, false, rsp)
 
 	if r.opt.printOption == 0 {
 		return
@@ -451,7 +453,7 @@ func (r *Invoker) printResp(b *bytes.Buffer, bx io.Writer, rsp *fasthttp.Respons
 
 var cLengthReg = regexp.MustCompile(`Content-Length: (\d+)`)
 
-func (r *Invoker) dump(b *bytes.Buffer, bx io.Writer, ignoreBody bool) (dumpHeader, dumpBody []byte) {
+func (r *Invoker) dump(b *bytes.Buffer, bx io.Writer, ignoreBody bool, rsp *fasthttp.Response) (dumpHeader, dumpBody []byte) {
 	dump := b.String()
 	dps := strings.Split(dump, "\n")
 	for i, line := range dps {
@@ -470,15 +472,41 @@ func (r *Invoker) dump(b *bytes.Buffer, bx io.Writer, ignoreBody bool) (dumpHead
 		cl = ss.ParseInt(subs[1])
 	}
 
-	maxBody := 4096
-	if env := os.Getenv("MAX_BODY"); env != "" {
-		if envValue, err := man.ParseBytes(env); err == nil {
-			maxBody = int(envValue)
-		} else {
-			log.Printf("bad environment value format: %s", env)
+	var filename string
+	if rsp != nil && r.opt.downloadDir != "" {
+		// Content-Disposition: inline; filename=20230529.00475.jpg
+		if d := string(rsp.Header.Peek("Content-Disposition")); d != "" {
+			_, params, err := mime.ParseMediaType(d)
+			if err != nil {
+				log.Printf("parse media type %s: %v", d, err)
+			} else {
+				filename = params["filename"]
+			}
+		}
+		if filename != "" {
+			filename = filepath.Join(r.opt.downloadDir, filename)
 		}
 	}
 
+	if filename != "" {
+		if err := os.WriteFile(filename, rsp.Body(), os.ModePerm); err != nil {
+			log.Printf("write file %s: %v", filename, err)
+		}
+		dumpBody = []byte(fmt.Sprintf("\n\n--- %s downloaded ---\n", filename))
+		if bx != nil {
+			_, _ = bx.Write(dumpBody)
+		}
+		return dumpHeader, dumpBody
+	}
+
+	maxBody := 4096
+	if envValue := os.Getenv("MAX_BODY"); envValue != "" {
+		if envValue, err := man.ParseBytes(envValue); err == nil {
+			maxBody = int(envValue)
+		} else {
+			log.Printf("bad environment value format: %s", envValue)
+		}
+	}
 	if !ignoreBody && (cl == 0 || (maxBody > 0 && cl > maxBody)) {
 		dumpBody = []byte("\n\n--- streamed or too long, ignored ---\n")
 	}
