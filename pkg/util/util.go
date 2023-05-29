@@ -98,9 +98,27 @@ func TrimDrySuffix(file string) string {
 	return strings.TrimSuffix(file, DrySuffix)
 }
 
-func NewJsonLogFile(file string) *JSONLogFile {
-	dry := IsDrySuffix(file)
+type JSONLogger interface {
+	io.Closer
+	IsDry() bool
+	ReadAll() []byte
+	WriteJSON(data []byte) error
+}
+
+type jsonLoggerNoop struct{}
+
+func (jsonLoggerNoop) Close() error           { return nil }
+func (jsonLoggerNoop) IsDry() bool            { return false }
+func (jsonLoggerNoop) ReadAll() []byte        { return nil }
+func (jsonLoggerNoop) WriteJSON([]byte) error { return nil }
+
+func NewJsonLogFile(file string) JSONLogger {
 	if file == "" {
+		return &jsonLoggerNoop{}
+	}
+
+	dry := IsDrySuffix(file)
+	if file != "" {
 		file = "berf_" + time.Now().Format(`200601021504`) + ".log"
 	} else if dry {
 		file = TrimDrySuffix(file)

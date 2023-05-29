@@ -14,6 +14,7 @@ import (
 
 type LogFile struct {
 	File *os.File
+	name string
 	Pos  int64
 	sync.Mutex
 }
@@ -36,16 +37,17 @@ func (f *LogFile) MarkPos() {
 	f.Unlock()
 }
 
-func CreateLogFile(verbose int, printOption uint8) *LogFile {
-	if verbose < 2 || printOption > 0 {
+func CreateLogFile(verbose int, n int) *LogFile {
+	if verbose < 2 && n > 1 {
 		return nil
 	}
 
-	f, err := os.CreateTemp(".", "blow_"+time.Now().Format(`20060102150405`)+"_"+"*.log")
+	f, err := os.CreateTemp("", "blow_"+time.Now().Format(`20060102150405`)+"_"+"*.log")
 	osx.ExitIfErr(err)
 
-	fmt.Printf("Log details to: %s\n", f.Name())
-	return &LogFile{File: f}
+	fileName := f.Name()
+	fmt.Printf("Log details to: %s\n", fileName)
+	return &LogFile{File: f, name: fileName}
 }
 
 func (f *LogFile) GetLastLog() string {
@@ -62,6 +64,8 @@ func (f *LogFile) Close() error {
 
 	return f.File.Close()
 }
+
+func (f *LogFile) Remove() error { return os.Remove(f.name) }
 
 func ReadFileFromPos(f *os.File, pos int64) ([]byte, error) {
 	var size int64

@@ -108,7 +108,13 @@ func (b *Bench) Final(_ context.Context, conf *berf.Config) error {
 	opt := b.invoker.opt
 
 	if opt.logf != nil {
-		defer opt.logf.Close()
+		defer func() {
+			opt.logf.Close()
+			// 关闭日志文件后，如果日志文件是仅仅由于 -n1 引起，则删除之
+			if conf.Verbose == 0 {
+				opt.logf.Remove()
+			}
+		}()
 	}
 
 	if conf.N == 1 && opt.logf != nil && opt.printOption == 0 {
@@ -290,7 +296,7 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 		hasStdoutDevice = false
 	}
 
-	opt.logf = internal.CreateLogFile(opt.verbose, opt.printOption)
+	opt.logf = internal.CreateLogFile(opt.verbose, conf.N)
 	opt.profiles = internal.ParseProfileArg(*pProfiles, *pEnv)
 	invoker, err := NewInvoker(ctx, opt)
 	osx.ExitIfErr(err)

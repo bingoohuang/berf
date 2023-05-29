@@ -30,7 +30,7 @@ var (
 	pGoIncr     = fla9.String(pf+"ci", "", "Goroutines incremental mode. empty: none; 1: up by step 1 to max every 1m; 1:10s: up to max by step 1 by n every 10s; 1:10s:1 up to max then down to 0 by step1 every 10s.")
 	pQPS        = fla9.Float64(pf+"qps", 0, "QPS rate limit")
 	pFeatures   = fla9.String(pf+"f", "", "Customized features, e.g. a,b,c, specifically nop to run no benchmarking job for collect hardware metrics only")
-	pPlotsFile  = fla9.String(pf+"plots", "", "Plots filename, append :dry to show exists plots in dry mode")
+	pPlotsFile  = fla9.String(pf+"plots", "", "Plots filename, append `:dry` to show exists plots in dry mode, use `auto` to automatically generate plots")
 	pVerbose    = fla9.Count(pf+"v", 0, "Verbose level, e.g. -v -vv")
 	pThinkTime  = fla9.String(pf+"think", "", "Think time among requests, eg. 1s, 10ms, 10-20ms and etc. (unit ns, us/µs, ms, s, m, h)")
 	pPort       = fla9.Int(pf+"port", 28888, "Listen port for serve Web UI")
@@ -40,7 +40,7 @@ var (
 // Config defines the bench configuration.
 type Config struct {
 	util.Features
-	PlotsHandle *util.JSONLogFile
+	PlotsHandle util.JSONLogger
 
 	OkStatus string
 
@@ -211,10 +211,6 @@ func (c *Config) Setup() {
 	c.Goroutines = ss.Ifi(c.Goroutines < 0, 100, c.Goroutines)
 	if c.GoMaxProcs < 0 {
 		c.GoMaxProcs = int(2.5 * float64(runtime.GOMAXPROCS(0)))
-	}
-
-	if c.N == 1 {
-		c.Verbose = 2
 	}
 
 	if c.N > 0 && c.N < c.Goroutines {

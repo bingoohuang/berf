@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/samber/lo"
 	"io"
 	"log"
 	"os"
@@ -25,6 +24,7 @@ import (
 	"github.com/bingoohuang/jj"
 	"github.com/karrick/godirwalk"
 	"github.com/mitchellh/go-homedir"
+	"github.com/samber/lo"
 )
 
 var filePathCache sync.Map
