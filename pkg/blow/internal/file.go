@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -21,6 +22,7 @@ import (
 	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/bingoohuang/gg/pkg/uid"
 	"github.com/bingoohuang/jj"
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/karrick/godirwalk"
 	"github.com/mitchellh/go-homedir"
 	"github.com/samber/lo"
@@ -325,6 +327,58 @@ func (r randJsonReader) Read(cache bool) *UploadChanValue {
 
 func (r randJsonReader) Start(context.Context) {}
 
+type antReader struct {
+	ch              chan string
+	uploadFileField string
+	pattern         string
+}
+
+func (f *antReader) Start(ctx context.Context) {
+	basepath, pattern := doublestar.SplitPattern(f.pattern)
+	f.ch = make(chan string, 1)
+	errStop := fmt.Errorf("canceled")
+
+	fn := func(p string, d fs.DirEntry) error {
+		if d.IsDir() {
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return errStop
+		default:
+			f.ch <- filepath.Join(basepath, p)
+		}
+
+		return nil
+	}
+	go func() {
+		defer close(f.ch)
+
+		for {
+			if err := doublestar.GlobWalk(
+				os.DirFS(basepath),
+				filepath.ToSlash(pattern),
+				fn,
+				doublestar.WithFailOnIOErrors(),
+				doublestar.WithNoFollow(),
+				doublestar.WithFilesOnly(),
+			); err != nil {
+				log.Printf("glob walk: %v", err)
+				return
+			}
+		}
+	}()
+}
+
+func (f *antReader) Read(cache bool) *UploadChanValue {
+	fr := &fileReader{
+		File:            <-f.ch,
+		uploadFileField: f.uploadFileField,
+	}
+	return fr.Read(cache)
+}
+
 type globReader struct {
 	uploadFileField string
 	matches         []string
@@ -422,7 +476,7 @@ func (f fileReader) Read(cache bool) *UploadChanValue {
 	return uv
 }
 
-func CreateFileReader(uploadFileField, upload, saveRandDir string) FileReader {
+func CreateFileReader(uploadFileField, upload, saveRandDir string, ant bool) FileReader {
 	var rr fileReaders
 
 	if saveRandDir != "" {
@@ -448,17 +502,28 @@ func CreateFileReader(uploadFileField, upload, saveRandDir string) FileReader {
 			rr.readers = append(rr.readers, &randJsonReader{uploadFileField: uploadFileField, saveRandDir: saveRandDir})
 		default:
 			file, _ = homedir.Expand(file)
-			if stat, err := os.Stat(file); err != nil {
-				if matches, err := filepath.Glob(file); err == nil {
-					rr.readers = append(rr.readers, &globReader{matches: lo.Shuffle(matches), uploadFileField: uploadFileField})
+			if stat, err := os.Stat(file); err == nil {
+				if stat.IsDir() {
+					rr.readers = append(rr.readers, &dirReader{Dir: file, uploadFileField: uploadFileField})
 				} else {
-					log.Fatalf("stat upload %s failed: %v", file, err)
+					rr.readers = append(rr.readers, &fileReader{File: file, uploadFileField: uploadFileField})
 				}
-			} else if stat.IsDir() {
-				rr.readers = append(rr.readers, &dirReader{Dir: file, uploadFileField: uploadFileField})
-			} else {
-				rr.readers = append(rr.readers, &fileReader{File: file, uploadFileField: uploadFileField})
+				continue
 			}
+
+			if ant {
+				if _, err := doublestar.Match(file, ""); err == nil {
+					rr.readers = append(rr.readers, &antReader{pattern: file, uploadFileField: uploadFileField})
+					continue
+				}
+			}
+
+			if matches, err := filepath.Glob(file); err == nil {
+				rr.readers = append(rr.readers, &globReader{matches: lo.Shuffle(matches), uploadFileField: uploadFileField})
+				continue
+			}
+
+			log.Fatalf("upload %s pattern unknown", file)
 		}
 	}
 

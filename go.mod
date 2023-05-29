@@ -13,6 +13,7 @@ require (
 	github.com/beorn7/perks v1.0.1
 	github.com/bingoohuang/gg v0.0.0-20230510011343-87bfcf343abf
 	github.com/bingoohuang/jj v0.0.0-20230529065232-c03e0df61d8a
+	github.com/bmatcuk/doublestar/v4 v4.6.0
 	github.com/deatil/go-cryptobin v1.0.1042
 	github.com/dustin/go-humanize v1.0.1
 	github.com/emmansun/gmsm v0.16.0

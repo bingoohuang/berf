@@ -182,6 +182,7 @@ type Opt struct {
 	eval        bool
 	uploadIndex bool
 	enableGzip  bool
+	ant         bool
 
 	printOption uint8
 	form        bool
@@ -292,6 +293,7 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 		pretty:             opts.HasAny("pretty"),
 		eval:               opts.HasAny("eval"),
 		jsonBody:           opts.HasAny("json"),
+		ant:                opts.HasAny("ant"),
 		saveRandDir:        opts.Get("saveRandDir"),
 		verbose:            conf.Verbose,
 		statusName:         *pStatusName,

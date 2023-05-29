@@ -20,6 +20,8 @@ github.com/bingoohuang/jiami v0.0.0-20221123002830-d9d1f5f029b4 h1:+VmCTioMLui7P
 github.com/bingoohuang/jiami v0.0.0-20221123002830-d9d1f5f029b4/go.mod h1:orsb36bWkIn1YzTj9vxKi61P/RJj4eopmi8dyrOFeEY=
 github.com/bingoohuang/jj v0.0.0-20230529065232-c03e0df61d8a h1:/8Ql01M+WTe/6yzan4JNgZFU0qAaUMX2Nrv+y95crek=
 github.com/bingoohuang/jj v0.0.0-20230529065232-c03e0df61d8a/go.mod h1:E/C9v4eilW5A9lFCLPD0U+jndUBVI6uCe7cDh9wI9gY=
+github.com/bmatcuk/doublestar/v4 v4.6.0 h1:HTuxyug8GyFbRkrffIpzNCSK4luc0TY3wzXvzIZhEXc=
+github.com/bmatcuk/doublestar/v4 v4.6.0/go.mod h1:xBQ8jztBU6kakFMg+8WGxn0c6z1fTSPVIjEY1Wr7jzc=
 github.com/buger/jsonparser v1.1.1 h1:2PnMjfWD7wBILjqQbt530v576A/cAbQvEW9gGIpYMUs=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghfAqPWnc=

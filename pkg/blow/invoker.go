@@ -88,7 +88,7 @@ func NewInvoker(ctx context.Context, opt *Opt) (*Invoker, error) {
 	}
 
 	if r.upload != "" {
-		uploadReader := internal.CreateFileReader(r.uploadFileField, r.upload, r.opt.saveRandDir)
+		uploadReader := internal.CreateFileReader(r.uploadFileField, r.upload, r.opt.saveRandDir, r.opt.ant)
 		r.uploadChan = make(chan *internal.UploadChanValue)
 		go internal.DealUploadFilePath(ctx, uploadReader, r.uploadChan, r.uploadCache)
 	}
