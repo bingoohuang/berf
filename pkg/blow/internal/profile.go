@@ -81,6 +81,7 @@ func (p *Profile) CreateReq(isTLS bool, req *fasthttp.Request, enableGzip, uploa
 			for k, v := range multi.Headers {
 				SetHeader(req, k, v)
 			}
+			req.Header.Set("Beefs-Original", data.Payload.Original)
 			req.SetBodyStream(multi.NewReader(), int(multi.Size))
 			return nil, nil
 		}

@@ -31,16 +31,16 @@ import (
 var filePathCache sync.Map
 
 type DataItem struct {
-	payload util.UploadPayload
+	Payload util.UploadPayload
 }
 
 func (d *DataItem) CreateFileField(fileFieldName string, uploadIndex bool) *util.Multipart {
 	if uploadIndex {
-		d.payload.Name = insertIndexToFilename(d.payload.Name)
+		d.Payload.Name = insertIndexToFilename(d.Payload.Name)
 	}
 
 	return util.PrepareMultipartPayload(map[string]interface{}{
-		fileFieldName: d.payload,
+		fileFieldName: d.Payload,
 	})
 }
 
@@ -120,28 +120,31 @@ func createDataItem(filePath string, isDiskFile bool, data []byte) func() *DataI
 			_, _ = io.Copy(&buf, file)
 
 			payload = util.UploadPayload{
-				Val:  buf.Bytes(),
-				Name: changeUploadName(filePath),
-				Size: stat.Size(),
+				Val:      buf.Bytes(),
+				Original: filePath,
+				Name:     changeUploadName(filePath),
+				Size:     stat.Size(),
 			}
 		} else {
 			payload = util.UploadPayload{
 				DiskFile: true,
 				Val:      []byte(filePath),
+				Original: filePath,
 				Name:     changeUploadName(filePath),
 				Size:     stat.Size(),
 			}
 		}
 	} else {
 		payload = util.UploadPayload{
-			Val:  data,
-			Name: changeUploadName(filePath),
-			Size: int64(len(data)),
+			Val:      data,
+			Original: filePath,
+			Name:     changeUploadName(filePath),
+			Size:     int64(len(data)),
 		}
 	}
 
 	return func() *DataItem {
-		return &DataItem{payload: payload}
+		return &DataItem{Payload: payload}
 	}
 }
 

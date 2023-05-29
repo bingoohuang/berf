@@ -625,6 +625,7 @@ func (r *Invoker) setBody(req *fasthttp.Request) (internal.Closers, error) {
 		for k, v := range multi.Headers {
 			internal.SetHeader(req, k, v)
 		}
+		req.Header.Set("Beefs-Original", data.Payload.Original)
 		req.SetBodyStream(multi.NewReader(), int(multi.Size))
 		return nil, nil
 	}

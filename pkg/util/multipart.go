@@ -66,6 +66,7 @@ func (m Multipart) NewReader() io.Reader {
 // UploadPayload means the file Payload.
 type UploadPayload struct {
 	Name     string
+	Original string
 	Val      []byte
 	Size     int64
 	DiskFile bool
