@@ -350,7 +350,9 @@ func (f *antReader) Start(ctx context.Context) {
 		case <-ctx.Done():
 			return errStop
 		default:
-			f.ch <- filepath.Join(basepath, p)
+			if !strings.HasPrefix(filepath.Base(p), ".") {
+				f.ch <- filepath.Join(basepath, p)
+			}
 		}
 
 		return nil
@@ -417,15 +419,13 @@ func (f *dirReader) Start(ctx context.Context) {
 			return e
 		}
 
-		if strings.HasPrefix(dirEntry.Name(), ".") {
-			return nil
-		}
-
 		select {
 		case <-ctx.Done():
 			return errStop
 		default:
-			f.ch <- osPathname
+			if !strings.HasPrefix(filepath.Base(osPathname), ".") {
+				f.ch <- osPathname
+			}
 		}
 
 		return nil
@@ -522,6 +522,9 @@ func CreateFileReader(uploadFileField, upload, saveRandDir string, ant bool) Fil
 			}
 
 			if matches, err := filepath.Glob(file); err == nil {
+				matches = lo.Filter(matches, func(item string, index int) bool {
+					return !strings.HasPrefix(filepath.Base(item), ".")
+				})
 				rr.readers = append(rr.readers, &globReader{matches: lo.Shuffle(matches), uploadFileField: uploadFileField})
 				continue
 			}
