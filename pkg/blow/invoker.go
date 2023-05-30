@@ -619,7 +619,10 @@ func (r *Invoker) setBody(req *fasthttp.Request) (internal.Closers, error) {
 	}
 
 	if r.upload != "" {
-		uv := <-r.uploadChan
+		uv, ok := <-r.uploadChan
+		if !ok {
+			return nil, io.EOF
+		}
 		data := uv.Data()
 		multi := data.CreateFileField(r.uploadFileField, r.opt.uploadIndex)
 		for k, v := range multi.Headers {
