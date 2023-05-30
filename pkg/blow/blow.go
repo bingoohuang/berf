@@ -26,7 +26,8 @@ var (
 		"      env export UPLOAD_INDEX=%clear%y%M%d.%H%m%s.%i%ext to append index to the file base name, \n"+
 		"                                %clear: 清楚原始文件名\n"+
 		"                                %y: 4位年 %M: 2位月 %d: 2位日 %H: 2位时 %m: 2位分 %s: 2位秒\n"+
-		"                                %i: 自增长序号, %05i： 补齐5位的自增长序号（前缀补0)")
+		"                                %i: 自增长序号, %05i： 补齐5位的自增长序号（前缀补0)\n"+
+		"      env export UPLOAD_EXIT=1 to exit when all files are uploaded")
 	pMethod   = fla9.String("method,m", "", "HTTP method")
 	pNetwork  = fla9.String("network", "", "Network simulation, local: simulates local network, lan: local, wan: wide, bad: bad network, or BPS:latency like 20M:20ms")
 	pHeaders  = fla9.Strings("header,H", nil, "Custom HTTP headers, K:V, e.g. Content-Type")
