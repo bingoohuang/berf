@@ -18,6 +18,7 @@ import (
 	"github.com/bingoohuang/berf/pkg/blow/internal/art"
 	"github.com/bingoohuang/berf/pkg/util"
 	"github.com/bingoohuang/gg/pkg/iox"
+	"github.com/bingoohuang/gg/pkg/osx/env"
 	"github.com/bingoohuang/gg/pkg/randx"
 	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/bingoohuang/gg/pkg/uid"
@@ -68,6 +69,7 @@ type UploadChanValue struct {
 	Path        string
 	ContentType string
 	Type        UploadChanValueType
+	UploadExit  bool
 }
 
 func (v UploadChanValue) GetCachePath() string {
@@ -334,6 +336,7 @@ type antReader struct {
 	ch              chan string
 	uploadFileField string
 	pattern         string
+	UploadExit      bool
 }
 
 func (f *antReader) Start(ctx context.Context) {
@@ -372,6 +375,10 @@ func (f *antReader) Start(ctx context.Context) {
 				log.Printf("glob walk: %v", err)
 				return
 			}
+
+			if f.UploadExit {
+				break
+			}
 		}
 	}()
 }
@@ -388,10 +395,12 @@ type globReader struct {
 	uploadFileField string
 	matches         []string
 	index           atomic.Uint64
+	UploadExit      bool
 }
 
 func (g *globReader) Read(cache bool) *UploadChanValue {
-	file := g.matches[int(g.index.Load())%len(g.matches)]
+	index := int(g.index.Load())
+	file := g.matches[index%len(g.matches)]
 	f := fileReader{
 		File:            file,
 		uploadFileField: g.uploadFileField,
@@ -399,6 +408,10 @@ func (g *globReader) Read(cache bool) *UploadChanValue {
 	uv := f.Read(cache)
 
 	g.index.Add(1)
+
+	if g.UploadExit && index == len(g.matches)-1 {
+		uv.UploadExit = true
+	}
 
 	return uv
 }
@@ -409,6 +422,7 @@ type dirReader struct {
 	Dir             string
 	ch              chan string
 	uploadFileField string
+	UploadExit      bool
 }
 
 func (f *dirReader) Start(ctx context.Context) {
@@ -439,6 +453,10 @@ func (f *dirReader) Start(ctx context.Context) {
 			if err := godirwalk.Walk(f.Dir, &options); err != nil {
 				log.Printf("walk dir: %s error: %v", f.Dir, err)
 				return
+			}
+
+			if f.UploadExit {
+				break
 			}
 		}
 	}()
@@ -492,6 +510,8 @@ func CreateFileReader(uploadFileField, upload, saveRandDir string, ant bool) Fil
 		}
 	}
 
+	uploadExit := env.Bool("UPLOAD_EXIT", false)
+
 	uploadFiles := ss.Split(upload)
 	for _, file := range uploadFiles {
 		switch file {
@@ -507,7 +527,7 @@ func CreateFileReader(uploadFileField, upload, saveRandDir string, ant bool) Fil
 			file, _ = homedir.Expand(file)
 			if stat, err := os.Stat(file); err == nil {
 				if stat.IsDir() {
-					rr.readers = append(rr.readers, &dirReader{Dir: file, uploadFileField: uploadFileField})
+					rr.readers = append(rr.readers, &dirReader{UploadExit: uploadExit, Dir: file, uploadFileField: uploadFileField})
 				} else {
 					rr.readers = append(rr.readers, &fileReader{File: file, uploadFileField: uploadFileField})
 				}
@@ -516,7 +536,7 @@ func CreateFileReader(uploadFileField, upload, saveRandDir string, ant bool) Fil
 
 			if ant {
 				if _, err := doublestar.Match(file, ""); err == nil {
-					rr.readers = append(rr.readers, &antReader{pattern: file, uploadFileField: uploadFileField})
+					rr.readers = append(rr.readers, &antReader{UploadExit: uploadExit, pattern: file, uploadFileField: uploadFileField})
 					continue
 				}
 			}
@@ -525,7 +545,7 @@ func CreateFileReader(uploadFileField, upload, saveRandDir string, ant bool) Fil
 				matches = lo.Filter(matches, func(item string, index int) bool {
 					return !strings.HasPrefix(filepath.Base(item), ".")
 				})
-				rr.readers = append(rr.readers, &globReader{matches: lo.Shuffle(matches), uploadFileField: uploadFileField})
+				rr.readers = append(rr.readers, &globReader{UploadExit: uploadExit, matches: lo.Shuffle(matches), uploadFileField: uploadFileField})
 				continue
 			}
 

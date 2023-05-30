@@ -14,7 +14,11 @@ func DealUploadFilePath(ctx context.Context, uploadReader FileReader, postFileCh
 		case <-ctx.Done():
 			return
 		default:
-			postFileCh <- uploadReader.Read(cache)
+			ur := uploadReader.Read(cache)
+			postFileCh <- ur
+			if ur.UploadExit {
+				return
+			}
 		}
 	}
 }
