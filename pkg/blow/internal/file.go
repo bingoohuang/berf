@@ -545,7 +545,10 @@ func CreateFileReader(uploadFileField, upload, saveRandDir string, ant bool) Fil
 				matches = lo.Filter(matches, func(item string, index int) bool {
 					return !strings.HasPrefix(filepath.Base(item), ".")
 				})
-				rr.readers = append(rr.readers, &globReader{UploadExit: uploadExit, matches: lo.Shuffle(matches), uploadFileField: uploadFileField})
+				if env.Bool("UPLOAD_SHUFFLE", false) {
+					matches = lo.Shuffle(matches)
+				}
+				rr.readers = append(rr.readers, &globReader{UploadExit: uploadExit, matches: matches, uploadFileField: uploadFileField})
 				continue
 			}
 
