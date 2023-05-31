@@ -514,47 +514,51 @@ func CreateFileReader(uploadFileField, upload, saveRandDir string, ant bool) Fil
 
 	uploadFiles := ss.Split(upload)
 	for _, file := range uploadFiles {
-		switch file {
-		case "rand.art":
-			rr.readers = append(rr.readers, &artReader{uploadFileField: uploadFileField, saveRandDir: saveRandDir})
-		case "rand.png":
-			rr.readers = append(rr.readers, &randImgReader{uploadFileField: uploadFileField, ContentType: "image/png", Extension: ".png", saveRandDir: saveRandDir})
-		case "rand.jpg":
-			rr.readers = append(rr.readers, &randImgReader{uploadFileField: uploadFileField, ContentType: "image/jpeg", Extension: ".jpeg", saveRandDir: saveRandDir})
-		case "rand.json":
-			rr.readers = append(rr.readers, &randJsonReader{uploadFileField: uploadFileField, saveRandDir: saveRandDir})
-		default:
-			file, _ = homedir.Expand(file)
-			if stat, err := os.Stat(file); err == nil {
-				if stat.IsDir() {
-					rr.readers = append(rr.readers, &dirReader{UploadExit: uploadExit, Dir: file, uploadFileField: uploadFileField})
-				} else {
-					rr.readers = append(rr.readers, &fileReader{File: file, uploadFileField: uploadFileField})
-				}
-				continue
-			}
-
-			if ant {
-				if _, err := doublestar.Match(file, ""); err == nil {
-					rr.readers = append(rr.readers, &antReader{UploadExit: uploadExit, pattern: file, uploadFileField: uploadFileField})
-					continue
-				}
-			}
-
-			if matches, err := filepath.Glob(file); err == nil {
-				matches = lo.Filter(matches, func(item string, index int) bool {
-					return !strings.HasPrefix(filepath.Base(item), ".")
-				})
-				if env.Bool("UPLOAD_SHUFFLE", false) {
-					matches = lo.Shuffle(matches)
-				}
-				rr.readers = append(rr.readers, &globReader{UploadExit: uploadExit, matches: matches, uploadFileField: uploadFileField})
-				continue
-			}
-
-			log.Fatalf("upload %s pattern unknown", file)
-		}
+		r := createUploadReader(file, uploadFileField, saveRandDir, uploadExit, ant)
+		rr.readers = append(rr.readers, r)
 	}
 
 	return &rr
+}
+
+func createUploadReader(file, uploadFileField, saveRandDir string, uploadExit, ant bool) FileReader {
+	switch file {
+	case "rand.art":
+		return &artReader{uploadFileField: uploadFileField, saveRandDir: saveRandDir}
+	case "rand.png":
+		return &randImgReader{uploadFileField: uploadFileField, ContentType: "image/png", Extension: ".png", saveRandDir: saveRandDir}
+	case "rand.jpg":
+		return &randImgReader{uploadFileField: uploadFileField, ContentType: "image/jpeg", Extension: ".jpeg", saveRandDir: saveRandDir}
+	case "rand.json":
+		return &randJsonReader{uploadFileField: uploadFileField, saveRandDir: saveRandDir}
+	}
+
+	file, _ = homedir.Expand(file)
+	if stat, err := os.Stat(file); err == nil {
+		if stat.IsDir() {
+			return &dirReader{UploadExit: uploadExit, Dir: file, uploadFileField: uploadFileField}
+		}
+
+		return &fileReader{File: file, uploadFileField: uploadFileField}
+	}
+
+	if ant {
+		if _, err := doublestar.Match(file, ""); err == nil {
+			return &antReader{UploadExit: uploadExit, pattern: file, uploadFileField: uploadFileField}
+		}
+	}
+
+	if matches, err := filepath.Glob(file); err == nil {
+		matches = lo.Filter(matches, func(item string, index int) bool {
+			base := filepath.Base(item)
+			return !strings.HasPrefix(base, ".")
+		})
+		if env.Bool("UPLOAD_SHUFFLE", false) {
+			matches = lo.Shuffle(matches)
+		}
+		return &globReader{UploadExit: uploadExit, matches: matches, uploadFileField: uploadFileField}
+	}
+
+	log.Fatalf("upload %s pattern unknown", file)
+	return nil
 }
