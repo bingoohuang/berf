@@ -62,6 +62,7 @@ const (
 )
 
 // ProxyHTTPDialerTimeout returns a fasthttp.DialFunc that dials using
+// code original from fasthttpproxy.ProxyHTTPDialerTimeout
 // the env(HTTP_PROXY, HTTPS_PROXY and NO_PROXY) configured HTTP proxy using the given timeout.
 //
 // Example usage:
@@ -70,7 +71,7 @@ const (
 //		Dial: ProxyHTTPDialerTimeout(time.Second * 2),
 //	}
 func ProxyHTTPDialerTimeout(timeout time.Duration, dialer Dialer) fasthttp.DialFunc {
-	proxier := httpproxy.FromEnvironment().ProxyFunc()
+	proxyFunc := httpproxy.FromEnvironment().ProxyFunc()
 
 	// encoded auth barrier for http and https proxy.
 	authHTTPStorage := &atomic.Value{}
@@ -86,7 +87,7 @@ func ProxyHTTPDialerTimeout(timeout time.Duration, dialer Dialer) fasthttp.DialF
 		if port == tlsPort {
 			reqURL.Scheme = httpsScheme
 		}
-		proxyURL, err := proxier(reqURL)
+		proxyURL, err := proxyFunc(reqURL)
 		if err != nil {
 			return nil, err
 		}
@@ -119,7 +120,8 @@ func ProxyHTTPDialerTimeout(timeout time.Duration, dialer Dialer) fasthttp.DialF
 			auth := authBarrierStorage.Load()
 			if auth == nil {
 				authBarrier := base64.StdEncoding.EncodeToString([]byte(proxyURL.User.String()))
-				authBarrierStorage.Store(&authBarrier)
+				auth = &authBarrier
+				authBarrierStorage.Store(auth)
 			}
 
 			req += "Proxy-Authorization: Basic " + *auth.(*string) + "\r\n"
