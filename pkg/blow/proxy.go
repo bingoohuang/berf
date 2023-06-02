@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bingoohuang/gg/pkg/osx/env"
 	"github.com/valyala/fasthttp"
 	"golang.org/x/net/http/httpproxy"
 )
@@ -20,15 +21,16 @@ type Dialer interface {
 	DialTimeout(addr string, timeout time.Duration) (net.Conn, error)
 }
 
-var dialer = &fasthttp.TCPDialer{
-	Concurrency: 1000,
-	LocalAddr:   getLocalAddr(),
-}
+var Debug = env.Bool("DEBUG", false)
 
 func getLocalAddr() *net.TCPAddr {
 	localIP := os.Getenv("LOCAL_IP")
 	if localIP == "" {
 		return nil
+	}
+
+	if Debug {
+		log.Printf("LOCAL_IP: %s", localIP)
 	}
 
 	ipAddr, err := net.ResolveIPAddr("ip", localIP)
@@ -37,8 +39,21 @@ func getLocalAddr() *net.TCPAddr {
 		return nil
 	}
 
+	if Debug {
+		log.Printf("ResolveIPAddr: %s", ipAddr.String())
+	}
+
 	return &net.TCPAddr{IP: ipAddr.IP}
 }
+
+var dialer = func() Dialer {
+	d := &fasthttp.TCPDialer{
+		Concurrency: 1000,
+		LocalAddr:   getLocalAddr(),
+	}
+
+	return d
+}()
 
 const (
 	httpsScheme = "https"
@@ -78,7 +93,7 @@ func ProxyHTTPDialerTimeout(timeout time.Duration, dialer Dialer) fasthttp.DialF
 
 		if proxyURL == nil {
 			if timeout == 0 {
-				return fasthttp.Dial(addr)
+				return dialer.Dial(addr)
 			}
 			return dialer.DialTimeout(addr, timeout)
 		}
@@ -104,8 +119,7 @@ func ProxyHTTPDialerTimeout(timeout time.Duration, dialer Dialer) fasthttp.DialF
 			auth := authBarrierStorage.Load()
 			if auth == nil {
 				authBarrier := base64.StdEncoding.EncodeToString([]byte(proxyURL.User.String()))
-				auth := &authBarrier
-				authBarrierStorage.Store(auth)
+				authBarrierStorage.Store(&authBarrier)
 			}
 
 			req += "Proxy-Authorization: Basic " + *auth.(*string) + "\r\n"

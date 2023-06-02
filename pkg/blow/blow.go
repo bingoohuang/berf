@@ -55,6 +55,11 @@ var (
 	pStatusName = fla9.String("status", "", "Status name in json, like resultCode")
 )
 
+func init() {
+	fla9.String("noop", "", "\n"+
+		"       env LOCAL_IP        指定网卡IP, e.g. LOCAL_IP=192.168.1.2 berf ...\n")
+}
+
 const (
 	printReqHeader uint8 = 1 << iota
 	printReqBody
