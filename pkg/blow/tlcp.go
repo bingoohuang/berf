@@ -86,7 +86,7 @@ func dial(ctx context.Context, dialFunc fasthttp.DialFunc, addr string, config *
 	}
 
 	if config == nil {
-		config = defaultConfig()
+		config = &emptyConfig
 	}
 
 	conn := tlcp.Client(rawConn, config)
@@ -100,8 +100,3 @@ func dial(ctx context.Context, dialFunc fasthttp.DialFunc, addr string, config *
 
 // emptyConfig 默认的空配置对象
 var emptyConfig tlcp.Config
-
-// 返回默认的空配置对象
-func defaultConfig() *tlcp.Config {
-	return &emptyConfig
-}

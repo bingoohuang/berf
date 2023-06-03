@@ -57,7 +57,8 @@ var (
 
 func init() {
 	fla9.String("noop", "", "\n"+
-		"       env LOCAL_IP        指定网卡IP, e.g. LOCAL_IP=192.168.1.2 berf ...\n")
+		"       env LOCAL_IP       指定网卡IP, e.g. LOCAL_IP=192.168.1.2 berf ...\n"+
+		"       env TLCP           使用传输层密码协议(TLCP)，遵循《GB/T 38636-2020 信息安全技术 传输层密码协议》, e.g. TLCP=1 berf ...\n")
 }
 
 const (
