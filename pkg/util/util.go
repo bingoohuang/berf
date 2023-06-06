@@ -169,50 +169,11 @@ func (f JSONLogFile) ReadAll() []byte {
 	_, _ = f.F.Seek(0, io.SeekStart)
 	defer LogErr2(f.F.Seek(0, io.SeekEnd))
 
-	data, err := ReadFile(f.F)
+	data, err := io.ReadAll(f.F)
 	if err != nil {
 		log.Printf("E! fail to read log file %s, error: %v", f.F.Name(), err)
 	}
 	return data
-}
-
-// ReadFile reads the named file and returns the contents.
-// A successful call returns err == nil, not err == EOF.
-// Because ReadFile reads the whole file, it does not treat an EOF from Read
-// as an error to be reported.
-func ReadFile(f *os.File) ([]byte, error) {
-	var size int
-	if info, err := f.Stat(); err == nil {
-		size64 := info.Size()
-		if int64(int(size64)) == size64 {
-			size = int(size64)
-		}
-	}
-	size++ // one byte for final read at EOF
-
-	// If a file claims a small Size, read at least 512 bytes.
-	// In particular, files in Linux's /proc claim Size 0 but
-	// then do not work right if read in small pieces,
-	// so an initial read of 1 byte would not work correctly.
-	if size < 512 {
-		size = 512
-	}
-
-	data := make([]byte, 0, size)
-	for {
-		if len(data) >= cap(data) {
-			d := append(data[:cap(data)], 0)
-			data = d[:len(data)]
-		}
-		n, err := f.Read(data[len(data):cap(data)])
-		data = data[:len(data)+n]
-		if err != nil {
-			if err == io.EOF {
-				err = nil
-			}
-			return data, err
-		}
-	}
 }
 
 func (f *JSONLogFile) WriteJSON(data []byte) error {

@@ -206,7 +206,7 @@ func regexFollows(reg *regexp.Regexp, s, following string) (isEnv, matchFollower
 //go:embed demo.http
 var DemoProfile []byte
 
-func ParseProfileFile(fileName string, envName string) ([]*Profile, error) {
+func ParseProfileFile(fileName, envName string) ([]*Profile, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		panic(err.Error())

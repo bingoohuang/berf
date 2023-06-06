@@ -2,7 +2,6 @@ package internal
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -70,39 +69,12 @@ func (f *LogFile) Close() error {
 func (f *LogFile) Remove() error { return os.Remove(f.name) }
 
 func ReadFileFromPos(f *os.File, pos int64) ([]byte, error) {
-	var size int64
-	if info, err := f.Stat(); err == nil {
-		size = info.Size()
-	}
-	size++ // one byte for final read at EOF
-
 	_, err := f.Seek(pos, io.SeekStart)
 	if err != nil {
 		return nil, err
 	}
 
-	size -= pos
-
-	// If a file claims a small size, read at least 512 bytes.
-	// In particular, files in Linux's /proc claim size 0 but
-	// then do not work right if read in small pieces,
-	// so an initial read of 1 byte would not work correctly.
-	if size < 512 {
-		size = 512
-	}
-
-	data := make([]byte, 0, size)
-	for {
-		if len(data) >= cap(data) {
-			d := append(data[:cap(data)], 0)
-			data = d[:len(data)]
-		}
-		n, err := f.Read(data[len(data):cap(data)])
-		data = data[:len(data)+n]
-		if err != nil {
-			return data, ErrorIf(errors.Is(err, io.EOF), nil, err)
-		}
-	}
+	return io.ReadAll(f)
 }
 
 func ErrorIf(b bool, err1, err2 error) error {

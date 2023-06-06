@@ -20,6 +20,7 @@ require (
 	github.com/go-echarts/go-echarts/v2 v2.2.6
 	github.com/gobwas/glob v0.2.3
 	github.com/jdxyw/generativeart v0.0.0-20220127024657-50049f153090
+	github.com/joho/godotenv v1.5.1
 	github.com/karrick/godirwalk v1.17.0
 	github.com/mattn/go-isatty v0.0.19
 	github.com/mattn/go-runewidth v0.0.14
@@ -30,7 +31,6 @@ require (
 	github.com/thoas/go-funk v0.9.3
 	github.com/valyala/fasthttp v1.47.0
 	go.uber.org/multierr v1.11.0
-	golang.org/x/crypto v0.9.0
 	golang.org/x/net v0.10.0
 	golang.org/x/sys v0.8.0
 )
@@ -59,9 +59,9 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
+	golang.org/x/crypto v0.9.0 // indirect
 	golang.org/x/exp v0.0.0-20220303212507-bbda1eaf7a17 // indirect
 	golang.org/x/image v0.7.0 // indirect
-	golang.org/x/term v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

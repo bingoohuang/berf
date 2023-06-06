@@ -246,18 +246,19 @@ func (p *Procstat) SimpleFindPids(f PIDFinder) ([]PID, error) {
 		}
 	}
 
-	if p.PidFile != "" {
+	switch {
+	case p.PidFile != "":
 		if p.PidFile == "self" {
 			return []PID{PID(os.Getpid())}, nil
 		}
 		pids, err = f.PidFile(p.PidFile)
-	} else if p.Exe != "" {
+	case p.Exe != "":
 		pids, err = f.Pattern(p.Exe)
-	} else if p.Pattern != "" {
+	case p.Pattern != "":
 		pids, err = f.FullPattern(p.Pattern)
-	} else if p.User != "" {
+	case p.User != "":
 		pids, err = f.UID(p.User)
-	} else {
+	default:
 		err = fmt.Errorf("either exe, pid_file, user, pattern, systemd_unit, cgroup, or win_service must be specified")
 	}
 

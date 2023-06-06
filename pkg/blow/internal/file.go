@@ -105,18 +105,18 @@ func (f fileReaders) Start(ctx context.Context) {
 	}
 }
 
-func createDataItem(filePath string, isDiskFile bool, data []byte) func() *DataItem {
+func createDataItem(filePath string, isDiskFile bool, data []byte) (func() *DataItem, error) {
 	var payload util.UploadPayload
 
 	if isDiskFile {
 		file, err := os.Open(filePath)
 		if err != nil {
-			log.Fatalf("open file %s failed: %v", filePath, err)
+			return nil, fmt.Errorf("open file %s: %w", filePath, err)
 		}
 		defer iox.Close(file)
 
 		if stat, err := file.Stat(); err != nil {
-			log.Fatalf("stat file: %s, error: %v", filePath, err)
+			return nil, fmt.Errorf("stat file %s: %w", filePath, err)
 		} else if stat.Size() <= 10<<20 /* 10 M*/ {
 			var buf bytes.Buffer
 			_, _ = io.Copy(&buf, file)
@@ -147,7 +147,7 @@ func createDataItem(filePath string, isDiskFile bool, data []byte) func() *DataI
 
 	return func() *DataItem {
 		return &DataItem{Payload: payload}
-	}
+	}, nil
 }
 
 func setUploadFileChanger(uploadIndex string) {
@@ -247,9 +247,14 @@ func (r artReader) Read(cache bool) *UploadChanValue {
 		}
 	}
 
+	var err error
 	data := art.Random(".png")
 	uv.Path = uid.New().String() + ".png"
-	uv.Data = createDataItem(uv.Path, false, data)
+	uv.Data, err = createDataItem(uv.Path, false, data)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	if r.saveRandDir != "" {
 		util.LogErr1(os.WriteFile(filepath.Join(r.saveRandDir, uv.Path), data, os.ModePerm))
 	}
@@ -286,7 +291,12 @@ func (r randImgReader) Read(cache bool) *UploadChanValue {
 	c := randx.ImgConfig{Width: 640, Height: 320, RandomText: uid.New().String(), FastMode: false}
 	data, _ := c.Gen(r.Extension)
 	uv.Path = c.RandomText + r.Extension
-	uv.Data = createDataItem(uv.Path, false, data)
+	var err error
+	uv.Data, err = createDataItem(uv.Path, false, data)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	if r.saveRandDir != "" {
 		util.LogErr1(os.WriteFile(filepath.Join(r.saveRandDir, uv.Path), data, os.ModePerm))
 	}
@@ -319,7 +329,11 @@ func (r randJsonReader) Read(cache bool) *UploadChanValue {
 
 	data := jj.Rand()
 	uv.Path = uid.New().String() + ".json"
-	uv.Data = createDataItem(uv.Path, false, data)
+	var err error
+	uv.Data, err = createDataItem(uv.Path, false, data)
+	if err != nil {
+		log.Fatal(err)
+	}
 	if r.saveRandDir != "" {
 		util.LogErr1(os.WriteFile(filepath.Join(r.saveRandDir, uv.Path), data, os.ModePerm))
 	}
@@ -478,12 +492,17 @@ type fileReader struct {
 func (f fileReader) Start(context.Context) {}
 
 func (f fileReader) Read(cache bool) *UploadChanValue {
+	var err error
 	uv := &UploadChanValue{
 		Type:        NormalFile,
 		ContentType: "",
 		Path:        f.File,
-		Data:        createDataItem(f.File, true, nil),
 	}
+	uv.Data, err = createDataItem(f.File, true, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	if !cache {
 		return uv
 	}

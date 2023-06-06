@@ -2,7 +2,9 @@ package blow
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -11,6 +13,7 @@ import (
 	"github.com/bingoohuang/berf"
 	"github.com/bingoohuang/berf/pkg/blow/internal"
 	"github.com/bingoohuang/berf/pkg/util"
+	"github.com/bingoohuang/gg/pkg/filex"
 	"github.com/bingoohuang/gg/pkg/fla9"
 	"github.com/bingoohuang/gg/pkg/osx"
 	"github.com/bingoohuang/gg/pkg/rest"
@@ -53,13 +56,11 @@ var (
 	pTimeout    = fla9.String("timeout", "", "Timeout for each http request, e.g. 5s for do:5s,dial:5s,write:5s,read:5s")
 	pPrint      = fla9.String("print,p", "", "a: all, R: req all, H: req headers, B: req body, r: resp all, h: resp headers b: resp body c: status code")
 	pStatusName = fla9.String("status", "", "Status name in json, like resultCode")
-)
 
-func init() {
-	fla9.String("noop", "", "\n"+
+	pCreateEnvFile = fla9.Bool("demo.env", false, "create a demo .env in current dir.\n"+
 		"       env LOCAL_IP       指定网卡IP, e.g. LOCAL_IP=192.168.1.2 berf ...\n"+
 		"       env TLCP           使用传输层密码协议(TLCP)，遵循《GB/T 38636-2020 信息安全技术 传输层密码协议》, e.g. TLCP=1 berf ...\n")
-}
+)
 
 const (
 	printReqHeader uint8 = 1 << iota
@@ -138,12 +139,33 @@ func (b *Bench) Final(_ context.Context, conf *berf.Config) error {
 	return nil
 }
 
+//go:embed .env
+var envFileDemo []byte
+
 func (b *Bench) Init(ctx context.Context, conf *berf.Config) (*berf.BenchOption, error) {
+	if *pCreateEnvFile {
+		return nil, b.createEnvFileDemo()
+	}
+
 	b.invoker = Blow(ctx, conf)
 	b.invoker.Run(ctx, conf, true)
 	return &berf.BenchOption{
 		NoReport: b.invoker.opt.printOption > 0,
 	}, nil
+}
+
+func (b *Bench) createEnvFileDemo() error {
+	if filex.Exists(".env") {
+		return fmt.Errorf(".env file already exists, please remove or rename it first")
+	}
+
+	if err := os.WriteFile(".env", envFileDemo, 0o644); err != nil {
+		return fmt.Errorf("create .env file: %w", err)
+	}
+
+	log.Printf(".env file created")
+
+	return io.EOF
 }
 
 func (b *Bench) Invoke(ctx context.Context, conf *berf.Config) (*berf.Result, error) {
@@ -214,11 +236,15 @@ func TryStartAsBlow() bool {
 		return false
 	}
 
+	StartBlow()
+	return true
+}
+
+func StartBlow() {
 	berf.StartBench(context.Background(),
 		&Bench{},
 		berf.WithOkStatus(ss.Or(*pStatusName, "200")),
 		berf.WithCounting("Connections"))
-	return true
 }
 
 func IsBlowEnv() bool {

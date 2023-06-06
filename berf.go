@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"reflect"
@@ -128,6 +129,9 @@ func StartBench(ctx context.Context, fn Benchable, fns ...ConfigFn) {
 	c.Setup()
 
 	benchOption, err := fn.Init(ctx, c)
+	if errors.Is(err, io.EOF) {
+		return
+	}
 	osx.ExitIfErr(err)
 
 	c.Desc = c.Description(fn.Name(ctx, c))
