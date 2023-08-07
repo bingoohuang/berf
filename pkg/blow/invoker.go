@@ -65,11 +65,13 @@ func NewInvoker(ctx context.Context, opt *Opt) (*Invoker, error) {
 		return nil, err
 	}
 
-	requestURI := string(header.RequestURI())
-	if opt.eval {
-		r.requestUriExpr = vars.ParseExpr(requestURI)
+	if header != nil {
+		requestURI := string(header.RequestURI())
+		if opt.eval {
+			r.requestUriExpr = vars.ParseExpr(requestURI)
+		}
+		r.httpHeader = header
 	}
-	r.httpHeader = header
 
 	if opt.upload != "" {
 		const cacheTag = ":cache"
@@ -106,6 +108,9 @@ func (r *Invoker) buildRequestClient(ctx context.Context, opt *Opt) (*fasthttp.R
 	case len(opt.profiles) > 0:
 		u, err = url.Parse(opt.profiles[0].URL)
 	default:
+		if opt.berfConfig.Features.IsNop() {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("failed to parse url")
 	}
 
