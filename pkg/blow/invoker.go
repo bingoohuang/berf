@@ -222,6 +222,13 @@ func (r *Invoker) buildRequestClient(ctx context.Context, opt *Opt) (*fasthttp.R
 	return &h, nil
 }
 
+var envHosts = func() []string {
+	hosts := os.Getenv("HOSTS")
+	return ss.Split(hosts, ss.WithSeps(","), ss.WithIgnoreEmpty(true), ss.WithTrimSpace(true))
+}()
+
+var envHostsIndex uint32
+
 func (r *Invoker) Run(ctx context.Context, _ *berf.Config, initial bool) (*berf.Result, error) {
 	req := fasthttp.AcquireRequest()
 	resp := fasthttp.AcquireResponse()
@@ -241,12 +248,20 @@ func (r *Invoker) Run(ctx context.Context, _ *berf.Config, initial bool) (*berf.
 	}
 
 	r.httpHeader.CopyTo(&req.Header)
+
+	if len(envHosts) > 0 {
+		atomicIdx := atomic.AddUint32(&envHostsIndex, 1)
+		idx := (int(atomicIdx) - 1) % len(envHosts) // 从 0 开始
+		req.Header.SetHost(envHosts[idx])
+	}
+
 	if len(r.requestUriExpr) > 0 && r.requestUriExpr.CountVars() > 0 {
 		result := r.requestUriExpr.Eval(internal.Valuer)
 		if v, ok := result.(string); ok {
 			req.SetRequestURI(v)
 		}
 	}
+
 	if r.isTLS {
 		uri := req.URI()
 		uri.SetScheme("https")
