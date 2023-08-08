@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -21,7 +22,7 @@ import (
 )
 
 var (
-	pURL    = fla9.String("url", "", "URL")
+	pUrls   = fla9.Strings("url", nil, "URL")
 	pBody   = fla9.String("body,b", "", "HTTP request body, or @file to read from, or @file:stream to enable chunked encoding for the file, or @file:line to read line by line")
 	pUpload = fla9.String("upload,u", "", "HTTP upload multipart form file or directory or glob pattern like ./*.jpg, \n"+
 		"      prefix file: to set form field name\n"+
@@ -110,8 +111,8 @@ type Bench struct {
 
 func (b *Bench) Name(context.Context, *berf.Config) string {
 	opt := b.invoker.opt
-	if v := opt.url; v != "" {
-		return v
+	if v := opt.urls; len(v) > 0 {
+		return strings.Join(v, ",")
 	}
 
 	return "profiles " + strings.Join(*pProfiles, ",")
@@ -176,7 +177,8 @@ type Opt struct {
 	berfConfig    *berf.Config
 	logf          *internal.LogFile
 	bodyLinesChan chan string
-	url           string
+	urls          []string
+	parsedUrls    []*url.URL
 	upload        string
 
 	rootCert string
@@ -248,7 +250,7 @@ func StartBlow() {
 }
 
 func IsBlowEnv() bool {
-	if *pURL != "" {
+	if len(*pUrls) > 0 {
 		return true
 	}
 
@@ -271,9 +273,12 @@ func parseUrlFromArgs() string {
 }
 
 func Blow(ctx context.Context, conf *berf.Config) *Invoker {
-	urlAddr := *pURL
-	if urlAddr == "" {
-		urlAddr = parseUrlFromArgs()
+	var urlAddrs []string
+	urlAddrs = append(urlAddrs, *pUrls...)
+	if len(urlAddrs) == 0 {
+		if urlAddr := parseUrlFromArgs(); urlAddr != "" {
+			urlAddrs = append(urlAddrs, urlAddr)
+		}
 	}
 
 	stream := strings.HasSuffix(*pBody, ":stream")
@@ -295,7 +300,7 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 	}
 
 	opt := &Opt{
-		url:            urlAddr,
+		urls:           urlAddrs,
 		method:         *pMethod,
 		headers:        *pHeaders,
 		bodyLinesChan:  linesChan,

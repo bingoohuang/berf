@@ -31,6 +31,7 @@ import (
 	"github.com/bingoohuang/gg/pkg/man"
 	"github.com/bingoohuang/gg/pkg/osx"
 	"github.com/bingoohuang/gg/pkg/osx/env"
+	"github.com/bingoohuang/gg/pkg/rest"
 	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/bingoohuang/gg/pkg/vars"
 	"github.com/bingoohuang/jj"
@@ -103,8 +104,18 @@ func (r *Invoker) buildRequestClient(ctx context.Context, opt *Opt) (*fasthttp.R
 	var err error
 
 	switch {
-	case opt.url != "":
-		u, err = url.Parse(opt.url)
+	case len(opt.urls) > 0:
+		r.opt.parsedUrls = make([]*url.URL, len(opt.urls))
+		for i, optURL := range opt.urls {
+			rr := rest.FixURI(optURL)
+			if rr.OK() {
+				r.opt.parsedUrls[i] = rr.Data
+			} else {
+				return nil, rr.Err
+			}
+		}
+
+		u = r.opt.parsedUrls[0]
 	case len(opt.profiles) > 0:
 		u, err = url.Parse(opt.profiles[0].URL)
 	default:
@@ -249,7 +260,13 @@ func (r *Invoker) Run(ctx context.Context, _ *berf.Config, initial bool) (*berf.
 
 	r.httpHeader.CopyTo(&req.Header)
 
-	if len(envHosts) > 0 {
+	if len(r.opt.parsedUrls) > 0 {
+		atomicIdx := atomic.AddUint32(&envHostsIndex, 1)
+		idx := (int(atomicIdx) - 1) % len(r.opt.parsedUrls) // 从 0 开始
+		u := r.opt.parsedUrls[idx]
+		req.Header.SetHost(u.Host)
+		req.Header.SetRequestURI(u.RequestURI())
+	} else if len(envHosts) > 0 {
 		atomicIdx := atomic.AddUint32(&envHostsIndex, 1)
 		idx := (int(atomicIdx) - 1) % len(envHosts) // 从 0 开始
 		req.Header.SetHost(envHosts[idx])
