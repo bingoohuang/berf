@@ -26,6 +26,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.14
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/samber/lo v1.38.1
+	github.com/shimingyah/pool v1.0.0
 	github.com/shirou/gopsutil/v3 v3.0.0-00010101000000-000000000000
 	github.com/stretchr/testify v1.8.4
 	github.com/thoas/go-funk v0.9.3
@@ -33,6 +34,8 @@ require (
 	go.uber.org/multierr v1.11.0
 	golang.org/x/net v0.14.0
 	golang.org/x/sys v0.11.0
+	google.golang.org/grpc v1.57.0
+	google.golang.org/protobuf v1.30.0
 )
 
 require (
@@ -45,6 +48,7 @@ require (
 	github.com/fogleman/gg v1.3.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/klauspost/compress v1.16.3 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/pbnjay/pixfont v0.0.0-20200714042608-33b744692567 // indirect
@@ -63,5 +67,6 @@ require (
 	golang.org/x/exp v0.0.0-20220303212507-bbda1eaf7a17 // indirect
 	golang.org/x/image v0.11.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230525234030-28d5490b6b19 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -63,6 +63,7 @@ type Config struct {
 	GoMaxProcs int
 }
 
+// ConfigFn defines the config function.
 type ConfigFn func(*Config)
 
 // WithCounting with customized config.
@@ -74,6 +75,7 @@ func WithOkStatus(okStatus string) ConfigFn { return func(c *Config) { c.OkStatu
 // WithConfig with customized config.
 func WithConfig(v *Config) ConfigFn { return func(c *Config) { *c = *v } }
 
+// Result defines the benchmark result.
 type Result struct {
 	Status     []string
 	Counting   []string
@@ -82,10 +84,12 @@ type Result struct {
 	Cost       time.Duration
 }
 
+// BenchOption defines the bench option.
 type BenchOption struct {
 	NoReport bool
 }
 
+// Benchable abstract interface for benchmark.
 type Benchable interface {
 	Name(context.Context, *Config) string
 	Init(context.Context, *Config) (*BenchOption, error)
@@ -93,6 +97,7 @@ type Benchable interface {
 	Final(context.Context, *Config) error
 }
 
+// BenchEmpty is an empty benchmark.
 type BenchEmpty struct{}
 
 // ErrNoop means there is no operation defined.
@@ -139,7 +144,7 @@ func StartBench(ctx context.Context, fn Benchable, fns ...ConfigFn) {
 		fmt.Println("Berf" + c.Desc)
 	}
 
-	requester := c.NewRequester(ctx, fn)
+	requester := c.newRequester(ctx, fn)
 	report := NewStreamReport(requester)
 	wg := &sync.WaitGroup{}
 	c.serveCharts(report, wg)

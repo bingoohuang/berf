@@ -43,7 +43,7 @@ type Requester struct {
 	concurrent int64
 }
 
-func (c *Config) NewRequester(ctx context.Context, fn Benchable) *Requester {
+func (c *Config) newRequester(ctx context.Context, fn Benchable) *Requester {
 	maxResult := c.Goroutines * 100
 	ctx, cancelFunc := context.WithCancel(ctx)
 	return &Requester{
