@@ -36,7 +36,7 @@ func (c *MyConn) Write(b []byte) (n int, err error) {
 
 type networkWrapper func(net.Conn) net.Conn
 
-func ThroughputStatDial(wrap networkWrapper, dial fasthttp.DialFunc, r *int64, w *int64) fasthttp.DialFunc {
+func ThroughputStatDial(wrap networkWrapper, dial fasthttp.DialFunc, r, w *int64) fasthttp.DialFunc {
 	return func(addr string) (net.Conn, error) {
 		conn, err := dial(addr)
 		if err != nil {

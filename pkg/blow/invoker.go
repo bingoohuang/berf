@@ -273,7 +273,7 @@ func (r *Invoker) Run(ctx context.Context, _ *berf.Config, initial bool) (*berf.
 	}
 
 	if len(r.requestUriExpr) > 0 && r.requestUriExpr.CountVars() > 0 {
-		result := r.requestUriExpr.Eval(internal.Valuer)
+		result, _ := r.requestUriExpr.Eval(internal.Valuer)
 		if v, ok := result.(string); ok {
 			req.SetRequestURI(v)
 		}

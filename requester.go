@@ -161,21 +161,21 @@ func (r *Requester) generateTokens(ch chan context.Context) {
 		dur = time.Minute
 	}
 
-	max := r.config.Goroutines
-	cancels := make([]context.CancelFunc, max)
+	maxGoroutines := r.config.Goroutines
+	cancels := make([]context.CancelFunc, maxGoroutines)
 	var ctx context.Context
 
 	t := time.NewTicker(dur)
 	defer t.Stop()
 
 	if up := r.config.Incr.Up; up <= 0 {
-		for i := 0; i < max; i++ {
+		for i := 0; i < maxGoroutines; i++ {
 			ctx, cancels[i] = context.WithCancel(r.ctx)
 			ch <- ctx
 		}
 	} else {
-		for i := 0; i < max; i += up {
-			for j := i; j < i+up && j < max; j++ {
+		for i := 0; i < maxGoroutines; i += up {
+			for j := i; j < i+up && j < maxGoroutines; j++ {
 				ctx, cancels[j] = context.WithCancel(r.ctx)
 				ch <- ctx
 			}
@@ -186,7 +186,7 @@ func (r *Requester) generateTokens(ch chan context.Context) {
 	keepTimes(t.C, 3)
 
 	if down := r.config.Incr.Down; down > 0 {
-		for i := max - 1; i >= 0; {
+		for i := maxGoroutines - 1; i >= 0; {
 			<-t.C
 			for j := i; i > j-down && i >= 0; i-- {
 				cancels[i]()

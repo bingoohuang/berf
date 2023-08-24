@@ -19,8 +19,10 @@ var gen = jj.NewGenContext(Valuer)
 
 func Gen(s string, mode StringMode) string {
 	if mode == SureJSON || mode == MayJSON && jj.Valid(s) {
-		return gen.Gen(s)
+		gs, _ := gen.Gen(s)
+		return gs
 	}
 
-	return vars.ToString(vars.ParseExpr(s).Eval(Valuer))
+	eval, _ := vars.ParseExpr(s).Eval(Valuer)
+	return vars.ToString(eval)
 }
