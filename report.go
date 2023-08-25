@@ -22,7 +22,7 @@ type ReportRecord struct {
 	writeBytes int64
 }
 
-func (r ReportRecord) Reset() {
+func (r *ReportRecord) Reset() {
 	r.cost = 0
 	r.code = nil
 	r.counting = nil
