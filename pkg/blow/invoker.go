@@ -339,8 +339,8 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 	}
 
 	conn := rsp.LocalAddr().String() + "->" + rsp.RemoteAddr().String()
-	_, _ = b1.WriteString(fmt.Sprintf("### %s time: %s cost: %s\n",
-		conn, time.Now().Format(time.RFC3339Nano), rr.Cost))
+	_, _ = b1.WriteString(fmt.Sprintf("### %s time: %s cost: %s  read/wrotten: %d/%d bytes\n",
+		conn, time.Now().Format(time.RFC3339Nano), rr.Cost, r.readBytes, r.writeBytes))
 
 	bw := bufio.NewWriter(b1)
 	_ = req.Header.Write(bw)
