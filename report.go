@@ -211,8 +211,8 @@ type SnapshotReport struct {
 	RPS, ElapseInSec float64
 	Count, Counting  int64
 
-	ReadThroughput, WriteThroughput float64
-	Elapsed                         time.Duration
+	ReadBytes, WriteBytes int64
+	Elapsed               time.Duration
 }
 
 func (s *StreamReport) Snapshot() *SnapshotReport {
@@ -236,8 +236,8 @@ func (s *StreamReport) Snapshot() *SnapshotReport {
 
 	elapseInSec := rs.Elapsed.Seconds()
 	rs.RPS = float64(rs.Count) / elapseInSec
-	rs.ReadThroughput = float64(s.readBytes) * 8 / 1000. / 1000. / elapseInSec
-	rs.WriteThroughput = float64(s.writeBytes) * 8 / 1000. / 1000. / elapseInSec
+	rs.ReadBytes = s.readBytes
+	rs.WriteBytes = s.writeBytes
 	rs.Counting = int64(s.counts.Estimate())
 	rs.ElapseInSec = elapseInSec
 

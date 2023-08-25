@@ -399,9 +399,16 @@ func (p *Printer) buildSummary(r *SnapshotReport, isFinal bool, sr *SummaryRepor
 
 	sr.RPS = fmt.Sprintf("%.3f", r.RPS)
 
-	if r.ReadThroughput > 0 || r.WriteThroughput > 0 {
-		sr.ReadsWrites = fmt.Sprintf("%.3f %.3f Mbps", r.ReadThroughput, r.WriteThroughput)
-		summaryBulk = append(summaryBulk, []string{"ReadWrite", sr.ReadsWrites})
+	if r.ReadBytes > 0 || r.WriteBytes > 0 {
+		readAvg := float64(r.ReadBytes) * 8 / 1000. / 1000. / r.ElapseInSec
+		writeAvg := float64(r.WriteBytes) * 8 / 1000. / 1000. / r.ElapseInSec
+		sr.ReadsWrites = fmt.Sprintf("%.3f %.3f Mbps", readAvg, writeAvg)
+		summaryBulk = append(summaryBulk, []string{"ReadWrite Avg", sr.ReadsWrites})
+
+		if p.verbose >= 1 {
+			readsWritesSum := fmt.Sprintf("%d %d", r.ReadBytes, r.WriteBytes)
+			summaryBulk = append(summaryBulk, []string{"ReadWrite Sum", readsWritesSum})
+		}
 	}
 
 	sr.Counting = r.Counting
