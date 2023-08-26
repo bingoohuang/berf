@@ -235,7 +235,7 @@ type Report struct {
 }
 
 func (p *Printer) formatTableReports(w *bytes.Buffer, r *SnapshotReport, isFinal bool) Report {
-	w.WriteString("\nSummary:\n")
+	w.WriteString("\n汇总:\n")
 	report := Report{}
 	writeBulk(w, p.buildSummary(r, isFinal, &report.SummaryReport))
 
@@ -243,12 +243,12 @@ func (p *Printer) formatTableReports(w *bytes.Buffer, r *SnapshotReport, isFinal
 	p.printError(w, r)
 	writeBulkWith(w, p.buildStats(r, &report.StatsReport), "", "  ", "\n")
 
-	w.WriteString("\nLatency Percentile:\n")
+	w.WriteString("\n百分位延迟:\n")
 	report.PercentileReport = make(map[string]string)
 	writeBulk(w, p.buildPercentile(r, report.PercentileReport))
 
 	if p.verbose >= 1 {
-		w.WriteString("\nLatency Histogram:\n")
+		w.WriteString("\n直方图延迟:\n")
 		writeBulk(w, p.buildHistogram(r))
 	}
 	return report
@@ -327,7 +327,7 @@ func (p *Printer) buildStats(r *SnapshotReport, stats *StatsReport) [][]string {
 	stats.Latency.StdDev = dts(st.StdDev)
 	stats.Latency.Max = dts(st.Max)
 	statsBulk := [][]string{
-		{"Statistics", "Min", "Mean", "StdDev", "Max"},
+		{"统计", "Min", "Mean", "StdDev", "Max"},
 		{"  Latency", dts(st.Min), dts(st.Mean), dts(st.StdDev), dts(st.Max)},
 	}
 	rs := r.RpsStats
@@ -366,20 +366,20 @@ type SummaryReport struct {
 
 func (p *Printer) buildSummary(r *SnapshotReport, isFinal bool, sr *SummaryReport) [][]string {
 	sr.Elapsed = r.Elapsed.Truncate(time.Millisecond).String()
-	elapsedLine := []string{"Elapsed", sr.Elapsed}
+	elapsedLine := []string{"耗时", sr.Elapsed}
 	if p.maxDuration > 0 && !isFinal {
 		elapsedLine = append(elapsedLine, p.pbDurStr)
 	}
 
 	sr.Count = r.Count
-	countLine := []string{"Count/RPS", fmt.Sprintf("%d %.3f", r.Count, r.RPS)}
+	countLine := []string{"总次/RPS", fmt.Sprintf("%d %.3f", r.Count, r.RPS)}
 	if p.maxNum > 0 && !isFinal {
 		countLine = append(countLine, p.pbNumStr)
 	}
 
 	var summaryBulk [][]string
 	if !p.config.Incr.IsEmpty() {
-		concurrentLine := []string{"Concurrent", fmt.Sprintf("%d", atomic.LoadInt64(p.concurrent))}
+		concurrentLine := []string{"并发", fmt.Sprintf("%d", atomic.LoadInt64(p.concurrent))}
 		summaryBulk = append(summaryBulk, concurrentLine)
 	}
 
@@ -403,11 +403,11 @@ func (p *Printer) buildSummary(r *SnapshotReport, isFinal bool, sr *SummaryRepor
 		readAvg := float64(r.ReadBytes) * 8 / 1000. / 1000. / r.ElapseInSec
 		writeAvg := float64(r.WriteBytes) * 8 / 1000. / 1000. / r.ElapseInSec
 		sr.ReadsWrites = fmt.Sprintf("%.3f %.3f Mbps", readAvg, writeAvg)
-		summaryBulk = append(summaryBulk, []string{"ReadWrite Avg", sr.ReadsWrites})
+		summaryBulk = append(summaryBulk, []string{"平均读写", sr.ReadsWrites})
 
 		if p.verbose >= 1 {
-			readsWritesSum := fmt.Sprintf("%d %d", r.ReadBytes, r.WriteBytes)
-			summaryBulk = append(summaryBulk, []string{"ReadWrite Sum", readsWritesSum})
+			readsWritesSum := fmt.Sprintf("%d %d 字节", r.ReadBytes, r.WriteBytes)
+			summaryBulk = append(summaryBulk, []string{"总和读写", readsWritesSum})
 		}
 	}
 

@@ -250,7 +250,7 @@ func (c *Config) Description(benchableName string) string {
 		return " starting to collect hardware metrics."
 	}
 
-	desc := " benchmarking"
+	desc := " "
 	if benchableName != "" {
 		desc += " " + benchableName
 	}

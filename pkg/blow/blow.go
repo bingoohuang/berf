@@ -246,7 +246,7 @@ func StartBlow() {
 	berf.StartBench(context.Background(),
 		&Bench{},
 		berf.WithOkStatus(ss.Or(*pStatusName, "200")),
-		berf.WithCounting("Connections"))
+		berf.WithCounting("连接数"))
 }
 
 func IsBlowEnv() bool {
