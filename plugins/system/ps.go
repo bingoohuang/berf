@@ -19,7 +19,7 @@ type PS interface {
 	NetIO() ([]net.IOCountersStat, error)
 	DiskIO(names []string) (map[string]disk.IOCountersStat, error)
 	VMStat() (*mem.VirtualMemoryStat, error)
-	NetConnections(fns ...net.ConnectionStatOptionsFn) ([]net.ConnectionStat, error)
+	NetConnections() ([]net.ConnectionStat, error)
 }
 
 type PSDiskDeps interface {
@@ -127,8 +127,8 @@ func (s *SystemPS) DiskUsage(mountPointFilter []string, fstypeExclude []string) 
 }
 
 func (s *SystemPS) NetIO() ([]net.IOCountersStat, error) { return net.IOCounters(true) }
-func (s *SystemPS) NetConnections(fns ...net.ConnectionStatOptionsFn) ([]net.ConnectionStat, error) {
-	return net.ConnectionsOptions(fns...)
+func (s *SystemPS) NetConnections() ([]net.ConnectionStat, error) {
+	return net.Connections("all")
 }
 
 func (s *SystemPS) DiskIO(names []string) (map[string]disk.IOCountersStat, error) {

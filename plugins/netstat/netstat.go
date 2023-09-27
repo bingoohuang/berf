@@ -6,7 +6,6 @@ import (
 
 	"github.com/bingoohuang/berf/plugins"
 	"github.com/bingoohuang/berf/plugins/system"
-	"github.com/shirou/gopsutil/v3/net"
 )
 
 type NetStats struct {
@@ -24,26 +23,21 @@ func (ns *NetStats) Gather() ([]interface{}, error) {
 	c := make(map[string]int)
 	c["UDP"] = 0
 
-	walker := func(netcon net.ConnectionStat) error {
+	netconns, err := ns.ps.NetConnections()
+	if err != nil {
+		return nil, fmt.Errorf("error getting net connections info: %s", err)
+	}
+
+	for _, netcon := range netconns {
 		if netcon.Type == syscall.SOCK_DGRAM {
 			c["UDP"]++
-			return nil // UDP has no status
+			continue // UDP has no status
 		}
 		if x, ok := c[netcon.Status]; !ok {
 			c[netcon.Status] = 0
 		} else {
 			c[netcon.Status] = x + 1
 		}
-		return nil
-	}
-
-	netconns, err := ns.ps.NetConnections(net.WithWalker(walker), net.WithKind("all"))
-	if err != nil {
-		return nil, fmt.Errorf("error getting net connections info: %s", err)
-	}
-
-	for _, netcon := range netconns {
-		walker(netcon)
 	}
 
 	return []interface{}{c["ESTABLISHED"], c["TIME_WAIT"], c["CLOSE_WAIT"], c["LISTEN"], c["CLOSING"], c["UDP"]}, nil
