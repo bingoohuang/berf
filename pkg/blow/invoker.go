@@ -129,9 +129,8 @@ func (r *Invoker) buildRequestClient(ctx context.Context, opt *Opt) (*fasthttp.R
 		return nil, err
 	}
 
-	originSchemeHTTPS := u.Scheme == "https"
-	envTLCP := env.Bool("TLCP", false)
-	if originSchemeHTTPS && envTLCP {
+	usingTLCP := u.Scheme == "https" && env.Bool("TLCP", false)
+	if usingTLCP {
 		u.Scheme = "http"
 	}
 
@@ -148,7 +147,7 @@ func (r *Invoker) buildRequestClient(ctx context.Context, opt *Opt) (*fasthttp.R
 
 	wrap := internal.NetworkWrap(opt.network)
 	cli.Dial = internal.ThroughputStatDial(wrap, cli.Dial, &r.readBytes, &r.writeBytes)
-	if originSchemeHTTPS && envTLCP {
+	if usingTLCP {
 		cli.Dial = createTlcpDialer(ctx, cli.Dial, r.opt.certPath, r.opt.tlcpCerts, r.opt.HasPrintOption, r.opt.tlsVerify)
 	}
 

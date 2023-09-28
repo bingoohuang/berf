@@ -77,7 +77,7 @@ Latency Histogram:
 ```
 
 ```sh
-[root@fs03-192-168-126-18 ~]# TLCP=true berf https://192.168.126.18:15443 -d1m -v
+[root@fs03-192-168-126-18 ~]# TLCP=1 berf https://192.168.126.18:15443 -d1m -v
 Berf benchmarking https://192.168.126.18:15443/ for 1m0s using 100 goroutine(s), 6 GoMaxProcs.
 @Real-time charts is on http://127.0.0.1:28888
 
@@ -108,7 +108,7 @@ Latency Histogram:
 ```
 
 ```sh
-$ export TLCP=true
+$ export TLCP=1
 $ berf http://10.0.0.18:15080 -n1 -pdb
 
 
