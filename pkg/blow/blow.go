@@ -281,14 +281,9 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 		}
 	}
 
-	stream := strings.HasSuffix(*pBody, ":stream")
-	if stream {
-		*pBody = strings.TrimSuffix(*pBody, ":stream")
-	}
-	lineMode := strings.HasSuffix(*pBody, ":line")
-	if lineMode {
-		*pBody = strings.TrimSuffix(*pBody, ":line")
-	}
+	stream := util.SplitTail(pBody, ":stream")
+	lineMode := util.SplitTail(pBody, ":line")
+
 	bodyStreamFile, bodyBytes, linesChan := internal.ParseBodyArg(*pBody, stream, lineMode)
 	cert, key := ss.Split2(*pCertKey)
 

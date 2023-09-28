@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/bingoohuang/berf/pkg/util"
 	"github.com/bingoohuang/gg/pkg/filex"
 	"github.com/bingoohuang/gg/pkg/osx"
 	"github.com/bingoohuang/gg/pkg/ss"
@@ -105,10 +106,10 @@ func ParseProfileArg(profileArg []string, envName string) []*Profile {
 	hasNew := false
 	var tag *Tag
 	for _, p := range profileArg {
-		if strings.HasSuffix(p, ":new") {
-			name := p[:len(p)-4]
-			osx.ExitIfErr(os.WriteFile(name, DemoProfile, os.ModePerm))
-			fmt.Printf("profile file %s created\n", name)
+
+		if util.SplitTail(&p, ":new") {
+			osx.ExitIfErr(os.WriteFile(p, DemoProfile, os.ModePerm))
+			fmt.Printf("profile file %s created\n", p)
 			hasNew = true
 			continue
 		}

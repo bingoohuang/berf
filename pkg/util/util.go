@@ -455,3 +455,11 @@ func mergeCodes(merged string, n int, last string) string {
 	}
 	return merged
 }
+
+func SplitTail(s *string, tail string) bool {
+	if strings.HasSuffix(*s, tail) {
+		*s = strings.TrimSuffix(*s, tail)
+		return true
+	}
+	return false
+}
