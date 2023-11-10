@@ -2,6 +2,9 @@ module github.com/bingoohuang/berf
 
 go 1.21.0
 
+replace github.com/valyala/fasthttp => /Volumes/e1t/GitHub/fasthttpbingoohuang
+
+
 require (
 	gitee.com/Trisia/gotlcp v1.3.13
 	github.com/AdhityaRamadhanus/fasthttpcors v0.0.0-20170121111917-d4c07198763a
@@ -12,7 +15,7 @@ require (
 	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/deatil/go-cryptobin v1.0.2031
 	github.com/dustin/go-humanize v1.0.1
-	github.com/emmansun/gmsm v0.22.0
+	github.com/emmansun/gmsm v0.23.0
 	github.com/go-echarts/go-echarts/v2 v2.3.2
 	github.com/gobwas/glob v0.2.3
 	github.com/jdxyw/generativeart v0.0.0-20220127024657-50049f153090
@@ -28,7 +31,7 @@ require (
 	github.com/thoas/go-funk v0.9.3
 	github.com/valyala/fasthttp v1.50.0
 	go.uber.org/multierr v1.11.0
-	golang.org/x/net v0.17.0
+	golang.org/x/net v0.18.0
 	golang.org/x/sys v0.14.0
 	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.31.0
@@ -60,8 +63,8 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
-	golang.org/x/crypto v0.14.0 // indirect
-	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
+	golang.org/x/crypto v0.15.0 // indirect
+	golang.org/x/exp v0.0.0-20231108232855-2478ac86f678 // indirect
 	golang.org/x/image v0.14.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231106174013-bbf56f31fb17 // indirect

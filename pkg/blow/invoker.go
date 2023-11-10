@@ -137,10 +137,9 @@ func (r *Invoker) buildRequestClient(ctx context.Context, opt *Opt) (*fasthttp.R
 	r.isTLS = u.Scheme == "https"
 
 	cli := &fasthttp.Client{
-		Name:            "blow",
-		MaxConnsPerHost: opt.maxConns,
-		ReadTimeout:     opt.readTimeout,
-		WriteTimeout:    opt.writeTimeout,
+		Name:         "blow",
+		ReadTimeout:  opt.readTimeout,
+		WriteTimeout: opt.writeTimeout,
 	}
 
 	cli.Dial = ProxyHTTPDialerTimeout(opt.dialTimeout, dialer)
