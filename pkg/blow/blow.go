@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"github.com/valyala/fasthttp"
 	"io"
 	"log"
 	"net/url"
@@ -58,9 +59,13 @@ var (
 	pPrint      = fla9.String("print,p", "", "a: all, R: req all, H: req headers, B: req body, r: resp all, h: resp headers b: resp body c: status code")
 	pStatusName = fla9.String("status", "", "Status name in json, like resultCode")
 
-	pCreateEnvFile = fla9.Bool("demo.env", false, "create a demo .env in current dir.\n"+
+	pCreateEnvFile = fla9.Bool("demo.env", false, fmt.Sprintf("create a demo .env in current dir.\n"+
 		"       env LOCAL_IP       指定网卡IP, e.g. LOCAL_IP=192.168.1.2 berf ...\n"+
-		"       env TLCP           使用传输层密码协议(TLCP)，遵循《GB/T 38636-2020 信息安全技术 传输层密码协议》, e.g. TLCP=1 berf ...\n")
+		"       env TLCP           使用传输层密码协议(TLCP)，遵循《GB/T 38636-2020 信息安全技术 传输层密码协议》，默认值0, e.g. TLCP=1 berf ...\n"+
+		"       env MAX_GREEDY_CONNS_PER_HOST 在从连接池获取连接时，总是优先创建新链接，直到 MAX_GREEDY_CONNS_PER_HOST 为止，默认值0, e.g. MAX_GREEDY_CONNS_PER_HOST=100 berf ...\n"+
+		"       env MAX_CONNS_PER_HOST        单台主机最大连接数，默认%d, e.g. MAX_CONNS_PER_HOST=1000 berf ...\n"+
+		"       env MAX_IDLE_CONN_DURATION    连接最大空闲时间，默认%s, e.g. MAX_IDLE_CONN_DURATION=10s berf ...\n",
+		fasthttp.DefaultMaxConnsPerHost, fasthttp.DefaultMaxIdleConnDuration))
 )
 
 const (

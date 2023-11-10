@@ -189,7 +189,7 @@ func (c *Config) serveCharts(report *StreamReport, wg *sync.WaitGroup) {
 func (c *Config) collectChartData(ctx context.Context, chartsFn func() *ChartsReport, charts *Charts, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	ticker := time.NewTicker(util.ParseEnvDuration("BERF_TICK", 15*time.Second))
+	ticker := time.NewTicker(util.EnvDuration("BERF_TICK", 15*time.Second))
 	defer ticker.Stop()
 
 	c.PlotsHandle = util.NewJsonLogFile(c.PlotsFile)

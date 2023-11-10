@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"github.com/bingoohuang/berf/pkg/util"
 	"io"
 	"log"
 	"mime"
@@ -140,6 +141,16 @@ func (r *Invoker) buildRequestClient(ctx context.Context, opt *Opt) (*fasthttp.R
 		Name:         "blow",
 		ReadTimeout:  opt.readTimeout,
 		WriteTimeout: opt.writeTimeout,
+		// 在从主机连接池获取连接时，总是优先创建新的链接，直到 MaxGreedyConnsPerHost 为止
+		MaxGreedyConnsPerHost: env.Int("MAX_GREEDY_CONNS_PER_HOST", 0),
+		// 主机最大连接池大小
+		MaxConnsPerHost: env.Int("MAX_CONNS_PER_HOST", fasthttp.DefaultMaxConnsPerHost),
+		// 最大连接空闲时间（超时会被回收）
+		MaxIdleConnDuration: util.EnvDuration("MAX_IDLE_CONN_DURATION", fasthttp.DefaultMaxIdleConnDuration),
+	}
+
+	if cli.MaxConnsPerHost < cli.MaxGreedyConnsPerHost {
+		cli.MaxConnsPerHost = cli.MaxGreedyConnsPerHost
 	}
 
 	cli.Dial = ProxyHTTPDialerTimeout(opt.dialTimeout, dialer)

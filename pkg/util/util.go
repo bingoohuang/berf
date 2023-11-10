@@ -19,11 +19,11 @@ import (
 	"go.uber.org/multierr"
 )
 
-func ParseEnvDuration(name string, defaultValue time.Duration) time.Duration {
+func EnvDuration(name string, defaultValue time.Duration) time.Duration {
 	if e := os.Getenv(name); e != "" {
-		if v, err := time.ParseDuration(e); err != nil {
-			log.Printf("W! env $%s %s is invalid, default %s is used, error: %v", name, e, defaultValue, err)
-		} else if v > 0 {
+		if v, err := time.ParseDuration(e); err != nil || v < 0 {
+			log.Fatalf("W! env $%s = %s is invalid for time duration", name, e)
+		} else {
 			return v
 		}
 	}
