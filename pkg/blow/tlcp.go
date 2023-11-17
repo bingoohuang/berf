@@ -89,6 +89,9 @@ var (
 
 	envTLCPCerts = func() (certs []tlcp.Certificate) {
 		env := os.Getenv(`TLCP_CERTS`)
+		if env == "" {
+			return nil
+		}
 		// TLCP 1.1，套件ECDHE-SM2-SM4-CBC-SM3，设置客户端双证书
 		certsFiles := strings.Split(env, ",")
 		switch len(certsFiles) {
