@@ -54,7 +54,6 @@ var (
 	pDir        = fla9.String("dir", "", "download dir, use :temp for temp dir")
 	pCertKey    = fla9.String("cert", "", "Path to the client's TLS Cert and private key file, eg. ca.pem,ca.key")
 	pRootCert   = fla9.String("root-ca", "", "Ca root certificate file to verify TLS")
-	pTlcpCerts  = fla9.String("tlcp-certs", "", "format: sign.cert.pem,sign.key.pem,enc.cert.pem,enc.key.pem")
 	pTimeout    = fla9.String("timeout", "", "Timeout for each http request, e.g. 5s for do:5s,dial:5s,write:5s,read:5s")
 	pPrint      = fla9.String("print,p", "", "a: all, R: req all, H: req headers, B: req body, r: resp all, h: resp headers b: resp body c: status code")
 	pStatusName = fla9.String("status", "", "Status name in json, like resultCode")
@@ -64,6 +63,7 @@ var (
 		"       env LOCAL_IP       指定网卡IP, e.g. LOCAL_IP=192.168.1.2 berf ...\n"+
 		"       env DEBUG          激活全局DEBUG模式，打印更多日志, e.g. DEBUG=1 berf ...\n"+
 		"       env TLCP           使用传输层密码协议(TLCP)，遵循《GB/T 38636-2020 信息安全技术 传输层密码协议》，默认值0, e.g. TLCP=1 berf ...\n"+
+		"       env TLCP_CERTS     TLCP客户端证书(ECC系列单证书/ECDHE系列套件双证书)，即认证密钥,认证证书[,加密密钥,加密证书], 示例: sign.cert.pem,sign.key.pem[,enc.cert.pem,enc.key.pem] \n"+
 		"       env TLS_SESSION_CACHE         客户端会话缓存，默认值 32, e.g. TLS_SESSION_CACHE=32 berf ...\n"+
 		"       env MAX_GREEDY_CONNS_PER_HOST 在从连接池获取连接时，总是优先创建新链接，直到 MAX_GREEDY_CONNS_PER_HOST 为止，默认值0, e.g. MAX_GREEDY_CONNS_PER_HOST=100 berf ...\n"+
 		"       env MAX_CONNS_PER_HOST        单台主机最大连接数，默认%d, e.g. MAX_CONNS_PER_HOST=1000 berf ...\n"+
@@ -204,7 +204,6 @@ type Opt struct {
 
 	bodyStreamFile string
 
-	tlcpCerts string
 	bodyBytes []byte
 
 	profiles []*internal.Profile
@@ -314,7 +313,6 @@ func Blow(ctx context.Context, conf *berf.Config) *Invoker {
 		rootCert:    *pRootCert,
 		certPath:    cert,
 		keyPath:     key,
-		tlcpCerts:   *pTlcpCerts,
 		tlsVerify:   opts.HasAny("tlsVerify"),
 		downloadDir: *pDir,
 

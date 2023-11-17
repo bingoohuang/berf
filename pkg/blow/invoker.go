@@ -158,7 +158,7 @@ func (r *Invoker) buildRequestClient(ctx context.Context, opt *Opt) (*fasthttp.R
 	wrap := internal.NetworkWrap(opt.network)
 	cli.Dial = internal.ThroughputStatDial(wrap, cli.Dial, &r.readBytes, &r.writeBytes)
 	if usingTLCP {
-		cli.Dial = createTlcpDialer(ctx, cli.Dial, r.opt.certPath, r.opt.tlcpCerts, r.opt.HasPrintOption, r.opt.tlsVerify)
+		cli.Dial = createTlcpDialer(ctx, cli.Dial, r.opt.certPath, r.opt.HasPrintOption, r.opt.tlsVerify)
 	}
 
 	if cli.TLSConfig, err = opt.buildTLSConfig(); err != nil {

@@ -9,7 +9,7 @@ require (
 	github.com/AdhityaRamadhanus/fasthttpcors v0.0.0-20170121111917-d4c07198763a
 	github.com/axiomhq/hyperloglog v0.0.0-20230201085229-3ddf4bad03dc
 	github.com/beorn7/perks v1.0.1
-	github.com/bingoohuang/gg v0.0.0-20230905014901-c159304e8efe
+	github.com/bingoohuang/gg v0.0.0-20231007013950-870407cbc990
 	github.com/bingoohuang/jj v0.0.0-20230920073527-45c71916c864
 	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/deatil/go-cryptobin v1.0.2032
