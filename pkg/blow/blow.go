@@ -60,7 +60,7 @@ var (
 
 	pCreateEnvFile = fla9.Bool("demo.env", false, fmt.Sprintf("create a demo .env in current dir.\n"+
 		"       env HOSTS          以,分隔指定HTTP多个请求 HOST 头, e.g. HOSTS=a.cn,b.cn berf ...\n"+
-		"       env LOCAL_IP       指定网卡IP, e.g. LOCAL_IP=192.168.1.2 berf ...\n"+
+		"       env LOCAL_IP       指定网卡IP,多个IP以,分割, e.g. LOCAL_IP=192.168.1.2,192.168.1.3 berf ...\n"+
 		"       env DEBUG          激活全局DEBUG模式，打印更多日志, e.g. DEBUG=1 berf ...\n"+
 		"       env TLCP           使用传输层密码协议(TLCP)，遵循《GB/T 38636-2020 信息安全技术 传输层密码协议》，默认值0, e.g. TLCP=1 berf ...\n"+
 		"       env TLCP_CERTS     TLCP客户端证书(ECC系列单证书/ECDHE系列套件双证书)，即认证密钥,认证证书[,加密密钥,加密证书], 示例: sign.cert.pem,sign.key.pem[,enc.cert.pem,enc.key.pem] \n"+

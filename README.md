@@ -4,7 +4,7 @@ berf framework for local methods.
 
 ## Features
 
-1. LOCAL_IP=ip berf ... 指定网卡 IP 运行 berf
+1. LOCAL_IP=ip1,ip2 berf ... 指定网卡 IP 运行 berf
 2. support vars substitution
    like `berf -n1 http://192.168.126.16:2900/person/_doc/@ksuid  -b '{"addr":"@地址","idcard":"@身份证","name":"@姓名","sex":"@性别"}'`
 3. support `-u rand.png,rand.jpg,rand.json` random image and json uploading content.

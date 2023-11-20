@@ -32,8 +32,8 @@ github.com/cristalhq/base64 v0.1.2/go.mod h1:sy4+2Hale2KbtSqkzpdMeYTP/IrB+HCvxVH
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/deatil/go-cryptobin v1.0.2032 h1:Wx/1QcwJdbRjidSsxRMDw+w/IbqoCD5Ej2rPvoa7AI8=
-github.com/deatil/go-cryptobin v1.0.2032/go.mod h1:yB6uMg/IWzy3PErhpcrJpczmBfBcFmU7WCk/7ttUbUc=
+github.com/deatil/go-cryptobin v1.0.2034 h1:h66cqDqPyh/sr4ylehJG96I8D+cIJtaJt3hYAUwhq3M=
+github.com/deatil/go-cryptobin v1.0.2034/go.mod h1:yB6uMg/IWzy3PErhpcrJpczmBfBcFmU7WCk/7ttUbUc=
 github.com/dgryski/go-metro v0.0.0-20180109044635-280f6062b5bc/go.mod h1:c9O8+fpSOX1DM8cPNSkX/qsBWdkD4yd2dpciOWQjpBw=
 github.com/dgryski/go-metro v0.0.0-20211217172704-adc40b04c140 h1:y7y0Oa6UawqTFPCDw9JG6pdKt4F9pAhHv0B7FMGaGD0=
 github.com/dgryski/go-metro v0.0.0-20211217172704-adc40b04c140/go.mod h1:c9O8+fpSOX1DM8cPNSkX/qsBWdkD4yd2dpciOWQjpBw=

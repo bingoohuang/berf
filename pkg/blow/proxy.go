@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -23,33 +24,39 @@ type Dialer interface {
 
 var Debug = env.Bool("DEBUG", false)
 
+var (
+	localIpIndex atomic.Uint64
+	localIps     = func() (addrs []*net.TCPAddr) {
+		ips := strings.Split(os.Getenv("LOCAL_IP"), ",")
+		for _, ip := range ips {
+			ipAddr, err := net.ResolveIPAddr("ip", ip)
+			if err != nil {
+				log.Panicf("resolving IP %s: %v", ip, err)
+			}
+			addrs = append(addrs, &net.TCPAddr{IP: ipAddr.IP})
+		}
+		if Debug {
+			log.Printf("LOCAL_IP resovled: %s", addrs)
+		}
+
+		return addrs
+	}()
+)
+
 func getLocalAddr() *net.TCPAddr {
-	localIP := os.Getenv("LOCAL_IP")
-	if localIP == "" {
+	localIpsLen := len(localIps)
+	if localIpsLen == 0 {
 		return nil
 	}
 
-	if Debug {
-		log.Printf("LOCAL_IP: %s", localIP)
-	}
-
-	ipAddr, err := net.ResolveIPAddr("ip", localIP)
-	if err != nil {
-		log.Printf("resolving local IP %s: %v", localIP, err)
-		return nil
-	}
-
-	if Debug {
-		log.Printf("ResolveIPAddr: %s", ipAddr.String())
-	}
-
-	return &net.TCPAddr{IP: ipAddr.IP}
+	idx := int(localIpIndex.Add(1)-1) % localIpsLen
+	return localIps[idx]
 }
 
 var dialer = func() Dialer {
 	d := &fasthttp.TCPDialer{
-		Concurrency: 1000,
-		LocalAddr:   getLocalAddr(),
+		Concurrency:   1000,
+		LocalAddrFunc: getLocalAddr,
 	}
 
 	return d

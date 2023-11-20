@@ -12,7 +12,7 @@ require (
 	github.com/bingoohuang/gg v0.0.0-20231007013950-870407cbc990
 	github.com/bingoohuang/jj v0.0.0-20230920073527-45c71916c864
 	github.com/bmatcuk/doublestar/v4 v4.6.1
-	github.com/deatil/go-cryptobin v1.0.2032
+	github.com/deatil/go-cryptobin v1.0.2034
 	github.com/dustin/go-humanize v1.0.1
 	github.com/emmansun/gmsm v0.23.0
 	github.com/go-echarts/go-echarts/v2 v2.3.2
