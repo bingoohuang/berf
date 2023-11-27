@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/gabriel-vasile/mimetype"
 	"io"
 	"io/fs"
 	"log"
@@ -492,10 +493,14 @@ type fileReader struct {
 func (f fileReader) Start(context.Context) {}
 
 func (f fileReader) Read(cache bool) *UploadChanValue {
-	var err error
+	contentType := "application/octet-stream"
+	fileMine, err := mimetype.DetectFile(f.File)
+	if err == nil {
+		contentType = fileMine.String()
+	}
 	uv := &UploadChanValue{
 		Type:        NormalFile,
-		ContentType: "",
+		ContentType: contentType,
 		Path:        f.File,
 	}
 	uv.Data, err = createDataItem(f.File, true, nil)
