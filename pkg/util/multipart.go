@@ -110,7 +110,7 @@ func PrepareMultipartPayload(fields map[string]interface{}) *Multipart {
 	boundary := fmt.Sprintf("%x", buf[:])
 	totalSize := 0
 	headers := map[string]string{
-		"Content-Type": fmt.Sprintf("multipart/form-Data; boundary=%s", boundary),
+		"Content-Type": fmt.Sprintf("multipart/form-data; boundary=%s", boundary),
 	}
 
 	parts := make([]interface{}, 0)
