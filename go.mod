@@ -15,6 +15,7 @@ require (
 	github.com/deatil/go-cryptobin v1.0.2034
 	github.com/dustin/go-humanize v1.0.1
 	github.com/emmansun/gmsm v0.23.0
+	github.com/gabriel-vasile/mimetype v1.4.2
 	github.com/go-echarts/go-echarts/v2 v2.3.2
 	github.com/gobwas/glob v0.2.3
 	github.com/jdxyw/generativeart v0.0.0-20220127024657-50049f153090
