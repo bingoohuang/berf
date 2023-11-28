@@ -1,5 +1,11 @@
 # changes
 
+## 2023年11月28日 验证代理使用 (http_proxy 等环境变量， PROXY 环境变量)
+
+1. 优先 PROXY 环境变量， e.g. PROXY=:7890
+2. PROXY=0 关闭代理
+3. 环境代理（http_proxy、https_proxy等）
+    
 ## 2023年05月25日 文件上传支持文件名添加文件序号
 
 `export UPLOAD_INDEX=.%y%M%d.%H%m%s.%i`
