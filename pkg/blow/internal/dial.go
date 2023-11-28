@@ -1,12 +1,14 @@
 package internal
 
 import (
+	"fmt"
 	"net"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/bingoohuang/berf/pkg/blow/lossy"
+	"github.com/bingoohuang/gg/pkg/osx/env"
 	"github.com/dustin/go-humanize"
 	"github.com/valyala/fasthttp"
 )
@@ -20,8 +22,13 @@ func NewMyConn(conn net.Conn, r, w *int64) (*MyConn, error) {
 	return &MyConn{Conn: conn, r: r, w: w}, nil
 }
 
+var Debug = env.Bool("DEBUG", false)
+
 func (c *MyConn) Read(b []byte) (n int, err error) {
 	if n, err = c.Conn.Read(b); n > 0 {
+		if Debug {
+			fmt.Printf("%s", b)
+		}
 		atomic.AddInt64(c.r, int64(n))
 	}
 	return
@@ -29,6 +36,9 @@ func (c *MyConn) Read(b []byte) (n int, err error) {
 
 func (c *MyConn) Write(b []byte) (n int, err error) {
 	if n, err = c.Conn.Write(b); n > 0 {
+		if Debug {
+			fmt.Printf("%s", b)
+		}
 		atomic.AddInt64(c.w, int64(n))
 	}
 	return

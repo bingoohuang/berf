@@ -8,7 +8,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/bingoohuang/berf/pkg/util"
 	"io"
 	"log"
 	"mime"
@@ -25,6 +24,7 @@ import (
 
 	"github.com/bingoohuang/berf"
 	"github.com/bingoohuang/berf/pkg/blow/internal"
+	"github.com/bingoohuang/berf/pkg/util"
 	"github.com/bingoohuang/gg/pkg/codec/b64"
 	"github.com/bingoohuang/gg/pkg/fla9"
 	"github.com/bingoohuang/gg/pkg/gz"

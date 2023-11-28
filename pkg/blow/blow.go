@@ -4,7 +4,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"github.com/valyala/fasthttp"
 	"io"
 	"log"
 	"net/url"
@@ -20,6 +19,7 @@ import (
 	"github.com/bingoohuang/gg/pkg/osx"
 	"github.com/bingoohuang/gg/pkg/rest"
 	"github.com/bingoohuang/gg/pkg/ss"
+	"github.com/valyala/fasthttp"
 )
 
 var (
