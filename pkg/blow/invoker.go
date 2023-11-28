@@ -153,7 +153,7 @@ func (r *Invoker) buildRequestClient(ctx context.Context, opt *Opt) (*fasthttp.R
 		cli.MaxConnsPerHost = cli.MaxGreedyConnsPerHost
 	}
 
-	cli.Dial = ProxyHTTPDialerTimeout(opt.dialTimeout, dialer)
+	cli.Dial = ProxyHTTPDialerTimeout(opt.dialTimeout, dialer, r.isTLS)
 
 	wrap := internal.NetworkWrap(opt.network)
 	cli.Dial = internal.ThroughputStatDial(wrap, cli.Dial, &r.readBytes, &r.writeBytes)
@@ -292,6 +292,11 @@ func (r *Invoker) Run(ctx context.Context, _ *berf.Config, initial bool) (*berf.
 		uri := req.URI()
 		uri.SetScheme("https")
 		uri.SetHostBytes(req.Header.Host())
+	}
+
+	requestURI := string(req.RequestURI())
+	if proxyURL, _ := proxyFunc(requestURI, r.isTLS); proxyURL != nil {
+		req.UsingProxy = true
 	}
 
 	return r.runOne(req, resp)

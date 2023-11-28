@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/bingoohuang/gg/pkg/osx/env"
+	"github.com/bingoohuang/gg/pkg/rest"
 	"github.com/valyala/fasthttp"
 	"golang.org/x/net/http/httpproxy"
 )
@@ -65,8 +66,38 @@ var dialer = func() Dialer {
 const (
 	httpsScheme = "https"
 	httpScheme  = "http"
-	tlsPort     = "443"
 )
+
+func getEnvAny(names ...string) string {
+	for _, n := range names {
+		if val := os.Getenv(n); val != "" {
+			return val
+		}
+	}
+	return ""
+}
+
+var proxyFunc = func() func(addr string, tls bool) (*url.URL, error) {
+	proxy := getEnvAny("PROXY", "proxy")
+	proxyFunc := httpproxy.FromEnvironment().ProxyFunc()
+	if proxy == "" {
+		return func(addr string, tls bool) (*url.URL, error) {
+			reqURL := &url.URL{Host: addr, Scheme: httpScheme}
+			if tls {
+				reqURL.Scheme = httpsScheme
+			}
+			return proxyFunc(reqURL)
+		}
+	}
+	if proxy == "off" || proxy == "0" {
+		return func(addr string, tls bool) (*url.URL, error) {
+			return nil, nil
+		}
+	}
+	return func(addr string, tls bool) (*url.URL, error) {
+		return rest.FixURI(proxy, rest.WithFatalErr(true)).Data, nil
+	}
+}()
 
 // ProxyHTTPDialerTimeout returns a fasthttp.DialFunc that dials using
 // code original from fasthttpproxy.ProxyHTTPDialerTimeout
@@ -77,24 +108,9 @@ const (
 //	c := &fasthttp.Client{
 //		Dial: ProxyHTTPDialerTimeout(time.Second * 2),
 //	}
-func ProxyHTTPDialerTimeout(timeout time.Duration, dialer Dialer) fasthttp.DialFunc {
-	proxyFunc := httpproxy.FromEnvironment().ProxyFunc()
-
-	// encoded auth barrier for http and https proxy.
-	authHTTPStorage := &atomic.Value{}
-	authHTTPSStorage := &atomic.Value{}
-
+func ProxyHTTPDialerTimeout(timeout time.Duration, dialer Dialer, tls bool) fasthttp.DialFunc {
 	return func(addr string) (net.Conn, error) {
-		port, _, err := net.SplitHostPort(addr)
-		if err != nil {
-			return nil, fmt.Errorf("unexpected addr format: %w", err)
-		}
-
-		reqURL := &url.URL{Host: addr, Scheme: httpScheme}
-		if port == tlsPort {
-			reqURL.Scheme = httpsScheme
-		}
-		proxyURL, err := proxyFunc(reqURL)
+		proxyURL, err := proxyFunc(addr, tls)
 		if err != nil {
 			return nil, err
 		}
@@ -116,22 +132,15 @@ func ProxyHTTPDialerTimeout(timeout time.Duration, dialer Dialer) fasthttp.DialF
 			return nil, err
 		}
 
+		if !tls {
+			return conn, nil
+		}
+
 		req := "CONNECT " + addr + " HTTP/1.1\r\n"
 
 		if proxyURL.User != nil {
-			authBarrierStorage := authHTTPStorage
-			if port == tlsPort {
-				authBarrierStorage = authHTTPSStorage
-			}
-
-			auth := authBarrierStorage.Load()
-			if auth == nil {
-				authBarrier := base64.StdEncoding.EncodeToString([]byte(proxyURL.User.String()))
-				auth = &authBarrier
-				authBarrierStorage.Store(auth)
-			}
-
-			req += "Proxy-Authorization: Basic " + *auth.(*string) + "\r\n"
+			authBarrier := base64.StdEncoding.EncodeToString([]byte(proxyURL.User.String()))
+			req += "Proxy-Authorization: Basic " + authBarrier + "\r\n"
 		}
 		req += "\r\n"
 
