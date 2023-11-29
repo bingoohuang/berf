@@ -5,6 +5,12 @@
 1. 优先 PROXY 环境变量， e.g. PROXY=:7890
 2. PROXY=0 关闭代理
 3. 环境代理（http_proxy、https_proxy等）
+
+文件上传测试：
+
+1. 目标服务：`ggt hertz -p / -u . --maxBodySize 10G` 或者 `goup -c 10G` 代理服务: `go-mitmprox`
+2. gurl: `PROXY=:9080 DEBUG=1 gurl :12123 -F /Volumes/e1t/500px/20230922002_179.png -pa`
+3. berf: `PROXY=:9080 DEBUG=1 berf :12123 -u /Volumes/e1t/500px/20230922002_179.png -n1`
     
 ## 2023年05月25日 文件上传支持文件名添加文件序号
 
