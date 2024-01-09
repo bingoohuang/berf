@@ -6,7 +6,7 @@ berf framework for local methods.
 
 1. LOCAL_IP=ip1,ip2 berf ... 指定网卡 IP 运行 berf
 2. support vars substitution
-   like `berf -n1 http://192.168.126.16:2900/person/_doc/@ksuid  -b '{"addr":"@地址","idcard":"@身份证","name":"@姓名","sex":"@性别"}'`
+   like `berf -opt eval -n1 192.168.126.5:9200/person/doc/@ksuid  -b '{"addr":"@地址","idcard":"@身份证","name":"@姓名","sex":"@性别"}'`
 3. support `-u rand.png,rand.jpg,rand.json` random image and json uploading content.
 4. support @var in URL like `berf :9335/pingoo/@ksuid -u imgs -d60s -v`, 2021-12-29
 5. support httpie like args `berf :10014/query q="show databases" -n1`, 2021-12-23
