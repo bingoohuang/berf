@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"mime"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -133,6 +134,9 @@ func (r *Invoker) buildRequestClient(ctx context.Context, opt *Opt) (*fasthttp.R
 	usingTLCP := u.Scheme == "https" && env.Bool("TLCP", false)
 	if usingTLCP {
 		u.Scheme = "http"
+		if u.Port() == "" {
+			u.Host += ":443"
+		}
 	}
 
 	r.isTLS = u.Scheme == "https"
@@ -181,7 +185,9 @@ func (r *Invoker) buildRequestClient(ctx context.Context, opt *Opt) (*fasthttp.R
 	}
 
 	h.SetContentType(adjustContentType(opt, contentType))
-	h.SetHost(ss.If(host != "", host, u.Host))
+	if host != "" {
+		h.SetHost(host)
+	}
 
 	opt.headers = funk.FilterString(opt.headers, func(hdr string) bool {
 		k, _ := ss.Split2(hdr, ss.WithSeps(":"))
@@ -249,7 +255,7 @@ var envHosts = func() []string {
 
 var envHostsIndex uint32
 
-func (r *Invoker) Run(ctx context.Context, _ *berf.Config, initial bool) (*berf.Result, error) {
+func (r *Invoker) Run(ctx context.Context, bc *berf.Config, initial bool) (*berf.Result, error) {
 	req := fasthttp.AcquireRequest()
 	resp := fasthttp.AcquireResponse()
 	defer fasthttp.ReleaseRequest(req)
@@ -257,6 +263,14 @@ func (r *Invoker) Run(ctx context.Context, _ *berf.Config, initial bool) (*berf.
 
 	if r.opt.logf != nil {
 		r.opt.logf.MarkPos()
+	}
+
+	if bc.N == 1 {
+		req.ConnAcquiredCallback = func(conn net.Conn) {
+			printConnectState(conn)
+		}
+	} else {
+		req.ConnAcquiredCallback = nil
 	}
 
 	if len(r.opt.profiles) > 0 {
@@ -274,10 +288,12 @@ func (r *Invoker) Run(ctx context.Context, _ *berf.Config, initial bool) (*berf.
 		idx := (int(atomicIdx) - 1) % len(r.opt.parsedUrls) // 从 0 开始
 		u := r.opt.parsedUrls[idx]
 		req.Header.SetHost(u.Host)
+		req.URI().SetHostBytes(req.Header.Host())
 		req.Header.SetRequestURI(u.RequestURI())
 	} else if len(envHosts) > 0 {
 		atomicIdx := atomic.AddUint32(&envHostsIndex, 1)
 		idx := (int(atomicIdx) - 1) % len(envHosts) // 从 0 开始
+		req.URI().SetHost(envHosts[idx])
 		req.Header.SetHost(envHosts[idx])
 	}
 
@@ -289,13 +305,15 @@ func (r *Invoker) Run(ctx context.Context, _ *berf.Config, initial bool) (*berf.
 	}
 
 	if r.isTLS {
-		uri := req.URI()
-		uri.SetScheme("https")
-		uri.SetHostBytes(req.Header.Host())
+		req.URI().SetScheme("https")
 	}
 
-	requestURI := string(req.RequestURI())
-	if proxyURL, _ := proxyFunc(requestURI, r.isTLS); proxyURL != nil {
+	if host := r.httpHeader.Host(); len(host) > 0 {
+		req.UseHostHeader = true
+		req.Header.SetHostBytes(host)
+	}
+
+	if proxyURL, _ := proxyFunc(string(req.URI().Host()), r.isTLS); proxyURL != nil {
 		req.UsingProxy = true
 	}
 

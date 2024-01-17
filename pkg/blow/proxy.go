@@ -2,18 +2,21 @@ package blow
 
 import (
 	"bufio"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"fmt"
 	"log"
 	"net"
 	"net/url"
 	"os"
-	"strings"
 	"sync/atomic"
 	"time"
 
+	"gitee.com/Trisia/gotlcp/tlcp"
 	"github.com/bingoohuang/gg/pkg/osx/env"
 	"github.com/bingoohuang/gg/pkg/rest"
+	"github.com/bingoohuang/gg/pkg/ss"
 	"github.com/valyala/fasthttp"
 	"golang.org/x/net/http/httpproxy"
 )
@@ -28,7 +31,8 @@ var Debug = env.Bool("DEBUG", false)
 var (
 	localIpIndex atomic.Uint64
 	localIps     = func() (addrs []*net.TCPAddr) {
-		ips := strings.Split(os.Getenv("LOCAL_IP"), ",")
+		ips := ss.Split(os.Getenv("LOCAL_IP"),
+			ss.WithSeps(","), ss.WithTrimSpace(true), ss.WithIgnoreEmpty(true))
 		for _, ip := range ips {
 			ipAddr, err := net.ResolveIPAddr("ip", ip)
 			if err != nil {
@@ -37,7 +41,7 @@ var (
 			addrs = append(addrs, &net.TCPAddr{IP: ipAddr.IP})
 		}
 		if Debug {
-			log.Printf("LOCAL_IP resovled: %s", addrs)
+			log.Printf("LOCAL_IP resovled: %v", addrs)
 		}
 
 		return addrs
@@ -77,12 +81,12 @@ func getEnvAny(names ...string) string {
 	return ""
 }
 
-var proxyFunc = func() func(addr string, tls bool) (*url.URL, error) {
+var proxyFunc = func() func(host string, tls bool) (*url.URL, error) {
 	proxy := getEnvAny("PROXY", "proxy")
 	proxyFunc := httpproxy.FromEnvironment().ProxyFunc()
 	if proxy == "" {
-		return func(addr string, tls bool) (*url.URL, error) {
-			reqURL := &url.URL{Host: addr, Scheme: httpScheme}
+		return func(host string, tls bool) (*url.URL, error) {
+			reqURL := &url.URL{Host: host, Scheme: httpScheme}
 			if tls {
 				reqURL.Scheme = httpsScheme
 			}
@@ -167,6 +171,117 @@ func ProxyHTTPDialerTimeout(timeout time.Duration, dialer Dialer, tls bool) fast
 			}
 			return nil, fmt.Errorf("could not connect to proxy: code: %d body %q", res.StatusCode(), string(res.Body()))
 		}
+
 		return conn, nil
 	}
+}
+
+type tlcpConnectionStater interface {
+	ConnectionState() tlcp.ConnectionState
+}
+type tlsConnectionStater interface {
+	ConnectionState() tls.ConnectionState
+}
+
+func printConnectState(conn net.Conn) {
+	if cs, ok := conn.(tlsConnectionStater); ok {
+		printTLSConnectState(conn, cs.ConnectionState())
+	} else if cs, ok := conn.(tlcpConnectionStater); ok {
+		printTLCPConnectState(conn, cs.ConnectionState())
+	}
+}
+
+func printTLSConnectState(conn net.Conn, state tls.ConnectionState) {
+	tlsVersion := func(version uint16) string {
+		switch version {
+		case tls.VersionTLS10:
+			return "TLSv10"
+		case tls.VersionTLS11:
+			return "TLSv11"
+		case tls.VersionTLS12:
+			return "TLSv12"
+		case tls.VersionTLS13:
+			return "TLSv13"
+		default:
+			return "Unknown"
+		}
+	}(state.Version)
+
+	fmt.Printf("option Conn type: %T\n", conn)
+	fmt.Printf("option TLS.Version: %s\n", tlsVersion)
+	for _, v := range state.PeerCertificates {
+		fmt.Println("option TLS.Subject:", v.Subject)
+		fmt.Println("option TLS.KeyUsage:", KeyUsageString(v.KeyUsage))
+	}
+	fmt.Printf("option TLS.HandshakeComplete: %t\n", state.HandshakeComplete)
+	fmt.Printf("option TLS.DidResume: %t\n", state.DidResume)
+	for _, suit := range tls.CipherSuites() {
+		if suit.ID == state.CipherSuite {
+			fmt.Printf("option TLS.CipherSuite: %+v", suit)
+			break
+		}
+	}
+	fmt.Println()
+}
+
+func printTLCPConnectState(conn net.Conn, state tlcp.ConnectionState) {
+	tlsVersion := func(version uint16) string {
+		switch version {
+		case tlcp.VersionTLCP:
+			return "TLCP"
+		default:
+			return "Unknown"
+		}
+	}(state.Version)
+
+	fmt.Printf("option Conn type: %T\n", conn)
+	fmt.Printf("option TLCP.Version: %s\n", tlsVersion)
+	for _, v := range state.PeerCertificates {
+		fmt.Println("option TLCP.Subject:", v.Subject)
+		fmt.Println("option TLCP.KeyUsage:", KeyUsageString(v.KeyUsage))
+	}
+	fmt.Printf("option TLCP.HandshakeComplete: %t\n", state.HandshakeComplete)
+	fmt.Printf("option TLCP.DidResume: %t\n", state.DidResume)
+	for _, suit := range tlcp.CipherSuites() {
+		if suit.ID == state.CipherSuite {
+			fmt.Printf("option TLCP.CipherSuite: %+v", suit)
+			break
+		}
+	}
+	fmt.Println()
+}
+
+// KeyUsageString convert x509.KeyUsage to string.
+func KeyUsageString(k x509.KeyUsage) []string {
+	var usages []string
+
+	if k&x509.KeyUsageDigitalSignature != 0 {
+		usages = append(usages, "DigitalSignature")
+	}
+	if k&x509.KeyUsageContentCommitment != 0 {
+		usages = append(usages, "ContentCommitment")
+	}
+	if k&x509.KeyUsageKeyEncipherment != 0 {
+		usages = append(usages, "KeyEncipherment")
+	}
+	if k&x509.KeyUsageDataEncipherment != 0 {
+		usages = append(usages, "DataEncipherment")
+	}
+	if k&x509.KeyUsageKeyAgreement != 0 {
+		usages = append(usages, "KeyAgreement")
+	}
+	if k&x509.KeyUsageCertSign != 0 {
+		usages = append(usages, "CertSign")
+	}
+	if k&x509.KeyUsageCRLSign != 0 {
+		usages = append(usages, "CRLSign")
+	}
+	if k&x509.KeyUsageEncipherOnly != 0 {
+		usages = append(usages, "EncipherOnly")
+	}
+	if k&x509.KeyUsageDecipherOnly != 0 {
+		usages = append(usages, "DecipherOnly")
+	}
+
+	return usages
 }

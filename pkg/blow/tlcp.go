@@ -99,7 +99,7 @@ var (
 		default:
 			panic("env $TLCP_CERTS should be sign.cert.pem[,sign.key.pem,enc.cert.pem,enc.key.pem]")
 		}
-		if len(certs) >= 2 {
+		if len(certsFiles) >= 2 {
 			signCertKeypair, err := tlcp.X509KeyPair(osx.ReadFile(certsFiles[0], osx.WithFatalOnError(true)).Data,
 				osx.ReadFile(certsFiles[1], osx.WithFatalOnError(true)).Data)
 			if err != nil {
@@ -107,7 +107,7 @@ var (
 			}
 			certs = append(certs, signCertKeypair)
 		}
-		if len(certs) >= 4 {
+		if len(certsFiles) >= 4 {
 			encCertKeypair, err := tlcp.X509KeyPair(osx.ReadFile(certsFiles[2], osx.WithFatalOnError(true)).Data,
 				osx.ReadFile(certsFiles[3], osx.WithFatalOnError(true)).Data)
 			if err != nil {
