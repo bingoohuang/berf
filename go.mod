@@ -12,7 +12,7 @@ require (
 	github.com/bingoohuang/gg v0.0.0-20240222052229-dd560e5ef0a1
 	github.com/bingoohuang/jj v0.0.0-20231223130052-8880c7020d67
 	github.com/bmatcuk/doublestar/v4 v4.6.1
-	github.com/deatil/go-cryptobin v1.0.2050
+	github.com/deatil/go-cryptobin v1.0.2051
 	github.com/dustin/go-humanize v1.0.1
 	github.com/emmansun/gmsm v0.26.0
 	github.com/gabriel-vasile/mimetype v1.4.3
@@ -26,8 +26,8 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/samber/lo v1.39.0
 	github.com/shimingyah/pool v1.0.0
-	github.com/shirou/gopsutil/v3 v3.24.1
-	github.com/stretchr/testify v1.8.4
+	github.com/shirou/gopsutil/v3 v3.24.2
+	github.com/stretchr/testify v1.9.0
 	github.com/thoas/go-funk v0.9.3
 	github.com/valyala/fasthttp v1.52.0
 	go.uber.org/multierr v1.11.0

@@ -669,12 +669,13 @@ func createJSONValuer(p *internal.Profile) func(jsonBody []byte) {
 }
 
 func parseStatus(rsp *fasthttp.Response, statusName string) string {
-	if statusName == "" {
-		return strconv.Itoa(rsp.StatusCode())
+	if statusName != "" {
+		if status := jj.GetBytes(rsp.Body(), statusName).String(); status != "" {
+			return statusName + " " + status
+		}
 	}
 
-	status := jj.GetBytes(rsp.Body(), statusName).String()
-	return ss.Or(status, "NA")
+	return "HTTP " + strconv.Itoa(rsp.StatusCode())
 }
 
 func (r *Invoker) setBody(req *fasthttp.Request) (internal.Closers, error) {
