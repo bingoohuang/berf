@@ -12,9 +12,9 @@ require (
 	github.com/bingoohuang/gg v0.0.0-20240222052229-dd560e5ef0a1
 	github.com/bingoohuang/jj v0.0.0-20231223130052-8880c7020d67
 	github.com/bmatcuk/doublestar/v4 v4.6.1
-	github.com/deatil/go-cryptobin v1.0.2051
+	github.com/deatil/go-cryptobin v1.0.2052
 	github.com/dustin/go-humanize v1.0.1
-	github.com/emmansun/gmsm v0.26.0
+	github.com/emmansun/gmsm v0.26.1
 	github.com/gabriel-vasile/mimetype v1.4.3
 	github.com/go-echarts/go-echarts/v2 v2.3.3
 	github.com/gobwas/glob v0.2.3
@@ -31,10 +31,10 @@ require (
 	github.com/thoas/go-funk v0.9.3
 	github.com/valyala/fasthttp v1.52.0
 	go.uber.org/multierr v1.11.0
-	golang.org/x/net v0.21.0
-	golang.org/x/sys v0.17.0
-	google.golang.org/grpc v1.62.0
-	google.golang.org/protobuf v1.32.0
+	golang.org/x/net v0.22.0
+	golang.org/x/sys v0.18.0
+	google.golang.org/grpc v1.62.1
+	google.golang.org/protobuf v1.33.0
 )
 
 require (
@@ -48,7 +48,7 @@ require (
 	github.com/fogleman/gg v1.3.0 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/klauspost/compress v1.17.7 // indirect
 	github.com/lufia/plan9stats v0.0.0-20240226150601-1dcf7310316a // indirect
 	github.com/pbnjay/pixfont v0.0.0-20200714042608-33b744692567 // indirect
@@ -63,10 +63,10 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
-	golang.org/x/crypto v0.20.0 // indirect
+	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225 // indirect
 	golang.org/x/image v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240228224816-df926f6c8641 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240304212257-790db918fca8 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
