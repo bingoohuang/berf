@@ -352,7 +352,8 @@ func (r *Invoker) doRequest(req *fasthttp.Request, rsp *fasthttp.Response, rr *b
 }
 
 func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *berf.Result, responseJSONValuer func(jsonBody []byte)) error {
-	rr.Status = append(rr.Status, parseStatus(rsp, r.opt.statusName))
+	status := parseStatus(rsp, r.opt.statusName)
+	rr.Status = append(rr.Status, status)
 	if r.opt.verbose >= 1 {
 		rr.Counting = append(rr.Counting, rsp.LocalAddr().String()+"->"+rsp.RemoteAddr().String())
 	}
@@ -670,7 +671,13 @@ func createJSONValuer(p *internal.Profile) func(jsonBody []byte) {
 
 func parseStatus(rsp *fasthttp.Response, statusName string) string {
 	if statusName != "" {
-		if status := jj.GetBytes(rsp.Body(), statusName).String(); status != "" {
+		if bytes.Equal(rsp.Header.Peek("Content-Encoding"), []byte("gzip")) {
+			if d, err := rsp.BodyGunzip(); err == nil {
+				if status := jj.GetBytes(d, statusName).String(); status != "" {
+					return statusName + " " + status
+				}
+			}
+		} else if status := jj.GetBytes(rsp.Body(), statusName).String(); status != "" {
 			return statusName + " " + status
 		}
 	}
