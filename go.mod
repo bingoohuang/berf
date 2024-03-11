@@ -12,7 +12,7 @@ require (
 	github.com/bingoohuang/gg v0.0.0-20240222052229-dd560e5ef0a1
 	github.com/bingoohuang/jj v0.0.0-20231223130052-8880c7020d67
 	github.com/bmatcuk/doublestar/v4 v4.6.1
-	github.com/deatil/go-cryptobin v1.0.2052
+	github.com/deatil/go-cryptobin v1.0.2053
 	github.com/dustin/go-humanize v1.0.1
 	github.com/emmansun/gmsm v0.26.1
 	github.com/gabriel-vasile/mimetype v1.4.3
@@ -67,6 +67,6 @@ require (
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225 // indirect
 	golang.org/x/image v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240304212257-790db918fca8 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240308144416-29370a3891b7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

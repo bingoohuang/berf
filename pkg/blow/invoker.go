@@ -400,15 +400,11 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 		bb1 = body
 	}
 
-	if string(rsp.Header.Peek("Content-Encoding")) == "gzip" {
-		if d, err := rsp.BodyGunzip(); err != nil {
-			return err
-		} else {
-			bb1.Write(d)
-		}
-	} else if err := rsp.BodyWriteTo(bb1); err != nil {
+	d, err := rsp.BodyUncompressed()
+	if err != nil {
 		return err
 	}
+	bb1.Write(d)
 
 	if responseJSONValuer != nil && body != nil {
 		i := body.Bytes()
@@ -671,14 +667,10 @@ func createJSONValuer(p *internal.Profile) func(jsonBody []byte) {
 
 func parseStatus(rsp *fasthttp.Response, statusName string) string {
 	if statusName != "" {
-		if bytes.Equal(rsp.Header.Peek("Content-Encoding"), []byte("gzip")) {
-			if d, err := rsp.BodyGunzip(); err == nil {
-				if status := jj.GetBytes(d, statusName).String(); status != "" {
-					return statusName + " " + status
-				}
+		if d, err := rsp.BodyUncompressed(); err == nil {
+			if status := jj.GetBytes(d, statusName).String(); status != "" {
+				return statusName + " " + status
 			}
-		} else if status := jj.GetBytes(rsp.Body(), statusName).String(); status != "" {
-			return statusName + " " + status
 		}
 	}
 
