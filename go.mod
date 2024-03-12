@@ -2,7 +2,7 @@ module github.com/bingoohuang/berf
 
 go 1.22
 
-replace github.com/valyala/fasthttp => /Volumes/e1t/GitHub/fasthttpbingoohuang
+replace github.com/valyala/fasthttp => github.com/goldstd/fasthttp v0.0.0-20240312093711-8e9ccba1510f
 
 require (
 	gitee.com/Trisia/gotlcp v1.3.18
@@ -67,6 +67,6 @@ require (
 	golang.org/x/exp v0.0.0-20240222234643-814bf88cf225 // indirect
 	golang.org/x/image v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240308144416-29370a3891b7 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240311173647-c811ad7063a7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
