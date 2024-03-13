@@ -18,3 +18,4 @@
 berf*.log
 .vscode
 berf_*
+cpu.prof
