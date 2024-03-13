@@ -37,7 +37,7 @@ func (f *LogFile) MarkPos() {
 }
 
 func CreateLogFile(verbose int, n int) *LogFile {
-	if verbose < 2 && n > 1 {
+	if verbose < 2 && n != 1 {
 		return nil
 	}
 
@@ -45,9 +45,7 @@ func CreateLogFile(verbose int, n int) *LogFile {
 	osx.ExitIfErr(err)
 
 	fileName := f.Name()
-	if verbose >= 2 {
-		fmt.Printf("Log details to: %s\n", fileName)
-	}
+	fmt.Printf("Log details to: %s\n", fileName)
 	return &LogFile{File: f, name: fileName}
 }
 
