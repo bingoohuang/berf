@@ -23,23 +23,32 @@ import (
 )
 
 var (
-	pUrls   = fla9.Strings("url", nil, "URL")
-	pBody   = fla9.String("body,b", "", "HTTP request body, or @file to read from, or @file:stream to enable chunked encoding for the file, or @file:line to read line by line")
-	pUpload = fla9.String("upload,u", "", "HTTP upload multipart form file or directory or glob pattern like ./*.jpg, \n"+
-		"      prefix file: to set form field name\n"+
-		"      extension: rand.png,rand.art,rand.jpg,rand.json\n"+
-		"      env export UPLOAD_INDEX=%clear%y%M%d.%H%m%s.%i%ext to append index to the file base name, \n"+
-		"                                %clear: 清除原始文件名\n"+
-		"                                %y: 4位年 %M: 2位月 %d: 2位日 %H: 2位时 %m: 2位分 %s: 2位秒\n"+
-		"                                %i: 自增长序号, %05i： 补齐5位的自增长序号（前缀补0)\n"+
-		"      env export UPLOAD_EXIT=1 to exit when all files are uploaded\n"+
-		"      env export UPLOAD_SHUFFLE=1 to shuffle the upload files (only for glob pattern)")
-	pMethod   = fla9.String("method,m", "", "HTTP method")
-	pNetwork  = fla9.String("network", "", "Network simulation, local: simulates local network, lan: local, wan: wide, bad: bad network, or BPS:latency like 20M:20ms")
-	pHeaders  = fla9.Strings("header,H", nil, "Custom HTTP headers, K:V, e.g. Content-Type")
-	pProfiles = fla9.Strings("profile,P", nil, "Profile file, append :new to create a demo profile, or :tag to run only specified profile, or range :tag1,tag3-tag5")
-	pEnv      = fla9.String("env", "", "Profile env name selected")
-	pOpts     = fla9.Strings("opt", nil, "options, multiple by comma: \n"+
+	pUrls = fla9.Strings("url", nil, "URL")
+	pBody = fla9.String("body,b", "",
+		"HTTP request body, or @file to read from, "+
+			"or @file:stream for chunked encoding of file, "+
+			"or @file:line to read line by line")
+	pUpload = fla9.String("upload,u", "",
+		"HTTP upload multipart form file or directory or glob pattern like ./*.jpg, \n"+
+			"      prefix file: to set form field name\n"+
+			"      extension: rand.png,rand.art,rand.jpg,rand.json\n"+
+			"      env export UPLOAD_INDEX=%clear%y%M%d.%H%m%s.%i%ext to append index to the file base name, \n"+
+			"                                %clear: 清除原始文件名\n"+
+			"                                %y: 4位年 %M: 2位月 %d: 2位日 %H: 2位时 %m: 2位分 %s: 2位秒\n"+
+			"                                %i: 自增长序号, %05i： 补齐5位的自增长序号（前缀补0)\n"+
+			"      env export UPLOAD_EXIT=1 to exit when all files are uploaded\n"+
+			"      env export UPLOAD_SHUFFLE=1 to shuffle the upload files (only for glob pattern)")
+	pMethod  = fla9.String("method,m", "", "HTTP method")
+	pNetwork = fla9.String("network", "",
+		"Network simulation, local: simulates local network, lan: local, wan: wide, bad: bad network, "+
+			"or BPS:latency like 20M:20ms")
+	pHeaders = fla9.Strings("header,H", nil,
+		"Custom HTTP headers, K:V, e.g. Content-Type")
+	pProfiles = fla9.Strings("profile,P", nil,
+		"Profile file, append :new to create a demo profile, or :tag to run only specified profile, "+
+			"or range :tag1,tag3-tag5")
+	pEnv  = fla9.String("env", "", "Profile env name selected")
+	pOpts = fla9.Strings("opt", nil, "options, multiple by comma: \n"+
 		"      gzip:               enabled content gzip  \n"+
 		"      tlsVerify:          verify the server's cert chain and host name \n"+
 		"      no-keepalive/no-ka: disable keepalive \n"+
@@ -50,12 +59,17 @@ var (
 		"      json:               set Content-Type=application/json; charset=utf-8 \n"+
 		"      eval:               evaluate url and body's variables \n"+
 		"      notty:              no tty color \n")
-	pAuth       = fla9.String("auth", "", "basic auth, eg. scott:tiger or direct base64 encoded like c2NvdHQ6dGlnZXI")
-	pDir        = fla9.String("dir", "", "download dir, use :temp for temp dir")
-	pCertKey    = fla9.String("cert", "", "Path to the client's TLS Cert and private key file, eg. ca.pem,ca.key")
-	pRootCert   = fla9.String("root-ca", "", "Ca root certificate file to verify TLS")
-	pTimeout    = fla9.String("timeout", "", "Timeout for each http request, e.g. 5s for do:5s,dial:5s,write:5s,read:5s")
-	pPrint      = fla9.String("print,p", "", "a: all, R: req all, H: req headers, B: req body, r: resp all, h: resp headers b: resp body c: status code")
+	pAuth = fla9.String("auth", "",
+		"basic auth, eg. scott:tiger or direct base64 encoded like c2NvdHQ6dGlnZXI")
+	pDir     = fla9.String("dir", "", "download dir, use :temp for temp dir")
+	pCertKey = fla9.String("cert", "",
+		"Path to the client's TLS Cert and private key file, eg. ca.pem,ca.key")
+	pRootCert = fla9.String("root-ca", "",
+		"Ca root certificate file to verify TLS")
+	pTimeout = fla9.String("timeout", "",
+		"Timeout for each http request, e.g. 5s for do:5s,dial:5s,write:5s,read:5s")
+	pPrint = fla9.String("print,p", "",
+		"a: all, R: req all, H: req headers, B: req body, r: resp all, h: resp headers b: resp body c: status code")
 	pStatusName = fla9.String("status", "", "Status name in json, like resultCode")
 
 	pCreateEnvFile = fla9.Bool("demo.env", false, fmt.Sprintf("create a demo .env in current dir.\n"+
@@ -67,7 +81,8 @@ var (
 		"       env TLS_SESSION_CACHE         客户端会话缓存，默认值 32, e.g. TLS_SESSION_CACHE=32 berf ...\n"+
 		"       env MAX_GREEDY_CONNS_PER_HOST 在从连接池获取连接时，总是优先创建新链接，直到 MAX_GREEDY_CONNS_PER_HOST 为止，默认值0, e.g. MAX_GREEDY_CONNS_PER_HOST=100 berf ...\n"+
 		"       env MAX_CONNS_PER_HOST        单台主机最大连接数，默认%d, e.g. MAX_CONNS_PER_HOST=1000 berf ...\n"+
-		"       env MAX_IDLE_CONN_DURATION    连接最大空闲时间，默认%s, e.g. MAX_IDLE_CONN_DURATION=10s berf ...\n",
+		"       env MAX_IDLE_CONN_DURATION    连接最大空闲时间，默认%s, e.g. MAX_IDLE_CONN_DURATION=10s berf ...\n"+
+		"       env SAMPLING_RATE    打印请求响应体时的采样率，默认0, e.g. SAMPLING_RATE=0.01 berf ...\n",
 		fasthttp.DefaultMaxConnsPerHost, fasthttp.DefaultMaxIdleConnDuration))
 )
 

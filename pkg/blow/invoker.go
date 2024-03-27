@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"mime"
 	"net"
 	"net/url"
@@ -351,7 +352,8 @@ func (r *Invoker) doRequest(req *fasthttp.Request, rsp *fasthttp.Response, rr *b
 	return r.processRsp(req, rsp, rr, nil)
 }
 
-func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *berf.Result, responseJSONValuer func(jsonBody []byte)) error {
+func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *berf.Result,
+	responseJSONValuer func(jsonBody []byte)) error {
 	status := parseStatus(rsp, r.opt.statusName)
 	rr.Status = append(rr.Status, status)
 	if r.opt.verbose >= 1 {
@@ -386,7 +388,9 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 	h := &req.Header
 	ignoreBody := h.IsGet() || h.IsHead()
 	statusCode := rsp.StatusCode()
-	r.printReq(b1, bx, ignoreBody, statusCode)
+
+	samplingYes := samplingFunc()
+	r.printReq(b1, bx, ignoreBody, statusCode, samplingYes)
 	b1.Reset()
 
 	header := rsp.Header.Header()
@@ -395,7 +399,8 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 
 	var body *bytes.Buffer
 
-	if responseJSONValuer != nil && bytes.HasPrefix(rsp.Header.Peek("Content-Type"), []byte("application/json")) {
+	if responseJSONValuer != nil && bytes.HasPrefix(
+		rsp.Header.Peek("Content-Type"), []byte("application/json")) {
 		body = &bytes.Buffer{}
 		bb1 = body
 	}
@@ -412,19 +417,34 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 		b1.Write(i)
 	}
 
-	_, _ = b1.Write([]byte("\n\n"))
-	r.printResp(b1, bx, rsp, statusCode)
+	//_, _ = b1.Write([]byte("\n\n"))
+	r.printResp(b1, bx, rsp, statusCode, samplingYes)
 
 	return nil
 }
 
-func (r *Invoker) printReq(b *bytes.Buffer, bx io.Writer, ignoreBody bool, statusCode int) {
+var samplingFunc = func() func() bool {
+	sampleRate, exits := util.EnvFloat("SAMPLING_RATE")
+	if !exits {
+		return func() bool { return true }
+	}
+
+	return func() bool {
+		return rand.Float32() <= sampleRate
+	}
+}()
+
+func (r *Invoker) printReq(b *bytes.Buffer, bx io.Writer, ignoreBody bool, statusCode int, samplingYes bool) {
 	if r.opt.printOption == 0 && bx == nil {
 		return
 	}
 
 	if !logStatus(r.opt.berfConfig.N, statusCode) {
 		bx = nil
+	}
+
+	if !samplingYes {
+		return
 	}
 
 	dumpHeader, dumpBody := r.dump(b, bx, ignoreBody, nil)
@@ -479,7 +499,7 @@ var logStatus = func() func(n, code int) bool {
 	}
 }()
 
-func (r *Invoker) printResp(b *bytes.Buffer, bx io.Writer, rsp *fasthttp.Response, statusCode int) {
+func (r *Invoker) printResp(b *bytes.Buffer, bx io.Writer, rsp *fasthttp.Response, statusCode int, samplingYes bool) {
 	if r.opt.printOption == 0 && bx == nil {
 		return
 	}
@@ -488,11 +508,11 @@ func (r *Invoker) printResp(b *bytes.Buffer, bx io.Writer, rsp *fasthttp.Respons
 		bx = nil
 	}
 
-	dumpHeader, dumpBody := r.dump(b, bx, false, rsp)
-
-	if r.opt.printOption == 0 {
+	if r.opt.printOption == 0 || !samplingYes {
 		return
 	}
+
+	dumpHeader, dumpBody := r.dump(b, bx, false, rsp)
 
 	printNum := 0
 	if r.opt.printOption&printRespStatusCode == printRespStatusCode {

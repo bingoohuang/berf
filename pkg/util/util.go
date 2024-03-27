@@ -19,6 +19,18 @@ import (
 	"go.uber.org/multierr"
 )
 
+func EnvFloat(name string) (float32, bool) {
+	if e := os.Getenv(name); e != "" {
+		if v, err := strconv.ParseFloat(e, 32); err != nil || v < 0 {
+			log.Fatalf("W! env $%s = %s is invalid for float32", name, e)
+		} else {
+			return float32(v), true
+		}
+	}
+
+	return 0, false
+}
+
 func EnvDuration(name string, defaultValue time.Duration) time.Duration {
 	if e := os.Getenv(name); e != "" {
 		if v, err := time.ParseDuration(e); err != nil || v < 0 {
