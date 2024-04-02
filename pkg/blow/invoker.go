@@ -390,7 +390,8 @@ func (r *Invoker) processRsp(req *fasthttp.Request, rsp *fasthttp.Response, rr *
 	statusCode := rsp.StatusCode()
 
 	samplingYes := samplingFunc()
-	r.printReq(b1, bx, ignoreBody, statusCode, samplingYes)
+
+	r.printReq(b1, bx, ignoreBody, statusCode, samplingYes, rr)
 	b1.Reset()
 
 	header := rsp.Header.Header()
@@ -434,8 +435,8 @@ var samplingFunc = func() func() bool {
 	}
 }()
 
-func (r *Invoker) printReq(b *bytes.Buffer, bx io.Writer, ignoreBody bool, statusCode int, samplingYes bool) {
-	if r.opt.printOption == 0 && bx == nil {
+func (r *Invoker) printReq(b *bytes.Buffer, bx io.Writer, ignoreBody bool, statusCode int, samplingYes bool, rr *berf.Result) {
+	if !samplingYes {
 		return
 	}
 
@@ -443,16 +444,12 @@ func (r *Invoker) printReq(b *bytes.Buffer, bx io.Writer, ignoreBody bool, statu
 		bx = nil
 	}
 
-	if !samplingYes {
-		return
-	}
-
 	dumpHeader, dumpBody := r.dump(b, bx, ignoreBody, nil)
 	if bx != nil {
 		_, _ = bx.Write([]byte("\n"))
 	}
 
-	if r.opt.printOption == 0 {
+	if r.opt.printOption == 0 && bx == nil {
 		return
 	}
 
@@ -500,15 +497,11 @@ var logStatus = func() func(n, code int) bool {
 }()
 
 func (r *Invoker) printResp(b *bytes.Buffer, bx io.Writer, rsp *fasthttp.Response, statusCode int, samplingYes bool) {
-	if r.opt.printOption == 0 && bx == nil {
-		return
-	}
-
 	if !logStatus(r.opt.berfConfig.N, statusCode) {
 		bx = nil
 	}
 
-	if r.opt.printOption == 0 || !samplingYes {
+	if r.opt.printOption == 0 && bx == nil || !samplingYes {
 		return
 	}
 
