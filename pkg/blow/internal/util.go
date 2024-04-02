@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"github.com/bingoohuang/gg/pkg/osx"
 	"io"
 	"log"
 	"strings"
@@ -60,13 +61,20 @@ func ParseBodyArg(body string, stream, lineMode bool) (streamFileName string, bo
 		}
 	}
 
-	if lineMode && filex.Exists(filename) {
+	fileExists := filex.Exists(filename)
+	if lineMode && fileExists {
 		var err error
 		lines, err = filex.LinesChan(filename, 1000)
 		if err != nil {
 			log.Fatalf("E! create line chan for %s, failed: %v", filename, err)
 		}
 		return "", nil, lines
+	}
+
+	if fileExists {
+		if f := osx.ReadFile(filename); f.OK() {
+			body = string(f.Data)
+		}
 	}
 
 	streamFileName, bodyBytes = fla9.ParseFileArg(body)
