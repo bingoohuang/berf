@@ -130,10 +130,10 @@ func NewJsonLogFile(file string) JSONLogger {
 	}
 
 	dry := IsDrySuffix(file)
-	if file != "" {
-		file = "berf_" + time.Now().Format(`200601021504`) + ".log"
-	} else if dry {
+	if dry {
 		file = TrimDrySuffix(file)
+	} else {
+		file = "berf_" + time.Now().Format(`200601021504`) + ".log"
 	}
 	logFile := &JSONLogFile{Name: file, Mutex: &sync.Mutex{}, Dry: dry}
 

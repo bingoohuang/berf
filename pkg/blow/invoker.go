@@ -282,6 +282,12 @@ func (r *Invoker) Run(ctx context.Context, bc *berf.Config, initial bool) (*berf
 		return nil, nil
 	}
 
+	r.setReq(req)
+
+	return r.runOne(req, resp)
+}
+
+func (r *Invoker) setReq(req *fasthttp.Request) {
 	r.httpHeader.CopyTo(&req.Header)
 
 	if len(r.opt.parsedUrls) > 0 {
@@ -317,8 +323,6 @@ func (r *Invoker) Run(ctx context.Context, bc *berf.Config, initial bool) (*berf
 	if proxyURL, _ := proxyFunc(string(req.URI().Host()), r.isTLS); proxyURL != nil {
 		req.UsingProxy = true
 	}
-
-	return r.runOne(req, resp)
 }
 
 func (r *Invoker) runOne(req *fasthttp.Request, resp *fasthttp.Response) (*berf.Result, error) {
